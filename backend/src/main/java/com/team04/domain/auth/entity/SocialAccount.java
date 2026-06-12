@@ -5,9 +5,11 @@ import com.team04.domain.user.entity.User;
 import com.team04.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
+@Getter
 @Table(name = "social_account")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class SocialAccount extends BaseEntity {
