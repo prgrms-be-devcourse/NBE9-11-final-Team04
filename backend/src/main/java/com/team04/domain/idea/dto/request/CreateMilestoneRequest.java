@@ -1,4 +1,4 @@
-package com.team04.idea.dto.request;
+package com.team04.domain.idea.dto.request;
 
 import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.Max;

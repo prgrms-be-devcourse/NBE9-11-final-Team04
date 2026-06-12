@@ -1,20 +1,23 @@
-package com.team04.idea.dto.request;
+package com.team04.domain.idea.dto.request;
 
-import com.team04.idea.entity.IdeaCategory;
-import com.team04.idea.entity.RewardType;
+import com.team04.domain.idea.entity.IdeaCategory;
+import com.team04.domain.idea.entity.RewardType;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 
-/** 아이디어 기본 정보를 수정하기 위한 요청 DTO입니다. */
-public record UpdateIdeaRequest(
+/** 아이디어와 3단계 마일스톤을 등록하기 위한 요청 DTO입니다. */
+public record CreateIdeaRequest(
         @NotBlank @Size(max = 100) String title,
         @NotNull IdeaCategory category,
         @NotBlank @Size(max = 200) String oneLineIntro,
@@ -27,7 +30,8 @@ public record UpdateIdeaRequest(
         @NotNull @Min(1_000_000) @Max(100_000_000) Long goalAmount,
         @NotNull @Future LocalDateTime fundingStartAt,
         @NotNull @Future LocalDateTime fundingEndAt,
-        @NotNull RewardType rewardType
+        @NotNull RewardType rewardType,
+        @NotEmpty @Size(min = 3, max = 3) List<@Valid @NotNull CreateMilestoneRequest> milestones
 ) {
 
     /** 펀딩 종료일이 시작일보다 이후인지 검증합니다. */

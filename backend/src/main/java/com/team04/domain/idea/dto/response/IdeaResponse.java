@@ -1,6 +1,6 @@
-package com.team04.idea.dto.response;
+package com.team04.domain.idea.dto.response;
 
-import com.team04.idea.entity.Idea;
+import com.team04.domain.idea.entity.Idea;
 
 import java.time.LocalDateTime;
 

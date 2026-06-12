@@ -1,4 +1,4 @@
-package com.team04.idea.entity;
+package com.team04.domain.idea.entity;
 
 import com.team04.global.exception.CustomException;
 import com.team04.global.exception.ErrorCode;

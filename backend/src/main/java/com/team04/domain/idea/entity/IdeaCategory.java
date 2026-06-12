@@ -1,4 +1,4 @@
-package com.team04.idea.entity;
+package com.team04.domain.idea.entity;
 
 /** 아이디어가 속한 사업 분야를 표현하는 카테고리 열거형입니다. */
 public enum IdeaCategory {

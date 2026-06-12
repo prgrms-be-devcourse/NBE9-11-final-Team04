@@ -1,12 +1,12 @@
-package com.team04.idea.controller;
+package com.team04.domain.idea.controller;
 
 import com.team04.global.response.ApiResponse;
-import com.team04.idea.dto.request.CreateIdeaRequest;
-import com.team04.idea.dto.request.ReportIdeaRequest;
-import com.team04.idea.dto.request.UpdateIdeaRequest;
-import com.team04.idea.dto.response.IdeaResponse;
-import com.team04.idea.dto.response.ReportIdeaResponse;
-import com.team04.idea.service.IdeaService;
+import com.team04.domain.idea.dto.request.CreateIdeaRequest;
+import com.team04.domain.idea.dto.request.ReportIdeaRequest;
+import com.team04.domain.idea.dto.request.UpdateIdeaRequest;
+import com.team04.domain.idea.dto.response.IdeaResponse;
+import com.team04.domain.idea.dto.response.ReportIdeaResponse;
+import com.team04.domain.idea.service.IdeaService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;

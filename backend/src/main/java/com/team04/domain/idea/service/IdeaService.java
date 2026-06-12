@@ -1,17 +1,17 @@
-package com.team04.idea.service;
+package com.team04.domain.idea.service;
 
 import com.team04.global.exception.CustomException;
 import com.team04.global.exception.ErrorCode;
-import com.team04.idea.dto.request.CreateIdeaRequest;
-import com.team04.idea.dto.request.ReportIdeaRequest;
-import com.team04.idea.dto.request.UpdateIdeaRequest;
-import com.team04.idea.dto.response.IdeaResponse;
-import com.team04.idea.dto.response.ReportIdeaResponse;
-import com.team04.idea.entity.Idea;
-import com.team04.idea.event.IdeaCreatedEvent;
-import com.team04.idea.event.IdeaPlagiarismReportedEvent;
-import com.team04.idea.event.IdeaReportNotificationEvent;
-import com.team04.idea.repository.IdeaRepository;
+import com.team04.domain.idea.dto.request.CreateIdeaRequest;
+import com.team04.domain.idea.dto.request.ReportIdeaRequest;
+import com.team04.domain.idea.dto.request.UpdateIdeaRequest;
+import com.team04.domain.idea.dto.response.IdeaResponse;
+import com.team04.domain.idea.dto.response.ReportIdeaResponse;
+import com.team04.domain.idea.entity.Idea;
+import com.team04.domain.idea.event.IdeaCreatedEvent;
+import com.team04.domain.idea.event.IdeaPlagiarismReportedEvent;
+import com.team04.domain.idea.event.IdeaReportNotificationEvent;
+import com.team04.domain.idea.repository.IdeaRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -99,7 +99,7 @@ public class IdeaService {
     }
 
     /** 아이디어 도용 신고 이벤트와 관리자 알림 이벤트를 발행합니다. */
-    @Transactional(readOnly = true)
+    @Transactional
     public ReportIdeaResponse reportIdea(Long ideaId, Long reporterUserId, ReportIdeaRequest request) {
         Idea idea = findActiveIdea(ideaId);
         eventPublisher.publishEvent(

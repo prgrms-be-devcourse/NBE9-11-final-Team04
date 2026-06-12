@@ -1,6 +1,6 @@
-package com.team04.idea.event;
+package com.team04.domain.idea.event;
 
-import com.team04.idea.dto.request.CreateMilestoneRequest;
+import com.team04.domain.idea.dto.request.CreateMilestoneRequest;
 
 import java.util.List;
 

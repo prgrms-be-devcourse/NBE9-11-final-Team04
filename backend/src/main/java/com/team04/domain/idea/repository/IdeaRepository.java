@@ -1,6 +1,6 @@
-package com.team04.idea.repository;
+package com.team04.domain.idea.repository;
 
-import com.team04.idea.entity.Idea;
+import com.team04.domain.idea.entity.Idea;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;

@@ -1,4 +1,4 @@
-package com.team04.idea.entity;
+package com.team04.domain.idea.entity;
 
 /** 아이디어 후원자에게 제공할 보상 방식을 표현하는 열거형입니다. */
 public enum RewardType {
