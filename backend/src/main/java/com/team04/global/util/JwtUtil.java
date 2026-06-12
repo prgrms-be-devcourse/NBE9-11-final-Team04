@@ -2,6 +2,7 @@ package com.team04.global.util;
 
 import com.team04.global.common.Role;
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtParser;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
@@ -26,9 +27,12 @@ public class JwtUtil {
 
     private SecretKey secretKey;
 
+    private JwtParser jwtParser;
+
     @PostConstruct
     private void init() {
         this.secretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+        this.jwtParser = Jwts.parser().verifyWith(secretKey).build();
     }
 
     public String generateAccessToken(Long userId, Role role) {
@@ -68,9 +72,7 @@ public class JwtUtil {
     }
 
     private Claims getClaims(String token) {
-        return Jwts.parser()
-                .verifyWith(secretKey)
-                .build()
+        return jwtParser
                 .parseSignedClaims(token)
                 .getPayload();
     }
