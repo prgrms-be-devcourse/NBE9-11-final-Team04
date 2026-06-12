@@ -29,6 +29,12 @@ public class Profile extends BaseEntity {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
+    public static Profile create(User user) {
+        Profile profile = new Profile();
+        profile.user = user;
+        return profile;
+    }
+
     public void update(String intro, String portfolioUrl) {
         this.intro = intro;
         this.portfolioUrl = portfolioUrl;

@@ -41,11 +41,28 @@ public class User extends BaseEntity {
     @Column(nullable = false)
     private UserStatus status;
 
+    public static User create(String email, String password, String name,
+                              String nickname, int age, Role role) {
+        User user = new User();
+        user.email = email;
+        user.password = password;
+        user.name = name;
+        user.nickname = nickname;
+        user.age = age;
+        user.role = role;
+        user.status = UserStatus.ACTIVE;
+        return user;
+    }
+
     public void update(String nickname) {
         this.nickname = nickname;
     }
 
     public void changePassword(String encoderPassword) {
         this.password = encoderPassword;
+    }
+
+    public void withdraw() {
+        this.status = UserStatus.WITHDRAWN;
     }
 }

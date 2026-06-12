@@ -58,4 +58,12 @@ public class UserService {
 
         user.changePassword(passwordEncoder.encode(request.newPassword()));
     }
+
+    @Transactional
+    public void withdraw(Long userId){
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        user.withdraw();
+    }
 }
