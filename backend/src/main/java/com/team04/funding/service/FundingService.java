@@ -7,10 +7,10 @@ import com.team04.funding.repository.FundingRepository;
 import com.team04.global.exception.CustomException;
 import com.team04.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -34,10 +34,9 @@ public class FundingService {
     }
 
     @Transactional(readOnly = true)
-    public List<FundingResponse> getFundingsByIdea(Long ideaId) {
-        return fundingRepository.findByIdeaIdOrderByCreatedAtDesc(ideaId).stream()
-                .map(this::toResponse)
-                .toList();
+    public Page<FundingResponse> getFundingsByIdea(Long ideaId, Pageable pageable) {
+        return fundingRepository.findByIdeaIdOrderByCreatedAtDesc(ideaId, pageable)
+                .map(this::toResponse);
     }
 
     private FundingResponse toResponse(Funding funding) {

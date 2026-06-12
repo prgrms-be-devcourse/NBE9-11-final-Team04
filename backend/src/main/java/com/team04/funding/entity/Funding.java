@@ -38,4 +38,8 @@ public class Funding extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private FundingTypes.FundingStatus status;
+
+    public void markAsPaid() {
+        this.status = FundingTypes.FundingStatus.PAID;
+    }
 }

@@ -25,7 +25,7 @@ public class Payment extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false)
     private Long fundingId;
 
     @Column(unique = true)
@@ -46,4 +46,29 @@ public class Payment extends BaseEntity {
     private PaymentTypes.PaymentStatus status;
 
     private LocalDateTime approvedAt;
+
+    public static Payment createPending(
+            Long fundingId,
+            String orderId,
+            Long amount,
+            PaymentTypes.PaymentMethod method
+    ) {
+        Payment payment = new Payment();
+        payment.fundingId = fundingId;
+        payment.orderId = orderId;
+        payment.amount = amount;
+        payment.method = method;
+        payment.status = PaymentTypes.PaymentStatus.PENDING;
+        return payment;
+    }
+
+    public void complete(String paymentKey) {
+        this.paymentKey = paymentKey;
+        this.status = PaymentTypes.PaymentStatus.SUCCESS;
+        this.approvedAt = LocalDateTime.now();
+    }
+
+    public void fail() {
+        this.status = PaymentTypes.PaymentStatus.FAILED;
+    }
 }
