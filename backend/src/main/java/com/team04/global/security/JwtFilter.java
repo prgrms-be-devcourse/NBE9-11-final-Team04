@@ -2,6 +2,7 @@ package com.team04.global.security;
 
 import com.team04.global.common.Role;
 import com.team04.global.util.JwtUtil;
+import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
@@ -29,15 +30,17 @@ public class JwtFilter extends OncePerRequestFilter {
 
         String token = resolveToken(request);
 
-        if (StringUtils.hasText(token) && jwtUtil.validate(token)) {
-            Long userId = jwtUtil.getUserId(token);
-            Role role = jwtUtil.getRole(token);
+        try {
+            Claims claims = jwtUtil.getClaims(token);
+            Long userId = Long.parseLong(claims.getSubject());
+            Role role = Role.valueOf(claims.get("role", String.class));
 
             CustomUserDetails userDetails = new CustomUserDetails(userId, role);
             UsernamePasswordAuthenticationToken authentication =
                     new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-
             SecurityContextHolder.getContext().setAuthentication(authentication);
+        } catch (Exception e) {
+            // 유효하지 않은 토큰 → 그냥 통과
         }
 
         filterChain.doFilter(request, response);

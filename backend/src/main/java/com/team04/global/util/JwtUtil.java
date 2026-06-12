@@ -71,7 +71,7 @@ public class JwtUtil {
         }
     }
 
-    private Claims getClaims(String token) {
+    public Claims getClaims(String token) {
         return jwtParser
                 .parseSignedClaims(token)
                 .getPayload();
