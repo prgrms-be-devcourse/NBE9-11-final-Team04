@@ -27,8 +27,7 @@ public class UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-        Profile profile = profileRepository.findByUserId(userId)
-                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+        Profile profile = profileRepository.findByUserId(userId).orElse(null);
 
         return new UserResponse(user, profile);
     }
@@ -39,10 +38,11 @@ public class UserService {
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
         user.update(request.nickname());
 
-        Profile profile = profileRepository.findByUserId(userId)
-                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+        Profile profile = profileRepository.findByUserId(userId).orElse(null);
 
-        profile.update(request.intro(),request.portfolioUrl());
+        if (profile != null) {
+            profile.update(request.intro(), request.portfolioUrl());
+        }
 
         return new UserResponse(user, profile);
     }

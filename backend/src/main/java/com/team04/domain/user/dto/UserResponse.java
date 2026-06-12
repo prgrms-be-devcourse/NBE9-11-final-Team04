@@ -33,9 +33,9 @@ public record UserResponse (
                         user.getAge(),
                         user.getRole(),
                         user.getStatus(),
-                        profile.getIntro(),
-                        profile.getPortfolioUrl(),
-                        profile.getProfileImage(),
+                        profile != null ? profile.getIntro() : null,
+                        profile != null ? profile.getPortfolioUrl() : null,
+                        profile != null ? profile.getProfileImage() : null,
                         user.getCreatedAt(),
                         user.getUpdatedAt()
                 );
