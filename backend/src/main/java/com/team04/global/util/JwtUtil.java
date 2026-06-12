@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.Date;
 
 @Component
@@ -20,10 +21,10 @@ public class JwtUtil {
     private String secret;
 
     @Value("${jwt.access-expiry}")
-    private long accessExpiry;
+    private Duration accessExpiry;
 
     @Value("${jwt.refresh-expiry}")
-    private long refreshExpiry;
+    private Duration refreshExpiry;
 
     private SecretKey secretKey;
 
@@ -40,7 +41,7 @@ public class JwtUtil {
                 .subject(userId.toString())
                 .claim("role", role.name())
                 .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + accessExpiry))
+                .expiration(new Date(System.currentTimeMillis() + accessExpiry.toMillis()))
                 .signWith(secretKey)
                 .compact();
     }
@@ -49,7 +50,7 @@ public class JwtUtil {
         return Jwts.builder()
                 .subject(userId.toString())
                 .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + refreshExpiry))
+                .expiration(new Date(System.currentTimeMillis() + accessExpiry.toMillis()))
                 .signWith(secretKey)
                 .compact();
     }
