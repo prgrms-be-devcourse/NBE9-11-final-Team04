@@ -34,15 +34,24 @@ public enum ErrorCode {
     FUNDING_ALREADY_CLOSED(400, "F002", "이미 마감된 펀딩입니다"),
     FUNDING_GOAL_NOT_MET(400, "F003", "목표 금액 미달성으로 환불 처리됩니다"),
     FUNDING_DUPLICATE_PAYMENT(409, "F004", "중복 결제 요청입니다"),
+    IDEA_NOT_OPEN(400, "F005", "후원 가능한 상태의 프로젝트가 아닙니다"),
+    IDEA_SELF_FUNDING_NOT_ALLOWED(400, "F006", "본인 프로젝트는 후원할 수 없습니다"),
+    INVALID_FUNDING_AMOUNT(400, "F007", "후원 금액이 올바르지 않습니다"),
+    PROJECT_FEE_NOT_FOUND(404, "F008", "존재하지 않는 프로젝트 수수료입니다"),
+    PROJECT_FEE_ALREADY_PAID(409, "F009", "이미 수수료가 결제된 프로젝트입니다"),
 
     // 마일스톤
     MILESTONE_NOT_FOUND(404, "M001", "존재하지 않는 마일스톤입니다"),
     MILESTONE_ALREADY_APPROVED(400, "M002", "이미 승인된 마일스톤입니다"),
 
     // 결제
-    PAYMENT_FAILED(400, "P001", "결제에 실패했습니다"),
-    REFUND_FAILED(400, "P002", "환불 처리에 실패했습니다"),
-    ESCROW_NOT_FOUND(404, "P003", "에스크로 정보를 찾을 수 없습니다"),
+    PAYMENT_NOT_FOUND(404, "P001", "존재하지 않는 결제입니다"),
+    PAYMENT_FAILED(400, "P002", "결제에 실패했습니다"),
+    REFUND_FAILED(400, "P003", "환불 처리에 실패했습니다"),
+    ESCROW_NOT_FOUND(404, "P004", "에스크로 정보를 찾을 수 없습니다"),
+    PAYMENT_AMOUNT_MISMATCH(400, "P005", "결제 금액이 일치하지 않습니다"),
+    PAYMENT_ALREADY_DONE(409, "P006", "이미 완료된 결제입니다"),
+    PAYMENT_NOT_READY(400, "P007", "결제를 진행할 수 없는 상태입니다"),
 
     // 분쟁
     DISPUTE_NOT_FOUND(404, "D001", "존재하지 않는 분쟁입니다"),

@@ -44,3 +44,4 @@ jobs:
 
       - name: 빌드 및 테스트
         run: ./gradlew build
+        working-directory: backend
