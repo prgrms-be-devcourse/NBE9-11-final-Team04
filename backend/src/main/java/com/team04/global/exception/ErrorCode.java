@@ -19,6 +19,12 @@ public enum ErrorCode {
     INVALID_PASSWORD(400, "U003", "비밀번호가 올바르지 않습니다"),
     ACCOUNT_SUSPENDED(403, "U004", "정지된 계정입니다"),
 
+    // 인증
+    INVALID_REFRESH_TOKEN(401, "A001", "유효하지 않은 리프레시 토큰입니다"),
+    INVALID_OTP(400, "A002", "인증 코드가 올바르지 않습니다"),
+    OTP_EXPIRED(400, "A003", "인증 코드가 만료되었습니다"),
+    ACCOUNT_WITHDRAWN(403, "U005", "탈퇴한 계정입니다"),
+
     // 아이디어
     IDEA_NOT_FOUND(404, "I001", "존재하지 않는 아이디어입니다"),
     IDEA_ACCESS_DENIED(403, "I002", "NDA 동의 후 열람 가능합니다"),

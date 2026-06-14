@@ -28,4 +28,12 @@ public class SocialAccount extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id",  nullable = false)
     private User user;
+
+    public static SocialAccount create(Provider provider, String providerId, User user) {
+        SocialAccount account = new SocialAccount();
+        account.provider = provider;
+        account.providerId = providerId;
+        account.user = user;
+        return account;
+    }
 }
