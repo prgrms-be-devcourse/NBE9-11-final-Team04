@@ -53,6 +53,13 @@ public class ExpertProfile {
     @Column(name = "file_url")
     private String fileUrl;     // 국가자격증 증명 파일
 
+    @Column(name = "start_date")
+    private String startDate;           // 개업일자 (BUSINESS_REGISTRATION 재검증용)
+
+    @Column(name = "representative_name")
+    private String representativeName;  // 대표자명 (BUSINESS_REGISTRATION 재검증용)
+
+
     // /experts/verify 성공 시 생성 (verified=true)
     @Builder
     public ExpertProfile(User user, QualificationType qualificationType, String qualificationNumber) {
@@ -69,13 +76,17 @@ public class ExpertProfile {
             User user,
             QualificationType qualificationType,
             String qualificationNumber,
-            String fileUrl
+            String fileUrl,
+            String startDate,           // 추가
+            String representativeName   // 추가
     ) {
         ExpertProfile profile = new ExpertProfile();
         profile.user = user;
         profile.qualificationType = qualificationType;
         profile.qualificationNumber = qualificationNumber;
         profile.fileUrl = fileUrl;
+        profile.startDate = startDate;
+        profile.representativeName = representativeName;
         profile.verified = false;
         profile.status = ExpertStatus.PENDING_VERIFICATION;
         return profile;

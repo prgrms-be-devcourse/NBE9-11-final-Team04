@@ -18,11 +18,9 @@ public class ExpertReview {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-
     @ManyToOne(fetch = FetchType.LAZY)  // 아이디어 재검토 시나리오에 의해 반려 후 다시 등록할 경우 여러 개의 리뷰가 달릴 수 있음
     @JoinColumn(name = "idea_id", nullable = false)
     private Idea ideaId;
-
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "expert_id", nullable = false)

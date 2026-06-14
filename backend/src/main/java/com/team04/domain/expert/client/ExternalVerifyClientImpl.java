@@ -58,7 +58,7 @@ public class ExternalVerifyClientImpl implements ExternalVerifyClient{
                         .body(NtsValidateResponse.class);
 
                 if (response == null) {
-                    throw new CustomException(ErrorCode.EXTERNAL_API_FAILURE);
+                    throw new IllegalStateException("국세청 API 응답 바디가 비어 있습니다.");
                 }
 
                 return response.isValid();

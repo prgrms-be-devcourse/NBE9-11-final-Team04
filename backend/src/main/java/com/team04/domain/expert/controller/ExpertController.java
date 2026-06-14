@@ -49,10 +49,9 @@ public class ExpertController {
     public ResponseEntity<ApiResponse<ExpertVerifyResponse>> verify(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @Valid @RequestBody ExpertVerifyRequest request
-            ) {
+    ) {
         ExpertVerifyResponse response = expertVerifyService.verify(userDetails.getUserId(), request);
         return ResponseEntity.status(201).body(ApiResponse.ofSuccess(response));
     }
 
 }
-
