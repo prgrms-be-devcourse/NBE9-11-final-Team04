@@ -30,6 +30,11 @@ public class JwtFilter extends OncePerRequestFilter {
 
         String token = resolveToken(request);
 
+        if (token == null) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         try {
             Claims claims = jwtUtil.getClaims(token);
             Long userId = Long.parseLong(claims.getSubject());

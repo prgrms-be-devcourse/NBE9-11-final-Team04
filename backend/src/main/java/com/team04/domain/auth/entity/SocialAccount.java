@@ -5,9 +5,11 @@ import com.team04.domain.user.entity.User;
 import com.team04.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
+@Getter
 @Table(name = "social_account")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class SocialAccount extends BaseEntity {
@@ -26,4 +28,12 @@ public class SocialAccount extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id",  nullable = false)
     private User user;
+
+    public static SocialAccount create(Provider provider, String providerId, User user) {
+        SocialAccount account = new SocialAccount();
+        account.provider = provider;
+        account.providerId = providerId;
+        account.user = user;
+        return account;
+    }
 }

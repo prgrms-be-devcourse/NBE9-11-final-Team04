@@ -1,7 +1,7 @@
 package com.team04.domain.user.service;
 
-import com.team04.domain.user.dto.PasswordChangeRequest;
-import com.team04.domain.user.dto.UserUpdateRequest;
+import com.team04.domain.user.dto.request.PasswordChangeRequest;
+import com.team04.domain.user.dto.request.UserUpdateRequest;
 import com.team04.domain.user.entity.Profile;
 import com.team04.domain.user.entity.User;
 import com.team04.domain.user.repository.ProfileRepository;
@@ -10,6 +10,7 @@ import com.team04.domain.user.status.UserStatus;
 import com.team04.global.common.Role;
 import com.team04.global.exception.CustomException;
 import com.team04.global.exception.ErrorCode;
+import com.team04.infra.redis.RefreshTokenRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -38,6 +39,9 @@ class UserServiceTest {
 
     @InjectMocks
     private UserService userService;
+
+    @Mock
+    private RefreshTokenRepository refreshTokenRepository;
 
     @Test
     @DisplayName("내 정보 조회 성공")
@@ -76,7 +80,7 @@ class UserServiceTest {
         assertThatThrownBy(() -> userService.getMe(1L))
                 .isInstanceOf(CustomException.class)
                 .extracting(e -> ((CustomException) e).getErrorCode())
-                .isEqualTo(ErrorCode.USER_NOT_FOUND);
+                .isEqualTo(ErrorCode.ACCOUNT_WITHDRAWN);
     }
 
     @Test
@@ -135,7 +139,7 @@ class UserServiceTest {
         assertThatThrownBy(() -> userService.updateMe(1L, request))
                 .isInstanceOf(CustomException.class)
                 .extracting(e -> ((CustomException) e).getErrorCode())
-                .isEqualTo(ErrorCode.USER_NOT_FOUND);
+                .isEqualTo(ErrorCode.ACCOUNT_WITHDRAWN);
     }
 
     @Test
