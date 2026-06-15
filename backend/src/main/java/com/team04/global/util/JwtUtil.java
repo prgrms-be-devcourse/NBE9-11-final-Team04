@@ -50,7 +50,7 @@ public class JwtUtil {
         return Jwts.builder()
                 .subject(userId.toString())
                 .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + accessExpiry.toMillis()))
+                .expiration(new Date(System.currentTimeMillis() + refreshExpiry.toMillis()))
                 .signWith(secretKey)
                 .compact();
     }

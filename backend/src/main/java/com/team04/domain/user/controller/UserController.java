@@ -1,8 +1,8 @@
 package com.team04.domain.user.controller;
 
-import com.team04.domain.user.dto.PasswordChangeRequest;
-import com.team04.domain.user.dto.UserResponse;
-import com.team04.domain.user.dto.UserUpdateRequest;
+import com.team04.domain.user.dto.request.PasswordChangeRequest;
+import com.team04.domain.user.dto.response.UserResponse;
+import com.team04.domain.user.dto.request.UserUpdateRequest;
 import com.team04.domain.user.service.UserService;
 import com.team04.global.response.ApiResponse;
 import com.team04.global.security.CustomUserDetails;

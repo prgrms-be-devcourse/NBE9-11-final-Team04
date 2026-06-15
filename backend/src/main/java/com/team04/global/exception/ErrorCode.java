@@ -19,6 +19,12 @@ public enum ErrorCode {
     INVALID_PASSWORD(400, "U003", "비밀번호가 올바르지 않습니다"),
     ACCOUNT_SUSPENDED(403, "U004", "정지된 계정입니다"),
 
+    // 인증
+    INVALID_REFRESH_TOKEN(401, "A001", "유효하지 않은 리프레시 토큰입니다"),
+    INVALID_OTP(400, "A002", "인증 코드가 올바르지 않습니다"),
+    OTP_EXPIRED(400, "A003", "인증 코드가 만료되었습니다"),
+    ACCOUNT_WITHDRAWN(403, "U005", "탈퇴한 계정입니다"),
+
     // 아이디어
     IDEA_NOT_FOUND(404, "I001", "존재하지 않는 아이디어입니다"),
     IDEA_STATUS_NOT_EDITABLE(400, "I004", "현재 상태에서는 아이디어를 수정할 수 없습니다"),
@@ -46,9 +52,9 @@ public enum ErrorCode {
 
     // 마일스톤
     MILESTONE_NOT_FOUND(404, "M001", "존재하지 않는 마일스톤입니다"),
-    MILESTONE_ALREADY_APPROVED(400, "M002", "이미 승인된 마일스톤입니다"),
-    INVALID_MILESTONE_COUNT(400, "M003", "마일스톤은 정확히 3개여야 합니다"),
-    INVALID_MILESTONE_STEP(400, "M004", "마일스톤 단계는 1, 2, 3으로 구성되어야 합니다"),
+    MILESTONE_ALREADY_COMPLETED(400, "M002", "이미 완료된 마일스톤입니다"),
+    INVALID_MILESTONE_COUNT(400, "M003", "현재 상태에서 해당 상태로 전이할 수 없습니다"),
+    INVALID_MILESTONE_STEP(400, "M004", "유효하지 않은 마일스톤 단계입니다"),
 
     // 결제
     PAYMENT_NOT_FOUND(404, "P001", "존재하지 않는 결제입니다"),
@@ -61,7 +67,13 @@ public enum ErrorCode {
 
     // 분쟁
     DISPUTE_NOT_FOUND(404, "D001", "존재하지 않는 분쟁입니다"),
-    DISPUTE_ALREADY_RESOLVED(400, "D002", "이미 처리된 분쟁입니다");
+    DISPUTE_ALREADY_RESOLVED(400, "D002", "이미 처리된 분쟁입니다"),
+
+    //정산
+    SETTLEMENT_NOT_FOUND(404, "S001", "존재하지 않는 정산입니다"),
+    SETTLEMENT_ALREADY_COMPLETED(409, "S002", "이미 완료된 정산입니다"),
+    SETTLEMENT_DUPLICATE(409, "S003", "중복 정산 요청입니다"),
+    SETTLEMENT_INVALID_STATUS(400, "S004", "정산 처리가 불가능한 상태입니다");
 
     private final int status;
     private final String code;
