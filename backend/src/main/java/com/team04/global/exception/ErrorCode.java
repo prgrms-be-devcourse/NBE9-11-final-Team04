@@ -27,8 +27,9 @@ public enum ErrorCode {
 
     // 아이디어
     IDEA_NOT_FOUND(404, "I001", "존재하지 않는 아이디어입니다"),
-    IDEA_ACCESS_DENIED(403, "I002", "NDA 동의 후 열람 가능합니다"),
-    IDEA_EMBARGOED(403, "I003", "엠바고 기간 중인 아이디어입니다"),
+    IDEA_STATUS_NOT_EDITABLE(400, "I004", "현재 상태에서는 아이디어를 수정할 수 없습니다"),
+    IDEA_STATUS_NOT_DELETABLE(400, "I005", "현재 상태에서는 아이디어를 삭제할 수 없습니다"),
+    INVALID_IDEA_STATUS_TRANSITION(400, "I006", "유효하지 않은 아이디어 상태 전이입니다"),
 
     // 전문가
     EXPERT_NOT_FOUND(404, "E001", "존재하지 않는 전문가입니다"),
@@ -49,6 +50,8 @@ public enum ErrorCode {
     // 마일스톤
     MILESTONE_NOT_FOUND(404, "M001", "존재하지 않는 마일스톤입니다"),
     MILESTONE_ALREADY_APPROVED(400, "M002", "이미 승인된 마일스톤입니다"),
+    INVALID_MILESTONE_COUNT(400, "M003", "마일스톤은 정확히 3개여야 합니다"),
+    INVALID_MILESTONE_STEP(400, "M004", "마일스톤 단계는 1, 2, 3으로 구성되어야 합니다"),
 
     // 결제
     PAYMENT_NOT_FOUND(404, "P001", "존재하지 않는 결제입니다"),
