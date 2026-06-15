@@ -10,6 +10,7 @@ import com.team04.domain.user.status.UserStatus;
 import com.team04.global.common.Role;
 import com.team04.global.exception.CustomException;
 import com.team04.global.exception.ErrorCode;
+import com.team04.infra.redis.RefreshTokenRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -38,6 +39,9 @@ class UserServiceTest {
 
     @InjectMocks
     private UserService userService;
+
+    @Mock
+    private RefreshTokenRepository refreshTokenRepository;
 
     @Test
     @DisplayName("내 정보 조회 성공")
