@@ -15,6 +15,15 @@ spring:
       host: localhost
       port: 6379
 
+  mail:
+    host: localhost
+    port: 25
+    username: test@test.com
+    password: test
+    properties:
+      mail.smtp.auth: false
+      mail.smtp.starttls.enable: false
+
 jwt:
   secret: test-secret-key-minimum-256-bits-long-for-hs256-algorithm
   access-expiry: 30m

@@ -1,4 +1,4 @@
-package com.team04.domain.user.dto;
+package com.team04.domain.user.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.team04.domain.user.entity.Profile;

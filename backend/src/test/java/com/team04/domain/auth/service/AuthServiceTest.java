@@ -1,6 +1,7 @@
 package com.team04.domain.auth.service;
 
-import com.team04.domain.auth.dto.*;
+import com.team04.domain.auth.dto.request.*;
+import com.team04.domain.auth.dto.response.TokenResponse;
 import com.team04.domain.user.entity.User;
 import com.team04.domain.user.repository.UserRepository;
 import com.team04.global.common.Role;

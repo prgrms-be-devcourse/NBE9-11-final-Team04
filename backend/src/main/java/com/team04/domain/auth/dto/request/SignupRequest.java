@@ -1,4 +1,4 @@
-package com.team04.domain.auth.dto;
+package com.team04.domain.auth.dto.request;
 
 import com.team04.global.common.Role;
 import jakarta.validation.constraints.*;

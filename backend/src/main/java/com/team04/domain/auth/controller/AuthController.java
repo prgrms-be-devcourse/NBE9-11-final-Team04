@@ -1,6 +1,7 @@
 package com.team04.domain.auth.controller;
 
-import com.team04.domain.auth.dto.*;
+import com.team04.domain.auth.dto.request.*;
+import com.team04.domain.auth.dto.response.TokenResponse;
 import com.team04.domain.auth.service.AuthService;
 import com.team04.global.response.ApiResponse;
 import com.team04.global.security.CustomUserDetails;

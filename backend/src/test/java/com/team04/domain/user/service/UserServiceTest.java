@@ -1,7 +1,7 @@
 package com.team04.domain.user.service;
 
-import com.team04.domain.user.dto.PasswordChangeRequest;
-import com.team04.domain.user.dto.UserUpdateRequest;
+import com.team04.domain.user.dto.request.PasswordChangeRequest;
+import com.team04.domain.user.dto.request.UserUpdateRequest;
 import com.team04.domain.user.entity.Profile;
 import com.team04.domain.user.entity.User;
 import com.team04.domain.user.repository.ProfileRepository;
@@ -76,7 +76,7 @@ class UserServiceTest {
         assertThatThrownBy(() -> userService.getMe(1L))
                 .isInstanceOf(CustomException.class)
                 .extracting(e -> ((CustomException) e).getErrorCode())
-                .isEqualTo(ErrorCode.USER_NOT_FOUND);
+                .isEqualTo(ErrorCode.ACCOUNT_WITHDRAWN);
     }
 
     @Test
@@ -135,7 +135,7 @@ class UserServiceTest {
         assertThatThrownBy(() -> userService.updateMe(1L, request))
                 .isInstanceOf(CustomException.class)
                 .extracting(e -> ((CustomException) e).getErrorCode())
-                .isEqualTo(ErrorCode.USER_NOT_FOUND);
+                .isEqualTo(ErrorCode.ACCOUNT_WITHDRAWN);
     }
 
     @Test

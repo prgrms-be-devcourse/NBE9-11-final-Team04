@@ -1,9 +1,11 @@
 package com.team04.domain.auth.service;
 
-import com.team04.domain.auth.dto.*;
+import com.team04.domain.auth.dto.request.*;
+import com.team04.domain.auth.dto.response.TokenResponse;
 import com.team04.domain.user.entity.User;
 import com.team04.domain.user.repository.UserRepository;
 import com.team04.domain.user.status.UserStatus;
+import com.team04.global.common.Role;
 import com.team04.global.exception.CustomException;
 import com.team04.global.exception.ErrorCode;
 import com.team04.global.util.JwtUtil;
@@ -36,6 +38,9 @@ public class AuthService {
 
     @Transactional
     public TokenResponse signup(SignupRequest request){
+        if (request.role() == Role.ADMIN) {
+            throw new CustomException(ErrorCode.INVALID_INPUT);
+        }
         if(userRepository.existsByEmail(request.email())){
             throw new CustomException(ErrorCode.DUPLICATE_EMAIL);
         }
@@ -56,7 +61,7 @@ public class AuthService {
         return new TokenResponse(accessToken, refreshToken);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public TokenResponse login(LoginRequest request){
         User user = getActiveUserOrThrow(request.email());
 
@@ -75,7 +80,7 @@ public class AuthService {
         refreshTokenRepository.delete(userId);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public TokenResponse tokenRefresh(TokenRefreshRequest request){
         String refreshToken = request.refreshToken();
 

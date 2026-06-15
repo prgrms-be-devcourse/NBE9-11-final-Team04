@@ -1,8 +1,8 @@
 package com.team04.domain.user.service;
 
-import com.team04.domain.user.dto.PasswordChangeRequest;
-import com.team04.domain.user.dto.UserResponse;
-import com.team04.domain.user.dto.UserUpdateRequest;
+import com.team04.domain.user.dto.request.PasswordChangeRequest;
+import com.team04.domain.user.dto.request.UserUpdateRequest;
+import com.team04.domain.user.dto.response.UserResponse;
 import com.team04.domain.user.entity.Profile;
 import com.team04.domain.user.entity.User;
 import com.team04.domain.user.repository.ProfileRepository;
@@ -10,6 +10,7 @@ import com.team04.domain.user.repository.UserRepository;
 import com.team04.domain.user.status.UserStatus;
 import com.team04.global.exception.CustomException;
 import com.team04.global.exception.ErrorCode;
+import com.team04.infra.redis.RefreshTokenRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -22,6 +23,7 @@ public class UserService {
     private final UserRepository userRepository;
     private final ProfileRepository profileRepository;
     private final PasswordEncoder passwordEncoder;
+    private final RefreshTokenRepository refreshTokenRepository;
 
     @Transactional(readOnly = true)
     public UserResponse getMe(Long userId) {
@@ -66,6 +68,7 @@ public class UserService {
         }
 
         user.changePassword(passwordEncoder.encode(request.newPassword()));
+        refreshTokenRepository.delete(userId);
     }
 
     @Transactional
