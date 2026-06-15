@@ -1,8 +1,10 @@
 package com.team04.domain.user.controller;
 
+import com.team04.domain.businessregistration.dto.request.BusinessRegistrationRequest;
+import com.team04.domain.businessregistration.service.BusinessRegistrationService;
 import com.team04.domain.user.dto.request.PasswordChangeRequest;
-import com.team04.domain.user.dto.response.UserResponse;
 import com.team04.domain.user.dto.request.UserUpdateRequest;
+import com.team04.domain.user.dto.response.UserResponse;
 import com.team04.domain.user.service.UserService;
 import com.team04.global.response.ApiResponse;
 import com.team04.global.security.CustomUserDetails;
@@ -18,6 +20,7 @@ import org.springframework.web.bind.annotation.*;
 public class UserController {
 
     private final UserService userService;
+    private final BusinessRegistrationService businessRegistrationService;
 
     @GetMapping("/me")
     public ApiResponse<UserResponse> getMe(
@@ -47,4 +50,14 @@ public class UserController {
         userService.withdraw(userDetails.getUserId());
         return ResponseEntity.noContent().build();
     }
+
+    @PostMapping("/me/business")
+    public ApiResponse<Void> registerBusiness(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestBody @Valid BusinessRegistrationRequest request
+    ) {
+        businessRegistrationService.register(userDetails.getUserId(), request.businessNumber());
+        return ApiResponse.ofSuccessWithoutBody();
+    }
+
 }
