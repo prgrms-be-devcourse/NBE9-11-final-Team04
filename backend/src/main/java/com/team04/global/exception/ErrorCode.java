@@ -21,8 +21,9 @@ public enum ErrorCode {
 
     // 아이디어
     IDEA_NOT_FOUND(404, "I001", "존재하지 않는 아이디어입니다"),
-    IDEA_ACCESS_DENIED(403, "I002", "NDA 동의 후 열람 가능합니다"),
-    IDEA_EMBARGOED(403, "I003", "엠바고 기간 중인 아이디어입니다"),
+    IDEA_STATUS_NOT_EDITABLE(400, "I004", "현재 상태에서는 아이디어를 수정할 수 없습니다"),
+    IDEA_STATUS_NOT_DELETABLE(400, "I005", "현재 상태에서는 아이디어를 삭제할 수 없습니다"),
+    INVALID_IDEA_STATUS_TRANSITION(400, "I006", "유효하지 않은 아이디어 상태 전이입니다"),
 
     // 전문가
     EXPERT_NOT_FOUND(404, "E001", "존재하지 않는 전문가입니다"),
