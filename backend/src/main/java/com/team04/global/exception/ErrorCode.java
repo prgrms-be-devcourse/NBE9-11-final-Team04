@@ -58,7 +58,13 @@ public enum ErrorCode {
 
     // 분쟁
     DISPUTE_NOT_FOUND(404, "D001", "존재하지 않는 분쟁입니다"),
-    DISPUTE_ALREADY_RESOLVED(400, "D002", "이미 처리된 분쟁입니다");
+    DISPUTE_ALREADY_RESOLVED(400, "D002", "이미 처리된 분쟁입니다"),
+
+    //정산
+    SETTLEMENT_NOT_FOUND(404, "S001", "존재하지 않는 정산입니다"),
+    SETTLEMENT_ALREADY_COMPLETED(409, "S002", "이미 완료된 정산입니다"),
+    SETTLEMENT_DUPLICATE(409, "S003", "중복 정산 요청입니다"),
+    SETTLEMENT_INVALID_STATUS(400, "S004", "정산 처리가 불가능한 상태입니다");
 
     private final int status;
     private final String code;
