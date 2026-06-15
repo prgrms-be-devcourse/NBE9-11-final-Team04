@@ -7,9 +7,11 @@ import com.team04.domain.expert.dto.response.ExpertVerifyResponse;
 import com.team04.domain.expert.service.ExpertProfileService;
 import com.team04.domain.expert.service.ExpertVerifyService;
 import com.team04.global.response.ApiResponse;
+import com.team04.global.security.CustomUserDetails;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -24,12 +26,10 @@ public class ExpertController {
     /* 전문가 프로필 등록 API */
     @PostMapping("/profile")
     public ResponseEntity<ApiResponse<ExpertProfileResponse>> registerProfile(
-            // TODO 인증 정상 동작 이후 @AuthenticationPrincipal로 변경 필요
-            // Headers에 key : "X-User-Id" , 1과 같은 id 값을 value로 사용
-            @RequestHeader("X-User-Id") Long userId,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @Valid @RequestBody ExpertProfileRequest request
     ) {
-        ExpertProfileResponse response = expertProfileService.registerProfile(userId, request);
+        ExpertProfileResponse response = expertProfileService.registerProfile(userDetails.getUserId(), request);
         return ResponseEntity.status(201).body(ApiResponse.ofSuccess(response));
     }
 
@@ -47,10 +47,10 @@ public class ExpertController {
     /* 전문가 프로필 검증 API */
     @PostMapping("/verify")
     public ResponseEntity<ApiResponse<ExpertVerifyResponse>> verify(
-            @RequestHeader("X-User-Id") Long userId,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @Valid @RequestBody ExpertVerifyRequest request
             ) {
-        ExpertVerifyResponse response = expertVerifyService.verify(userId, request);
+        ExpertVerifyResponse response = expertVerifyService.verify(userDetails.getUserId(), request);
         return ResponseEntity.status(201).body(ApiResponse.ofSuccess(response));
     }
 
