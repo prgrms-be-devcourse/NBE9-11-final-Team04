@@ -49,9 +49,9 @@ public enum ErrorCode {
 
     // 마일스톤
     MILESTONE_NOT_FOUND(404, "M001", "존재하지 않는 마일스톤입니다"),
-    MILESTONE_ALREADY_APPROVED(400, "M002", "이미 승인된 마일스톤입니다"),
-    INVALID_MILESTONE_COUNT(400, "M003", "마일스톤은 정확히 3개여야 합니다"),
-    INVALID_MILESTONE_STEP(400, "M004", "마일스톤 단계는 1, 2, 3으로 구성되어야 합니다"),
+    MILESTONE_ALREADY_COMPLETED(400, "M002", "이미 완료된 마일스톤입니다"),
+    INVALID_MILESTONE_COUNT(400, "M003", "현재 상태에서 해당 상태로 전이할 수 없습니다"),
+    INVALID_MILESTONE_STEP(400, "M004", "유효하지 않은 마일스톤 단계입니다"),
 
     // 결제
     PAYMENT_NOT_FOUND(404, "P001", "존재하지 않는 결제입니다"),
