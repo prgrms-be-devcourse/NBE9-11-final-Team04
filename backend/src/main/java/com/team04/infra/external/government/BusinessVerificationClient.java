@@ -1,5 +1,7 @@
 package com.team04.infra.external.government;
 
+import com.team04.global.exception.CustomException;
+import com.team04.global.exception.ErrorCode;
 import com.team04.infra.external.government.dto.response.BusinessVerificationResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -7,8 +9,11 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 import reactor.core.publisher.Mono;
+import reactor.util.retry.Retry;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 
@@ -40,6 +45,10 @@ public class BusinessVerificationClient {
                                 .then(Mono.error(new RuntimeException("국세청 API 500")))
                 )
                 .bodyToMono(BusinessVerificationResponse.class)
+                .retryWhen(Retry.fixedDelay(3, Duration.ofSeconds(1))
+                        .filter(throwable -> !(throwable instanceof WebClientResponseException.InternalServerError))
+                )
+                .onErrorMap(throwable -> new CustomException(ErrorCode.BUSINESS_VERIFICATION_UNAVAILABLE))
                 .block();
 
         if (response == null || response.getData() == null || response.getData().isEmpty()) {
