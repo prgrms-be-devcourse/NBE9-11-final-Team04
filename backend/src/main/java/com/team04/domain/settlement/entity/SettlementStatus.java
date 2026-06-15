@@ -1,4 +1,4 @@
-package com.team04.settlement.entity;
+package com.team04.domain.settlement.entity;
 
 public enum SettlementStatus {
     PENDING,

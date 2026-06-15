@@ -1,4 +1,4 @@
-package com.team04.settlement.entity;
+package com.team04.domain.settlement.entity;
 
 import com.team04.global.entity.BaseEntity;
 import jakarta.persistence.*;

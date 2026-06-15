@@ -1,7 +1,7 @@
-package com.team04.settlement.repository;
+package com.team04.domain.settlement.repository;
 
-import com.team04.settlement.entity.Settlement;
-import com.team04.settlement.entity.SettlementType;
+import com.team04.domain.settlement.entity.Settlement;
+import com.team04.domain.settlement.entity.SettlementType;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
