@@ -1,14 +1,14 @@
 package com.team04.domain.expert.dto.request;
 
-import com.team04.domain.expert.entity.QualificationType;
-import jakarta.validation.constraints.NotBlank;
+import com.team04.domain.expert.entity.TechStack;
 import jakarta.validation.constraints.NotNull;
 
 public record ExpertProfileRequest(
 
-        @NotNull(message = "자격 유형은 필수입니다")
-        QualificationType qualificationType,
+        @NotNull(message = "기술 스택은 필수입니다.")
+        TechStack techStack,
 
-        @NotBlank(message = "자격 번호는 필수입니다")
-        String qualificationNumber
+        String portfolioUrl,
+
+        String career
 ) {}

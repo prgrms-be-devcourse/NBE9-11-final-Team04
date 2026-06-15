@@ -38,12 +38,60 @@ public class ExpertProfile {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private ExpertStatus status = ExpertStatus.ACTIVE;
+    private ExpertStatus status = ExpertStatus.PENDING_VERIFICATION;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "tech_stack")
+    private TechStack techStack;
+
+    @Column(name = "portfolio_url")
+    private String portfolioUrl;
+
+    @Column(columnDefinition = "TEXT")
+    private String career;
+
+    @Column(name = "file_url")
+    private String fileUrl;     // 국가자격증 증명 파일
+
+    // /experts/verify 성공 시 생성 (verified=true)
     @Builder
     public ExpertProfile(User user, QualificationType qualificationType, String qualificationNumber) {
         this.user = user;
         this.qualificationType = qualificationType;
         this.qualificationNumber = qualificationNumber;
+        this.verified = true;
+        this.verifiedAt = LocalDateTime.now();
+        this.status = ExpertStatus.ACTIVE;
+    }
+
+    // API 장애 시 보류 상태로 생성
+    public static ExpertProfile ofPending(
+            User user,
+            QualificationType qualificationType,
+            String qualificationNumber,
+            String fileUrl
+    ) {
+        ExpertProfile profile = new ExpertProfile();
+        profile.user = user;
+        profile.qualificationType = qualificationType;
+        profile.qualificationNumber = qualificationNumber;
+        profile.fileUrl = fileUrl;
+        profile.verified = false;
+        profile.status = ExpertStatus.PENDING_VERIFICATION;
+        return profile;
+    }
+
+    // 검증 완료 처리 (배치에서 보류 → 완료 전환 시 사용)
+    public void verify() {
+        this.verified = true;
+        this.verifiedAt = LocalDateTime.now();
+        this.status = ExpertStatus.ACTIVE;
+    }
+
+    // /experts/profile 등록 시 추가 정보 업데이트
+    public void updateProfile(TechStack techStack, String portfolioUrl, String career) {
+        this.techStack = techStack;
+        this.portfolioUrl = portfolioUrl;
+        this.career = career;
     }
 }
