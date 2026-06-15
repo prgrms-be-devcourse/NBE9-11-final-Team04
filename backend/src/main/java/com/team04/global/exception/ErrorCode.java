@@ -41,11 +41,11 @@ public enum ErrorCode {
     PROJECT_FEE_ALREADY_PAID(409, "F009", "이미 수수료가 결제된 프로젝트입니다"),
 
     // 마일스톤
-    // 마일스톤
     MILESTONE_NOT_FOUND(404, "M001", "존재하지 않는 마일스톤입니다"),
     MILESTONE_ALREADY_COMPLETED(400, "M002", "이미 완료된 마일스톤입니다"),
-    MILESTONE_INVALID_STATUS_TRANSITION(400, "M003", "현재 상태에서 해당 상태로 전이할 수 없습니다"),
-    MILESTONE_INVALID_STEP(400, "M004", "유효하지 않은 마일스톤 단계입니다"),
+    INVALID_MILESTONE_COUNT(400, "M003", "현재 상태에서 해당 상태로 전이할 수 없습니다"),
+    INVALID_MILESTONE_STEP(400, "M004", "유효하지 않은 마일스톤 단계입니다"),
+
     // 결제
     PAYMENT_NOT_FOUND(404, "P001", "존재하지 않는 결제입니다"),
     PAYMENT_FAILED(400, "P002", "결제에 실패했습니다"),
