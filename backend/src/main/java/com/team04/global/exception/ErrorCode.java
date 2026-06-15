@@ -42,7 +42,6 @@ public enum ErrorCode {
     EXTERNAL_API_FAILURE(503, "E005", "외부 API 장애가 발생했습니다"),
     EXTERNAL_API_INVALID(400, "E006", "유효하지 않은 자격 정보입니다"),
 
-
     // 펀딩
     FUNDING_NOT_FOUND(404, "F001", "존재하지 않는 펀딩입니다"),
     FUNDING_ALREADY_CLOSED(400, "F002", "이미 마감된 펀딩입니다"),

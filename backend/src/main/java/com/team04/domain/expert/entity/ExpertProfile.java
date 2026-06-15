@@ -77,8 +77,8 @@ public class ExpertProfile {
             QualificationType qualificationType,
             String qualificationNumber,
             String fileUrl,
-            String startDate,           // 추가
-            String representativeName   // 추가
+            String startDate,
+            String representativeName
     ) {
         ExpertProfile profile = new ExpertProfile();
         profile.user = user;

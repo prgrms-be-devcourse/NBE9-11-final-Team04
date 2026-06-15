@@ -87,8 +87,8 @@ public class ExpertVerifyService {
                         request.qualificationType(),
                         request.qualificationNumber(),
                         null,
-                        request.startDate(),           // 추가
-                        request.representativeName()   // 추가
+                        request.startDate(),
+                        request.representativeName()
                 );
                 expertProfileRepository.save(pending);
                 return ExpertVerifyResponse.from(pending);

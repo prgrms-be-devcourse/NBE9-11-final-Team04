@@ -4,7 +4,6 @@ import com.team04.domain.expert.dto.request.ExpertProfileRequest;
 import com.team04.domain.expert.dto.response.ExpertProfileResponse;
 import com.team04.domain.expert.entity.ExpertProfile;
 import com.team04.domain.expert.repository.ExpertProfileRepository;
-import com.team04.domain.user.entity.User;
 import com.team04.domain.user.repository.UserRepository;
 import com.team04.global.exception.CustomException;
 import com.team04.global.exception.ErrorCode;
@@ -38,7 +37,6 @@ public class ExpertProfileService {
 
         return ExpertProfileResponse.from(profile);
     }
-
 
     @Transactional(readOnly = true)
     public ExpertProfileResponse getProfile(Long expertId) {

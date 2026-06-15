@@ -15,7 +15,6 @@ public record ExpertProfileResponse(
         TechStack techStack,
         String portfolioUrl,
         String career
-
 ) {
     public static ExpertProfileResponse from(ExpertProfile profile) {
         return new ExpertProfileResponse(
