@@ -22,11 +22,10 @@ public class AuthController {
     private final AuthService authService;
 
     @PostMapping("/signup")
-    public ResponseEntity<ApiResponse<Void>> signup(
+    public ResponseEntity<ApiResponse<TokenResponse>> signup(
             @RequestBody @Valid SignupRequest request
     ){
-        authService.signup(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ofSuccessWithoutBody());
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ofSuccess(authService.signup(request)));
     }
 
     @PostMapping("/email-verify/send")

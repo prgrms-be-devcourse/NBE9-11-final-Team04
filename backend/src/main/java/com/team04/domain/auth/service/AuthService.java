@@ -35,7 +35,7 @@ public class AuthService {
     private static final Duration REFRESH_TOKEN_TTL = Duration.ofDays(14);
 
     @Transactional
-    public void signup(SignupRequest request){
+    public TokenResponse signup(SignupRequest request){
         if(userRepository.existsByEmail(request.email())){
             throw new CustomException(ErrorCode.DUPLICATE_EMAIL);
         }
@@ -48,6 +48,12 @@ public class AuthService {
                 request.role()
         );
         userRepository.save(user);
+
+        String accessToken = jwtUtil.generateAccessToken(user.getId(), user.getRole());
+        String refreshToken = jwtUtil.generateRefreshToken(user.getId());
+        refreshTokenRepository.save(user.getId(), refreshToken, REFRESH_TOKEN_TTL);
+
+        return new TokenResponse(accessToken, refreshToken);
     }
 
     @Transactional(readOnly = true)
