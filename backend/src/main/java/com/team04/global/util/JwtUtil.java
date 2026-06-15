@@ -1,6 +1,6 @@
 package com.team04.global.util;
 
-import com.team04.global.common.Role;
+import com.team04.domain.user.entity.Role;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtParser;
 import io.jsonwebtoken.Jwts;

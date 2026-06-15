@@ -1,4 +1,4 @@
-package com.team04.global.common;
+package com.team04.domain.user.entity;
 
 public enum Role {
     PROPOSER,

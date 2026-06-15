@@ -7,7 +7,7 @@ import com.team04.domain.user.entity.User;
 import com.team04.domain.user.repository.ProfileRepository;
 import com.team04.domain.user.repository.UserRepository;
 import com.team04.domain.user.status.UserStatus;
-import com.team04.global.common.Role;
+import com.team04.domain.user.entity.Role;
 import com.team04.global.exception.CustomException;
 import com.team04.global.exception.ErrorCode;
 import com.team04.infra.redis.RefreshTokenRepository;
