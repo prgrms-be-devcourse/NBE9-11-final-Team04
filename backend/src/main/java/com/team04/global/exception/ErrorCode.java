@@ -25,8 +25,10 @@ public enum ErrorCode {
     OTP_EXPIRED(400, "A003", "인증 코드가 만료되었습니다"),
     ACCOUNT_WITHDRAWN(403, "U005", "탈퇴한 계정입니다"),
 
-    //API
+    // 사업자검증
     BUSINESS_VERIFICATION_UNAVAILABLE(503, "B001", "사업자 인증 서비스가 일시적으로 불안정합니다. 잠시 후 다시 시도해주세요"),
+    BUSINESS_VERIFICATION_FAILED(400, "B002", "사업자 진위확인에 실패했습니다"),
+    BUSINESS_ALREADY_REGISTERED(409, "B003", "이미 등록된 사업자번호입니다"),
 
     // 아이디어
     IDEA_NOT_FOUND(404, "I001", "존재하지 않는 아이디어입니다"),

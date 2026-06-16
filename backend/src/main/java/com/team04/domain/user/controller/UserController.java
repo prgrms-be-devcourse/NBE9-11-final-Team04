@@ -1,6 +1,7 @@
 package com.team04.domain.user.controller;
 
 import com.team04.domain.businessregistration.dto.request.BusinessRegistrationRequest;
+import com.team04.domain.businessregistration.dto.response.BusinessRegistrationResponse;
 import com.team04.domain.businessregistration.service.BusinessRegistrationService;
 import com.team04.domain.user.dto.request.PasswordChangeRequest;
 import com.team04.domain.user.dto.request.UserUpdateRequest;
@@ -52,12 +53,12 @@ public class UserController {
     }
 
     @PostMapping("/me/business")
-    public ApiResponse<Void> registerBusiness(
+    public ApiResponse<BusinessRegistrationResponse> registerBusiness(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestBody @Valid BusinessRegistrationRequest request
     ) {
-        businessRegistrationService.register(userDetails.getUserId(), request.businessNumber());
-        return ApiResponse.ofSuccessWithoutBody();
+        return ApiResponse.ofSuccess(businessRegistrationService.register(userDetails.getUserId(), request));
     }
+
 
 }

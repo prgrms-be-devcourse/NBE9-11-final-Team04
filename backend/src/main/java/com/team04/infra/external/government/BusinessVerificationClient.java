@@ -14,6 +14,7 @@ import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
 
 import java.time.Duration;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -29,13 +30,24 @@ public class BusinessVerificationClient {
 
     private static final String BASE_URL = "https://api.odcloud.kr/api/nts-businessman/v1";
 
-    public boolean verify(String businessNumber) {
+    public boolean verify(String businessNumber, String representativeName, String openDate) {
+        Map<String, Object> business = new HashMap<>();
+        business.put("b_no", businessNumber);
+        business.put("p_nm", representativeName);
+        business.put("start_dt", openDate);
+        business.put("p_nm2", "");
+        business.put("b_nm", "");
+        business.put("tax_type", "");
+        business.put("b_sector", "");
+        business.put("b_adr", "");
+
         Map<String, Object> requestBody = Map.of(
-                "b_no", List.of(businessNumber)
+                "businesses", List.of(business)
         );
 
+
         BusinessVerificationResponse response = webClient.post()
-                .uri(BASE_URL + "/status?serviceKey=" + apiKey)
+                .uri(BASE_URL + "/validate?serviceKey=" + apiKey)
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(requestBody)
                 .retrieve()
@@ -55,6 +67,6 @@ public class BusinessVerificationClient {
             return false;
         }
 
-        return "01".equals(response.getData().get(0).getBSttCd());
+        return "01".equals(response.getData().get(0).getValid());
     }
 }

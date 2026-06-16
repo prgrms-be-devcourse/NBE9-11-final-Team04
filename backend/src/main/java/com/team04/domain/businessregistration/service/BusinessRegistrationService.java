@@ -1,5 +1,7 @@
 package com.team04.domain.businessregistration.service;
 
+import com.team04.domain.businessregistration.dto.request.BusinessRegistrationRequest;
+import com.team04.domain.businessregistration.dto.response.BusinessRegistrationResponse;
 import com.team04.domain.businessregistration.entity.BusinessRegistration;
 import com.team04.domain.businessregistration.repository.BusinessRegistrationRepository;
 import com.team04.domain.user.entity.User;
@@ -21,7 +23,7 @@ public class BusinessRegistrationService {
     private final UserRepository userRepository;
 
     @Transactional
-    public void register(Long userId, String businessNumber){
+    public BusinessRegistrationResponse register(Long userId, BusinessRegistrationRequest request){
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
@@ -32,13 +34,29 @@ public class BusinessRegistrationService {
             throw new CustomException(ErrorCode.ACCOUNT_WITHDRAWN);
         }
 
-        BusinessRegistration registration = BusinessRegistration.create(user, businessNumber);
-
-        boolean verified = businessVerificationClient.verify(businessNumber);
-        if(verified){
-            registration.verify();
+        if (businessRegistrationRepository.existsByBusinessNumber(request.businessNumber())) {
+            throw new CustomException(ErrorCode.BUSINESS_ALREADY_REGISTERED);
         }
 
+        BusinessRegistration registration = BusinessRegistration.create(user, request.businessNumber());
+
+        boolean verified = businessVerificationClient.verify(
+                request.businessNumber(),
+                request.representativeName(),
+                request.openDate()
+        );
+
+        if (!verified) {
+            throw new CustomException(ErrorCode.BUSINESS_VERIFICATION_FAILED);
+        }
+
+        registration.verify();
         businessRegistrationRepository.save(registration);
+
+        return new BusinessRegistrationResponse(
+                registration.getBusinessNumber(),
+                registration.isVerified(),
+                registration.getVerifiedAt()
+        );
     }
 }

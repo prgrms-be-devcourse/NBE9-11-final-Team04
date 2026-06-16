@@ -15,7 +15,7 @@ public class BusinessVerificationResponse {
     @Getter
     @NoArgsConstructor
     public static class Data {
-        @JsonProperty("b_stt_cd")
-        private String bSttCd;  // 01: 계속사업자, 02: 휴업, 03: 폐업
+        @JsonProperty("valid")
+        private String valid;  // 01: 일치, 02: 불일치
     }
 }
