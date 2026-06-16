@@ -14,3 +14,40 @@ spring:
 
 server:
   port: 8080
+
+verification:
+  forbidden-keywords:
+    - 100% 보장
+    - 수익 확정
+    - 무조건 성공
+    - 절대 실패 없음
+    - 원금 보장
+    - 확실한 수익
+    - 대박 보장
+    - 즉시 수익
+    - 리스크 없음
+    - 위험 없는 투자
+    - 무위험
+    - 수익률 보장
+    - 손실 없음
+    - 반드시 성공
+    - 무조건 수익
+
+openai:
+  verification:
+    base-url: https://api.openai.com
+    model: gpt-4o-mini
+    timeout-seconds: 300
+
+resilience4j:
+  retry:
+    instances:
+      openAiVerification:
+        max-attempts: 3
+        wait-duration: 2s
+  circuitbreaker:
+    instances:
+      openAiVerification:
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 30s
