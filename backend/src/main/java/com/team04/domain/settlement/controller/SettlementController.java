@@ -20,7 +20,7 @@ public class SettlementController {
 
     private final SettlementService settlementService;
 
-    // 프로젝트별 정산 이력 조회
+    /** 프로젝트 ID 기준으로 해당 프로젝트의 전체 정산 이력을 최신순으로 조회합니다. 관리자는 모든 프로젝트 조회 가능, 제안자는 본인 프로젝트만 조회 가능합니다. */
     @GetMapping("/ideas/{ideaId}")
     public ApiResponse<List<SettlementResponse>> getSettlementsByIdea(
             @PathVariable Long ideaId,
@@ -28,7 +28,7 @@ public class SettlementController {
         return ApiResponse.ofSuccess(settlementService.getSettlementsByIdea(
                 ideaId, userDetails.getUserId(), userDetails.getRole()));
     }
-    // 정산 단건 조회
+    /** 정산 ID로 단건 정산 정보를 조회합니다. 관리자는 모든 정산 조회 가능, 제안자는 본인 프로젝트 정산만 조회 가능합니다. */
     @GetMapping("/{settlementId}")
     public ApiResponse<SettlementResponse> getSettlement(
             @PathVariable Long settlementId,
