@@ -28,3 +28,7 @@ jwt:
   secret: test-secret-key-minimum-256-bits-long-for-hs256-algorithm
   access-expiry: 30m
   refresh-expiry: 14d
+
+nts:
+  api:
+    service-key: test-service-key
