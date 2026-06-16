@@ -18,7 +18,7 @@ public record OpenAiVerificationProperties(
 
     /** 설정이 비어 있을 때 사용할 검증 모델명을 반환합니다. */
     public String model() {
-        return model == null ? "gpt-4.1-mini" : model;
+        return model == null ? "gpt-4o-mini" : model;
     }
 
     /** 설정이 비어 있을 때 사용할 5분 타임아웃 초를 반환합니다. */

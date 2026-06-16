@@ -30,7 +30,14 @@ public class OpenAiVerificationService {
     @CircuitBreaker(name = "openAiVerification")
     public AiVerificationStructuredResult verify(VerificationRequest request) {
         try {
-            String content = client.verify(buildRequest(request)).firstContent();
+            var response = client.verify(buildRequest(request));
+            if (response == null || response.choices() == null || response.choices().isEmpty()) {
+                throw new CustomException(ErrorCode.AI_RESPONSE_EMPTY);
+            }
+            String content = response.firstContent();
+            if (content == null || content.isBlank()) {
+                throw new CustomException(ErrorCode.AI_RESPONSE_EMPTY);
+            }
             return objectMapper.readValue(content, AiVerificationStructuredResult.class);
         } catch (CustomException exception) {
             throw exception;

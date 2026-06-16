@@ -10,6 +10,7 @@ import com.team04.domain.verification.entity.VerificationDecision;
 import com.team04.domain.verification.entity.VerificationResult;
 import com.team04.domain.verification.entity.VerificationStatus;
 import com.team04.domain.verification.event.NotificationEvent;
+import com.team04.domain.verification.event.VerificationRequestedEvent;
 import com.team04.domain.verification.properties.VerificationProperties;
 import com.team04.domain.verification.repository.ProjectVerificationRepository;
 import com.team04.domain.verification.repository.TrustScoreRepository;
@@ -22,7 +23,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -54,17 +56,17 @@ public class VerificationAsyncProcessor {
                 .toList();
     }
 
-    /** 별도 스레드와 별도 트랜잭션에서 금칙어 사전 및 OpenAI 검증을 수행합니다. */
+    /** 트랜잭션 커밋 후 별도 스레드에서 금칙어 사전 및 OpenAI 검증을 수행합니다. */
     @Async("verificationTaskExecutor")
-    @Transactional
-    public void processAiVerification(Long verificationId, VerificationRequest request) {
-        ProjectVerification verification = getVerification(verificationId);
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void processAiVerification(VerificationRequestedEvent event) {
+        ProjectVerification verification = getVerification(event.verificationId());
         try {
-            if (containsForbiddenKeyword(request)) {
+            if (containsForbiddenKeyword(event.request())) {
                 applyDecision(verification, forbiddenKeywordResult());
                 return;
             }
-            applyDecision(verification, openAiVerificationService.verify(request));
+            applyDecision(verification, openAiVerificationService.verify(event.request()));
         } catch (Exception exception) {
             VerificationStatus previous = verification.getStatus();
             verification.changeStatus(VerificationStatus.PENDING_ADMIN_REVIEW);

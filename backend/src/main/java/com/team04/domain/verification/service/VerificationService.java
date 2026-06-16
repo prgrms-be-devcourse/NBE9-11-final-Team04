@@ -5,11 +5,13 @@ import com.team04.domain.verification.dto.response.VerificationResponse;
 import com.team04.domain.verification.entity.ProjectVerification;
 import com.team04.domain.verification.entity.VerificationAuditLog;
 import com.team04.domain.verification.entity.VerificationStatus;
+import com.team04.domain.verification.event.VerificationRequestedEvent;
 import com.team04.domain.verification.repository.ProjectVerificationRepository;
 import com.team04.domain.verification.repository.VerificationAuditLogRepository;
 import com.team04.global.exception.CustomException;
 import com.team04.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,7 +28,7 @@ public class VerificationService {
 
     private final ProjectVerificationRepository projectVerificationRepository;
     private final VerificationAuditLogRepository auditLogRepository;
-    private final VerificationAsyncProcessor verificationAsyncProcessor;
+    private final ApplicationEventPublisher eventPublisher;
 
     /** 검증 요청을 접수하고 Controller 트랜잭션 종료 후 백그라운드 검증을 시작합니다. */
     @Transactional
@@ -34,10 +36,18 @@ public class VerificationService {
         ProjectVerification verification = projectVerificationRepository.findByIdeaId(request.ideaId())
                 .orElseGet(() -> new ProjectVerification(request.ideaId()));
         blockIfWaiting(verification);
+        VerificationStatus currentStatus = verification.getStatus();
+        if (currentStatus == VerificationStatus.NEEDS_REVISION) {
+            throw new CustomException(ErrorCode.USE_RESUBMIT_API);
+        }
+        if (currentStatus == VerificationStatus.AI_VERIFYING ||
+                currentStatus == VerificationStatus.PENDING_ADMIN_REVIEW) {
+            throw new CustomException(ErrorCode.VERIFICATION_ALREADY_IN_PROGRESS);
+        }
         verification.startAiVerification();
         ProjectVerification saved = projectVerificationRepository.save(verification);
         audit(saved, VerificationStatus.DRAFT, VerificationStatus.AI_VERIFYING, "검증 요청 접수");
-        verificationAsyncProcessor.processAiVerification(saved.getId(), request);
+        eventPublisher.publishEvent(new VerificationRequestedEvent(saved.getId(), request));
         return VerificationResponse.of(saved, "검증 중입니다.");
     }
 
@@ -55,7 +65,7 @@ public class VerificationService {
         VerificationStatus previous = verification.getStatus();
         verification.resubmit();
         audit(verification, previous, VerificationStatus.AI_VERIFYING, "보완안 재제출");
-        verificationAsyncProcessor.processAiVerification(verification.getId(), request);
+        eventPublisher.publishEvent(new VerificationRequestedEvent(verification.getId(), request));
         return VerificationResponse.of(verification, "검증 중입니다.");
     }
 

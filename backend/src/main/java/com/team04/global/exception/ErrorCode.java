@@ -39,9 +39,11 @@ public enum ErrorCode {
     INVALID_VERIFICATION_STATUS_TRANSITION(400, "V001", "유효하지 않은 검증 상태 전이입니다"),
     VERIFICATION_NOT_FOUND(404, "V002", "존재하지 않는 검증 요청입니다"),
     VERIFICATION_WAITING_PERIOD_ACTIVE(409, "V003", "재등록 대기 기간이 만료되지 않았습니다"),
+    USE_RESUBMIT_API(400, "V004", "보완 필요 상태에서는 재제출 API를 사용해야 합니다"),
 
     // AI 검증
     AI_RESPONSE_EMPTY(500, "V005", "OpenAI 응답이 비어 있습니다"),
+    VERIFICATION_ALREADY_IN_PROGRESS(409, "V006", "이미 검증이 진행 중입니다"),
 
     // 전문가
     EXPERT_NOT_FOUND(404, "E001", "존재하지 않는 전문가입니다"),
