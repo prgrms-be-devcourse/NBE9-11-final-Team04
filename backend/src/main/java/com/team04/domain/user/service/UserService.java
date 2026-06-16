@@ -56,6 +56,7 @@ public class UserService {
 
         profile.update(request.intro(), request.portfolioUrl());
         profileRepository.save(profile);
+        userRepository.save(user);
 
         return new UserResponse(user, profile);
     }
