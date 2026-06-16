@@ -33,6 +33,9 @@ public enum ErrorCode {
     IDEA_STATUS_NOT_EDITABLE(400, "I004", "현재 상태에서는 아이디어를 수정할 수 없습니다"),
     IDEA_STATUS_NOT_DELETABLE(400, "I005", "현재 상태에서는 아이디어를 삭제할 수 없습니다"),
     INVALID_IDEA_STATUS_TRANSITION(400, "I006", "유효하지 않은 아이디어 상태 전이입니다"),
+    IDEA_DRAFT_NOT_FOUND(404, "I007", "존재하지 않는 아이디어 임시저장입니다"),
+    IDEA_DRAFT_LIMIT_EXCEEDED(409, "I008", "아이디어 임시저장은 최대 50개까지 가능합니다"),
+    SELF_REPORT_NOT_ALLOWED(400, "I009", "본인 아이디어는 신고할 수 없습니다"),
 
     // 전문가
     EXPERT_NOT_FOUND(404, "E001", "존재하지 않는 전문가입니다"),
@@ -73,7 +76,8 @@ public enum ErrorCode {
     SETTLEMENT_NOT_FOUND(404, "S001", "존재하지 않는 정산입니다"),
     SETTLEMENT_ALREADY_COMPLETED(409, "S002", "이미 완료된 정산입니다"),
     SETTLEMENT_DUPLICATE(409, "S003", "중복 정산 요청입니다"),
-    SETTLEMENT_INVALID_STATUS(400, "S004", "정산 처리가 불가능한 상태입니다");
+    SETTLEMENT_INVALID_STATUS(400, "S004", "정산 처리가 불가능한 상태입니다"),
+    SETTLEMENT_ACCESS_DENIED(403, "S005", "정산 조회 권한이 없습니다");
 
     private final int status;
     private final String code;
