@@ -77,7 +77,8 @@ public enum ErrorCode {
     SETTLEMENT_ALREADY_COMPLETED(409, "S002", "이미 완료된 정산입니다"),
     SETTLEMENT_DUPLICATE(409, "S003", "중복 정산 요청입니다"),
     SETTLEMENT_INVALID_STATUS(400, "S004", "정산 처리가 불가능한 상태입니다"),
-    SETTLEMENT_ACCESS_DENIED(403, "S005", "정산 조회 권한이 없습니다");
+    SETTLEMENT_ACCESS_DENIED(403, "S005", "정산 조회 권한이 없습니다"),
+    SETTLEMENT_INVALID_STATUS_TRANSITION(400, "S006", "현재 상태에서 해당 상태로 전이할 수 없습니다");
 
     private final int status;
     private final String code;
