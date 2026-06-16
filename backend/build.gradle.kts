@@ -27,7 +27,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-data-redis")
     implementation("org.springframework.boot:spring-boot-starter-mail")
     implementation("io.github.resilience4j:resilience4j-spring-boot4:2.4.0")
-    implementation("org.springframework.boot:spring-boot-starter-aop")
+    implementation("org.aspectj:aspectjweaver")
     implementation("io.jsonwebtoken:jjwt-api:0.12.6")
     implementation("io.github.openfeign.querydsl:querydsl-jpa:5.6.1:jakarta")
     compileOnly("org.projectlombok:lombok")
