@@ -6,6 +6,7 @@ import com.team04.domain.milestone.entity.CompletionReport;
 import com.team04.domain.milestone.entity.CompletionReportStatus;
 import com.team04.domain.milestone.entity.CompletionReportType;
 import com.team04.domain.milestone.entity.Milestone;
+import com.team04.domain.milestone.entity.MilestoneStatus;
 import com.team04.domain.milestone.repository.CompletionReportRepository;
 import com.team04.domain.milestone.repository.MilestoneRepository;
 import com.team04.domain.settlement.service.SettlementService;
@@ -32,7 +33,7 @@ public class MilestoneService {
     public CompletionReportResponse submitCompletionReport(Long milestoneId, CompletionReportRequest request) {
         Milestone milestone = findMilestone(milestoneId);
 
-        if (milestone.getStatus() != com.team04.domain.milestone.entity.MilestoneStatus.IN_PROGRESS) {
+        if (milestone.getStatus() != MilestoneStatus.IN_PROGRESS) {
             throw new CustomException(ErrorCode.INVALID_MILESTONE_STATUS_TRANSITION);
         }
 
@@ -52,14 +53,19 @@ public class MilestoneService {
     /**
      * 소명 보고서 제출
      * 제안자만 가능, 완료 보고서가 REJECTED 상태여야 함
+     * 소명 보고서가 이미 존재하면 중복 제출 불가
      */
     @Transactional
     public CompletionReportResponse submitAppealReport(Long milestoneId, CompletionReportRequest request) {
         CompletionReport completionReport = completionReportRepository
                 .findByMilestoneIdAndType(milestoneId, CompletionReportType.COMPLETION)
-                .orElseThrow(() -> new CustomException(ErrorCode.MILESTONE_NOT_FOUND));
+                .orElseThrow(() -> new CustomException(ErrorCode.INVALID_MILESTONE_STATUS_TRANSITION));
 
         if (completionReport.getStatus() != CompletionReportStatus.REJECTED) {
+            throw new CustomException(ErrorCode.INVALID_MILESTONE_STATUS_TRANSITION);
+        }
+
+        if (completionReportRepository.findByMilestoneIdAndType(milestoneId, CompletionReportType.APPEAL).isPresent()) {
             throw new CustomException(ErrorCode.INVALID_MILESTONE_STATUS_TRANSITION);
         }
 
@@ -116,6 +122,6 @@ public class MilestoneService {
                 .findByMilestoneIdAndType(milestoneId, CompletionReportType.APPEAL)
                 .orElseGet(() -> completionReportRepository
                         .findByMilestoneIdAndType(milestoneId, CompletionReportType.COMPLETION)
-                        .orElseThrow(() -> new CustomException(ErrorCode.MILESTONE_NOT_FOUND)));
+                        .orElseThrow(() -> new CustomException(ErrorCode.INVALID_MILESTONE_STATUS_TRANSITION)));
     }
 }

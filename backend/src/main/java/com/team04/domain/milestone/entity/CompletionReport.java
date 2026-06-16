@@ -1,5 +1,7 @@
 package com.team04.domain.milestone.entity;
 
+import com.team04.global.exception.CustomException;
+import com.team04.global.exception.ErrorCode;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -45,13 +47,19 @@ public class CompletionReport {
         this.submittedAt = LocalDateTime.now();
     }
 
-    /** 보고서를 승인합니다. */
+    /** 보고서를 승인합니다. SUBMITTED 상태에서만 가능합니다. */
     public void approve() {
+        if (this.status != CompletionReportStatus.SUBMITTED) {
+            throw new CustomException(ErrorCode.INVALID_MILESTONE_STATUS_TRANSITION);
+        }
         this.status = CompletionReportStatus.APPROVED;
     }
 
-    /** 보고서를 반려합니다. */
+    /** 보고서를 반려합니다. SUBMITTED 상태에서만 가능합니다. */
     public void reject() {
+        if (this.status != CompletionReportStatus.SUBMITTED) {
+            throw new CustomException(ErrorCode.INVALID_MILESTONE_STATUS_TRANSITION);
+        }
         this.status = CompletionReportStatus.REJECTED;
     }
 }
