@@ -30,9 +30,14 @@ public class ExpertVerifyService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-        if (expertProfileRepository.existsByUserId(userId)) {
-            throw new CustomException(ErrorCode.DUPLICATE_EXPERT_PROFILE);
-        }
+        // verified=true인 경우에만 중복 방어
+        expertProfileRepository.findByUserId(userId).ifPresent(existing -> {
+            if (existing.isVerified()) {
+                throw new CustomException(ErrorCode.DUPLICATE_EXPERT_PROFILE);
+            }
+            // 미검증 상태면 기존 프로필 삭제 후 재등록
+            expertProfileRepository.delete(existing);
+        });
 
         // NATIONAL_QUALIFICATION → 파일 URL 필수 검증
         if (request.qualificationType() == QualificationType.NATIONAL_QUALIFICATION
@@ -49,7 +54,9 @@ public class ExpertVerifyService {
                         user,
                         request.qualificationType(),
                         request.qualificationNumber(),
-                        request.fileUrl()
+                        request.fileUrl(),
+                        null,   // startDate 불필요
+                        null    // representativeName 불필요
                 );
                 expertProfileRepository.save(pending);
                 log.info("국가자격 검증 보류 처리: userId={}", userId);
@@ -79,7 +86,9 @@ public class ExpertVerifyService {
                         user,
                         request.qualificationType(),
                         request.qualificationNumber(),
-                        null
+                        null,
+                        request.startDate(),
+                        request.representativeName()
                 );
                 expertProfileRepository.save(pending);
                 return ExpertVerifyResponse.from(pending);

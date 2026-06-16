@@ -9,6 +9,7 @@ import com.team04.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Profile;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -17,6 +18,7 @@ import java.util.List;
 
 @Slf4j
 @Component
+@Profile("!local")
 @RequiredArgsConstructor
 public class ExternalVerifyClientImpl implements ExternalVerifyClient{
 
@@ -58,7 +60,7 @@ public class ExternalVerifyClientImpl implements ExternalVerifyClient{
                         .body(NtsValidateResponse.class);
 
                 if (response == null) {
-                    throw new CustomException(ErrorCode.EXTERNAL_API_FAILURE);
+                    throw new IllegalStateException("국세청 API 응답 바디가 비어 있습니다.");
                 }
 
                 return response.isValid();
