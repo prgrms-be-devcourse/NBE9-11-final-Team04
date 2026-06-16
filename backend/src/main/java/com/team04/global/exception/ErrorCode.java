@@ -24,6 +24,7 @@ public enum ErrorCode {
     INVALID_OTP(400, "A002", "인증 코드가 올바르지 않습니다"),
     OTP_EXPIRED(400, "A003", "인증 코드가 만료되었습니다"),
     ACCOUNT_WITHDRAWN(403, "U005", "탈퇴한 계정입니다"),
+    UNDERAGE(403, "U006", "만 19세 미만은 가입할 수 없습니다"),
 
     // 아이디어
     IDEA_NOT_FOUND(404, "I001", "존재하지 않는 아이디어입니다"),

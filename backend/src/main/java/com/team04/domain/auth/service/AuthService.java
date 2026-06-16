@@ -41,6 +41,9 @@ public class AuthService {
         if (request.role() == Role.ADMIN) {
             throw new CustomException(ErrorCode.INVALID_INPUT);
         }
+        if (request.age() < 19) {
+            throw new CustomException(ErrorCode.UNDERAGE);
+        }
         if(userRepository.existsByEmail(request.email())){
             throw new CustomException(ErrorCode.DUPLICATE_EMAIL);
         }

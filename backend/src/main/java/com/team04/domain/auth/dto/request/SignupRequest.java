@@ -11,7 +11,7 @@ public record SignupRequest(
         String password,
         @NotBlank String name,
         @NotBlank String nickname,
-        @Min(1) @Max(150) int age,
+        @Min(19) @Max(150) int age,
         @NotNull Role role
 ) {
 }
