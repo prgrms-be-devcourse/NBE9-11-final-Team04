@@ -38,6 +38,9 @@ public enum ErrorCode {
     EXPERT_NOT_FOUND(404, "E001", "존재하지 않는 전문가입니다"),
     EXPERT_NOT_VERIFIED(403, "E002", "자격 검증이 완료되지 않은 전문가입니다"),
     EXPERT_SUSPENDED(403, "E003", "자격 정지된 전문가 계정입니다"),
+    DUPLICATE_EXPERT_PROFILE(409, "E004", "이미 등록된 전문가 프로필입니다"),
+    EXTERNAL_API_FAILURE(503, "E005", "외부 API 장애가 발생했습니다"),
+    EXTERNAL_API_INVALID(400, "E006", "유효하지 않은 자격 정보입니다"),
 
     // 펀딩
     FUNDING_NOT_FOUND(404, "F001", "존재하지 않는 펀딩입니다"),
