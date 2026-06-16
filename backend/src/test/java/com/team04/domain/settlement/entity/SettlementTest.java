@@ -59,7 +59,8 @@ class SettlementTest {
         Settlement settlement = createSettlement();
         settlement.complete();
         assertThatThrownBy(settlement::complete)
-                .isInstanceOf(CustomException.class);
+                .isInstanceOf(CustomException.class)
+                .hasMessageContaining("현재 상태에서 해당 상태로 전이할 수 없습니다");
     }
 
     @Test

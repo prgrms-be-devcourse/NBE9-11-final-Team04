@@ -62,30 +62,28 @@ public class Settlement extends BaseEntity {
         this.idempotencyKey = idempotencyKey;
     }
     public void complete() {
-        if (this.status != SettlementStatus.PENDING) {
-            throw new CustomException(ErrorCode.SETTLEMENT_INVALID_STATUS_TRANSITION);
-        }
+        validatePendingStatus();
         this.status = SettlementStatus.COMPLETED;
     }
 
     public void partialRefund() {
-        if (this.status != SettlementStatus.PENDING) {
-            throw new CustomException(ErrorCode.SETTLEMENT_INVALID_STATUS_TRANSITION);
-        }
+        validatePendingStatus();
         this.status = SettlementStatus.PARTIALLY_REFUNDED;
     }
 
     public void forfeit() {
-        if (this.status != SettlementStatus.PENDING) {
-            throw new CustomException(ErrorCode.SETTLEMENT_INVALID_STATUS_TRANSITION);
-        }
+        validatePendingStatus();
         this.status = SettlementStatus.FORFEITED;
     }
 
     public void refund() {
+        validatePendingStatus();
+        this.status = SettlementStatus.REFUNDED;
+    }
+
+    private void validatePendingStatus() {
         if (this.status != SettlementStatus.PENDING) {
             throw new CustomException(ErrorCode.SETTLEMENT_INVALID_STATUS_TRANSITION);
         }
-        this.status = SettlementStatus.REFUNDED;
     }
 }
