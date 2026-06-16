@@ -34,6 +34,12 @@ public enum ErrorCode {
     IDEA_DRAFT_LIMIT_EXCEEDED(409, "I008", "아이디어 임시저장은 최대 50개까지 가능합니다"),
     SELF_REPORT_NOT_ALLOWED(400, "I009", "본인 아이디어는 신고할 수 없습니다"),
 
+    // 검증
+    INVALID_VERIFICATION_STATUS_TRANSITION(400, "V001", "유효하지 않은 검증 상태 전이입니다"),
+
+    // AI 검증
+    AI_RESPONSE_EMPTY(500, "V005", "OpenAI 응답이 비어 있습니다"),
+
     // 전문가
     EXPERT_NOT_FOUND(404, "E001", "존재하지 않는 전문가입니다"),
     EXPERT_NOT_VERIFIED(403, "E002", "자격 검증이 완료되지 않은 전문가입니다"),
