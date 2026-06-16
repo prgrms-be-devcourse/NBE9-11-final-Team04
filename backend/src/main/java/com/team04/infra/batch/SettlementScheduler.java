@@ -22,7 +22,7 @@ public class SettlementScheduler {
      * 매일 자정 실행
      * 펀딩 마감됐고 목표 금액 미달성인 프로젝트를 감지해 자동으로 환불 장부 생성
      */
-    @Scheduled(cron = "0 0 0 * * *")
+    @Scheduled(cron = "0 * * * * *")
     public void processFailedFundingRefunds() {
         log.info("목표 미달성 자동 환불 스케줄러 시작");
 
