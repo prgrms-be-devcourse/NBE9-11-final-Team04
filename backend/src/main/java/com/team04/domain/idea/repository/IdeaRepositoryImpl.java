@@ -79,4 +79,18 @@ public class IdeaRepositoryImpl implements IdeaRepositoryCustom {
         }
         return idea.createdAt.desc();
     }
+    /** 펀딩 종료일이 지났고 현재 모금액이 목표액에 미달한 아이디어 ID 목록을 반환합니다. */
+    @Override
+    public List<Long> findFailedFundingIdeaIds(LocalDateTime now) {
+        QIdea idea = QIdea.idea;
+        return queryFactory
+                .select(idea.id)
+                .from(idea)
+                .where(
+                        idea.deletedAt.isNull(),
+                        idea.fundingEndAt.lt(now),
+                        idea.currentAmount.lt(idea.goalAmount)
+                )
+                .fetch();
+    }
 }
