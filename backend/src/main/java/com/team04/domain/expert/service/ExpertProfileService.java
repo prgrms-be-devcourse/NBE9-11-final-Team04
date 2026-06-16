@@ -38,8 +38,7 @@ public class ExpertProfileService {
         return ExpertProfileResponse.from(profile);
     }
 
-
-    @Transactional
+    @Transactional(readOnly = true)
     public ExpertProfileResponse getProfile(Long expertId) {
         ExpertProfile profile = expertProfileRepository.findById(expertId)
                 .orElseThrow(() -> new CustomException(ErrorCode.EXPERT_NOT_FOUND));
