@@ -17,6 +17,7 @@ import com.team04.domain.verification.repository.VerificationAuditLogRepository;
 import com.team04.domain.verification.repository.VerificationResultRepository;
 import com.team04.global.exception.CustomException;
 import com.team04.global.exception.ErrorCode;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Async;
@@ -25,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.regex.Pattern;
 
 /** Controller 요청 트랜잭션과 분리된 비동기 AI 검증 처리를 담당하는 서비스입니다. */
 @Service
@@ -40,6 +42,17 @@ public class VerificationAsyncProcessor {
     private final VerificationProperties verificationProperties;
     private final OpenAiVerificationService openAiVerificationService;
     private final ApplicationEventPublisher eventPublisher;
+
+    private List<Pattern> forbiddenKeywordPatterns;
+
+    /** 스프링 빈 초기화 후 금칙어 정규식 패턴을 한 번만 컴파일합니다. */
+    @PostConstruct
+    public void initializeForbiddenKeywordPatterns() {
+        forbiddenKeywordPatterns = verificationProperties.forbiddenKeywords().stream()
+                .map(keyword -> keyword.replace(" ", "\\s*"))
+                .map(keyword -> Pattern.compile(keyword, Pattern.CASE_INSENSITIVE))
+                .toList();
+    }
 
     /** 별도 스레드와 별도 트랜잭션에서 금칙어 사전 및 OpenAI 검증을 수행합니다. */
     @Async("verificationTaskExecutor")
@@ -100,8 +113,9 @@ public class VerificationAsyncProcessor {
 
     /** yml 금칙어 사전에 포함된 표현이 요청 본문에 있는지 확인합니다. */
     private boolean containsForbiddenKeyword(VerificationRequest request) {
-        String content = (request.title() + " " + request.description()).toLowerCase();
-        return verificationProperties.forbiddenKeywords().stream().map(String::toLowerCase).anyMatch(content::contains);
+        String content = request.title() + " " + request.description();
+        return forbiddenKeywordPatterns.stream()
+                .anyMatch(pattern -> pattern.matcher(content).find());
     }
 
     /** 금칙어 사전 탐지 결과를 AI 구조화 결과와 동일한 형태로 생성합니다. */
