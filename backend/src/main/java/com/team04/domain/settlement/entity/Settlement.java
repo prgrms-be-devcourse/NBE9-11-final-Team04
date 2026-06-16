@@ -1,6 +1,8 @@
 package com.team04.domain.settlement.entity;
 
 import com.team04.global.entity.BaseEntity;
+import com.team04.global.exception.CustomException;
+import com.team04.global.exception.ErrorCode;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -58,5 +60,30 @@ public class Settlement extends BaseEntity {
         this.payoutAmount = payoutAmount;
         this.status = SettlementStatus.PENDING;
         this.idempotencyKey = idempotencyKey;
+    }
+    public void complete() {
+        validatePendingStatus();
+        this.status = SettlementStatus.COMPLETED;
+    }
+
+    public void partialRefund() {
+        validatePendingStatus();
+        this.status = SettlementStatus.PARTIALLY_REFUNDED;
+    }
+
+    public void forfeit() {
+        validatePendingStatus();
+        this.status = SettlementStatus.FORFEITED;
+    }
+
+    public void refund() {
+        validatePendingStatus();
+        this.status = SettlementStatus.REFUNDED;
+    }
+
+    private void validatePendingStatus() {
+        if (this.status != SettlementStatus.PENDING) {
+            throw new CustomException(ErrorCode.SETTLEMENT_INVALID_STATUS_TRANSITION);
+        }
     }
 }

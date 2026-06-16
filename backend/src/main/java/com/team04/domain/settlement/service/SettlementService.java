@@ -4,6 +4,7 @@ import com.team04.domain.idea.dto.response.IdeaResponse;
 import com.team04.domain.idea.service.IdeaService;
 import com.team04.domain.settlement.dto.response.SettlementResponse;
 import com.team04.domain.settlement.entity.Settlement;
+import com.team04.domain.settlement.entity.SettlementType;
 import com.team04.domain.settlement.repository.SettlementRepository;
 import com.team04.domain.user.entity.Role;
 import com.team04.global.exception.CustomException;
@@ -18,9 +19,15 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SettlementService {
 
+    private static final double PLATFORM_FEE_RATE = 0.01;
+
     private final SettlementRepository settlementRepository;
     private final IdeaService ideaService;
 
+    /**
+     * 프로젝트별 정산 이력 전체 조회
+     * 관리자는 모든 프로젝트 조회 가능, 제안자는 본인 프로젝트만 조회 가능
+     */
     @Transactional(readOnly = true)
     public List<SettlementResponse> getSettlementsByIdea(Long ideaId, Long userId, Role role) {
         if (role != Role.ADMIN) {
@@ -35,6 +42,10 @@ public class SettlementService {
                 .toList();
     }
 
+    /**
+     * 정산 단건 조회
+     * 관리자는 모든 정산 조회 가능, 제안자는 본인 프로젝트 정산만 조회 가능
+     */
     @Transactional(readOnly = true)
     public SettlementResponse getSettlement(Long settlementId, Long userId, Role role) {
         Settlement settlement = settlementRepository.findById(settlementId)
@@ -47,5 +58,74 @@ public class SettlementService {
             }
         }
         return SettlementResponse.from(settlement);
+    }
+
+    /**
+     * 최종 정산 장부 생성
+     * 플랫폼 수수료 1% 차감 후 제안자 지급액 계산
+     * 멱등성 키로 중복 정산 방지
+     */
+    @Transactional
+    public SettlementResponse createFinalSettlement(Long ideaId, Long totalAmount) {
+        String idempotencyKey = generateIdempotencyKey(ideaId, SettlementType.FINAL, null);
+
+        if (settlementRepository.findByIdempotencyKey(idempotencyKey).isPresent()) {
+            throw new CustomException(ErrorCode.SETTLEMENT_DUPLICATE);
+        }
+
+        long platformFee = Math.round(totalAmount * PLATFORM_FEE_RATE);
+        long payoutAmount = totalAmount - platformFee;
+
+        Settlement settlement = Settlement.builder()
+                .ideaId(ideaId)
+                .milestoneId(null)
+                .type(SettlementType.FINAL)
+                .totalAmount(totalAmount)
+                .platformFee(platformFee)
+                .payoutAmount(payoutAmount)
+                .idempotencyKey(idempotencyKey)
+                .build();
+
+        settlement.complete();
+        return SettlementResponse.from(settlementRepository.save(settlement));
+    }
+
+    /**
+     * 목표 미달성 환불 장부 생성
+     * 수수료 없이 전액 환불 처리
+     * 멱등성 키로 중복 환불 방지
+     */
+    @Transactional
+    public SettlementResponse createRefundSettlement(Long ideaId, Long totalAmount) {
+        String idempotencyKey = generateIdempotencyKey(ideaId, SettlementType.FINAL, null) + "-REFUND";
+
+        if (settlementRepository.findByIdempotencyKey(idempotencyKey).isPresent()) {
+            throw new CustomException(ErrorCode.SETTLEMENT_DUPLICATE);
+        }
+
+        Settlement settlement = Settlement.builder()
+                .ideaId(ideaId)
+                .milestoneId(null)
+                .type(SettlementType.FINAL)
+                .totalAmount(totalAmount)
+                .platformFee(0L)
+                .payoutAmount(totalAmount)
+                .idempotencyKey(idempotencyKey)
+                .build();
+
+        settlement.refund();
+        return SettlementResponse.from(settlementRepository.save(settlement));
+    }
+
+    /**
+     * 멱등성 키 생성
+     * 최종 정산: idea-{ideaId}-FINAL
+     * 중간 정산: idea-{ideaId}-INTERIM-{milestoneId}
+     */
+    private String generateIdempotencyKey(Long ideaId, SettlementType type, Long milestoneId) {
+        if (type == SettlementType.FINAL) {
+            return "idea-" + ideaId + "-FINAL";
+        }
+        return "idea-" + ideaId + "-INTERIM-" + milestoneId;
     }
 }

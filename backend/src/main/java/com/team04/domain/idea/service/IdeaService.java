@@ -259,4 +259,9 @@ public class IdeaService {
             throw new CustomException(ErrorCode.INVALID_MILESTONE_STEP);
         }
     }
+    /** 펀딩 마감됐고 목표 금액 미달성인 아이디어 ID 목록을 반환합니다. */
+    @Transactional(readOnly = true)
+    public List<Long> getFailedFundingIdeaIds() {
+        return ideaRepository.findFailedFundingIdeaIds(LocalDateTime.now());
+    }
 }
