@@ -41,6 +41,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.POST, "/auth/logout").authenticated()
                         .requestMatchers("/auth/**").permitAll()
+                        .requestMatchers("/payments/webhooks/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/ideas", "/ideas/search").permitAll()
                         .anyRequest().authenticated()
                 )

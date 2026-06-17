@@ -37,3 +37,8 @@ nts:
   api:
     # ⚠️ [입력 필요] 공공데이터포털 마이페이지에서 복사한 국세청 API [Decoding] 인증키 입력
     service-key: "NEED_TO_INPUT_YOUR_NTS_DECODING_SERVICE_KEY"
+
+openai:
+  verification:
+    # ⚠️ [입력 필요] OpenAI 플랫폼에서 발급받은 API 키 입력
+    api-key: "NEED_TO_INPUT_YOUR_OPENAI_API_KEY"

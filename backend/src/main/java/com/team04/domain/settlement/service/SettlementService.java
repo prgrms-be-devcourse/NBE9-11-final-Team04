@@ -102,7 +102,8 @@ public class SettlementService {
 
     /**
      * 목표 미달성 환불 장부 생성
-     * 수수료 없이 전액 환불 처리
+     * 수수료 없이 환불 처리
+     * 선정산으로 이미 지급된 금액 차감 후 실제 환불액 산출
      * 멱등성 키로 중복 환불 방지
      */
     @Transactional
@@ -114,13 +115,18 @@ public class SettlementService {
             throw new CustomException(ErrorCode.SETTLEMENT_DUPLICATE);
         }
 
+        long preSettlementTotal = preSettlementRepository
+                .sumAmountByIdeaIdAndStatusNot(ideaId, PreSettlementStatus.FAILED);
+
+        long refundAmount = totalAmount - preSettlementTotal;
+
         Settlement settlement = Settlement.builder()
                 .ideaId(ideaId)
                 .milestoneId(null)
                 .type(SettlementType.FINAL)
                 .totalAmount(totalAmount)
                 .platformFee(0L)
-                .payoutAmount(totalAmount)
+                .payoutAmount(refundAmount)
                 .idempotencyKey(idempotencyKey)
                 .build();
 
