@@ -64,6 +64,17 @@ public class ProjectVerification extends BaseEntity {
         this.revisionDueAt = null;
     }
 
+    /** 검증 시작 상태로 변경합니다. */
+    public void startAiVerification() {
+        changeStatus(VerificationStatus.AI_VERIFYING);
+    }
+
+    /** 30일 대기 종료 시간을 기록하고 반려 상태로 변경합니다. */
+    public void rejectWithWaiting(LocalDateTime waitingUntil) {
+        changeStatus(VerificationStatus.REJECTED);
+        this.waitingUntil = waitingUntil;
+    }
+
     /** 외부 검증 대기 종료 시간을 기록합니다. */
     public void updateWaitingUntil(LocalDateTime waitingUntil) {
         this.waitingUntil = waitingUntil;

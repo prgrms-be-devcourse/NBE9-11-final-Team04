@@ -64,14 +64,17 @@ public class SettlementService {
      * 최종 정산 장부 생성
      * 플랫폼 수수료 1% 차감 후 제안자 지급액 계산
      * 멱등성 키로 중복 정산 방지
+     * 마일스톤 3단계 완료 승인 시 내부 호출
      */
     @Transactional
-    public SettlementResponse createFinalSettlement(Long ideaId, Long totalAmount) {
+    public SettlementResponse createFinalSettlement(Long ideaId) {
         String idempotencyKey = generateIdempotencyKey(ideaId, SettlementType.FINAL, null);
 
         if (settlementRepository.findByIdempotencyKey(idempotencyKey).isPresent()) {
             throw new CustomException(ErrorCode.SETTLEMENT_DUPLICATE);
         }
+
+        Long totalAmount = ideaService.getIdea(ideaId).currentAmount();
 
         long platformFee = Math.round(totalAmount * PLATFORM_FEE_RATE);
         long payoutAmount = totalAmount - platformFee;
@@ -96,8 +99,9 @@ public class SettlementService {
      * 멱등성 키로 중복 환불 방지
      */
     @Transactional
-    public SettlementResponse createRefundSettlement(Long ideaId, Long totalAmount) {
+    public SettlementResponse createRefundSettlement(Long ideaId) {
         String idempotencyKey = generateIdempotencyKey(ideaId, SettlementType.FINAL, null) + "-REFUND";
+        Long totalAmount = ideaService.getIdea(ideaId).currentAmount();
 
         if (settlementRepository.findByIdempotencyKey(idempotencyKey).isPresent()) {
             throw new CustomException(ErrorCode.SETTLEMENT_DUPLICATE);

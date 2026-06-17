@@ -56,4 +56,28 @@ public class Milestone extends BaseEntity {
         this.lockedAmount = lockedAmount;
         this.status = MilestoneStatus.PENDING;
     }
+
+    /**
+     * 마일스톤을 진행 중 상태로 전이합니다.
+     */
+    public void start() {
+        this.status.validateTransitionTo(MilestoneStatus.IN_PROGRESS);
+        this.status = MilestoneStatus.IN_PROGRESS;
+    }
+
+    /**
+     * 마일스톤을 완료 상태로 전이합니다.
+     */
+    public void complete() {
+        this.status.validateTransitionTo(MilestoneStatus.COMPLETED);
+        this.status = MilestoneStatus.COMPLETED;
+    }
+
+    /**
+     * 마일스톤을 취소 상태로 전이합니다.
+     */
+    public void cancel() {
+        this.status.validateTransitionTo(MilestoneStatus.CANCELLED);
+        this.status = MilestoneStatus.CANCELLED;
+    }
 }
