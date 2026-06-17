@@ -11,7 +11,9 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.util.UriComponentsBuilder;
 
+import java.net.URI;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -38,13 +40,20 @@ public class BusinessVerifyClientImpl implements BusinessVerifyClient {
 
         for (int attempt = 1; attempt <= MAX_RETRY; attempt++) {
             try {
+                URI uri = UriComponentsBuilder
+                        .fromUriString(NTS_BASE_URL + "/validate")
+                        .queryParam("serviceKey", ntsServiceKey)
+                        .queryParam("returnType", "JSON")
+                        .build()
+                        .encode()
+                        .toUri();
+
                 NtsValidateResponse response = restClient.post()
-                        .uri(NTS_BASE_URL + "/validate?serviceKey={key}&returnType=JSON", ntsServiceKey)
+                        .uri(uri)
                         .contentType(MediaType.APPLICATION_JSON)
                         .body(body)
                         .retrieve()
                         .body(NtsValidateResponse.class);
-
                 if (response == null) {
                     throw new IllegalStateException("국세청 API 응답 바디가 비어 있습니다.");
                 }

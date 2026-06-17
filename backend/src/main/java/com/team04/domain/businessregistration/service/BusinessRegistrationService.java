@@ -36,7 +36,8 @@ public class BusinessRegistrationService {
 
     @Transactional
     public void deleteMyBusiness(Long userId) {
-        BusinessRegistration registration = businessRegistrationRepository.findByUserId(userId)
+        BusinessRegistration registration = businessRegistrationRepository
+                .findByUserId(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.BUSINESS_REGISTRATION_NOT_FOUND));
         businessRegistrationRepository.delete(registration);
     }
@@ -51,6 +52,9 @@ public class BusinessRegistrationService {
         }
         if (user.getStatus() == UserStatus.WITHDRAWN) {
             throw new CustomException(ErrorCode.ACCOUNT_WITHDRAWN);
+        }
+        if (businessRegistrationRepository.existsByUserId(userId)) {
+            throw new CustomException(ErrorCode.BUSINESS_ALREADY_REGISTERED);
         }
         if (businessRegistrationRepository.existsByBusinessNumber(request.businessNumber())) {
             throw new CustomException(ErrorCode.BUSINESS_ALREADY_REGISTERED);

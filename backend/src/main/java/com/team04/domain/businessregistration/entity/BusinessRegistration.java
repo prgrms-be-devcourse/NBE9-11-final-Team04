@@ -19,7 +19,7 @@ public class BusinessRegistration extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column
+    @Column(unique = true)
     private String businessNumber;
 
     @Column
@@ -28,7 +28,7 @@ public class BusinessRegistration extends BaseEntity {
     @Column
     private LocalDateTime verifiedAt;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
