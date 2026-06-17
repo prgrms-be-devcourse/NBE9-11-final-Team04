@@ -65,6 +65,7 @@ public enum ErrorCode {
     MILESTONE_ALREADY_COMPLETED(400, "M002", "이미 완료된 마일스톤입니다"),
     INVALID_MILESTONE_COUNT(400, "M003", "현재 상태에서 해당 상태로 전이할 수 없습니다"),
     INVALID_MILESTONE_STEP(400, "M004", "유효하지 않은 마일스톤 단계입니다"),
+    INVALID_MILESTONE_STATUS_TRANSITION(400, "M005", "현재 상태에서 해당 상태로 전이할 수 없습니다"),
 
     // 결제
     PAYMENT_NOT_FOUND(404, "P001", "존재하지 않는 결제입니다"),

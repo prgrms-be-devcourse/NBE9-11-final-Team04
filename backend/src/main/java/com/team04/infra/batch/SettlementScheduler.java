@@ -30,8 +30,7 @@ public class SettlementScheduler {
 
         for (Long ideaId : failedIdeaIds) {
             try {
-                Long totalAmount = ideaService.getIdea(ideaId).currentAmount();
-                settlementService.createRefundSettlement(ideaId, totalAmount);
+                settlementService.createRefundSettlement(ideaId);
                 log.info("환불 장부 생성 완료 - ideaId: {}", ideaId);
             } catch (Exception e) {
                 log.error("환불 장부 생성 실패 - ideaId: {}, error: {}", ideaId, e.getMessage());

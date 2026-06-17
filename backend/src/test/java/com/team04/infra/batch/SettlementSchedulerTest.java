@@ -1,6 +1,5 @@
 package com.team04.infra.batch;
 
-import com.team04.domain.idea.dto.response.IdeaResponse;
 import com.team04.domain.idea.service.IdeaService;
 import com.team04.domain.settlement.service.SettlementService;
 import org.junit.jupiter.api.DisplayName;
@@ -31,16 +30,13 @@ class SettlementSchedulerTest {
     @DisplayName("목표 미달성 프로젝트 환불 장부 생성 성공")
     void processFailedFundingRefunds_success() {
         // given
-        IdeaResponse ideaResponse = mock(IdeaResponse.class);
-        given(ideaResponse.currentAmount()).willReturn(500000L);
         given(ideaService.getFailedFundingIdeaIds()).willReturn(List.of(1L, 2L));
-        given(ideaService.getIdea(anyLong())).willReturn(ideaResponse);
 
         // when
         settlementScheduler.processFailedFundingRefunds();
 
         // then
-        verify(settlementService, times(2)).createRefundSettlement(anyLong(), anyLong());
+        verify(settlementService, times(2)).createRefundSettlement(anyLong());
     }
 
     @Test
@@ -53,23 +49,20 @@ class SettlementSchedulerTest {
         settlementScheduler.processFailedFundingRefunds();
 
         // then
-        verify(settlementService, never()).createRefundSettlement(anyLong(), anyLong());
+        verify(settlementService, never()).createRefundSettlement(anyLong());
     }
 
     @Test
     @DisplayName("환불 장부 생성 실패해도 다음 프로젝트 처리 계속됨")
     void processFailedFundingRefunds_continueOnError() {
         // given
-        IdeaResponse ideaResponse = mock(IdeaResponse.class);
-        given(ideaResponse.currentAmount()).willReturn(500000L);
         given(ideaService.getFailedFundingIdeaIds()).willReturn(List.of(1L, 2L));
-        given(ideaService.getIdea(anyLong())).willReturn(ideaResponse);
-        doThrow(new RuntimeException("실패")).when(settlementService).createRefundSettlement(eq(1L), anyLong());
+        doThrow(new RuntimeException("실패")).when(settlementService).createRefundSettlement(1L);
 
         // when
         settlementScheduler.processFailedFundingRefunds();
 
         // then
-        verify(settlementService, times(2)).createRefundSettlement(anyLong(), anyLong());
+        verify(settlementService, times(2)).createRefundSettlement(anyLong());
     }
 }
