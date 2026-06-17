@@ -8,6 +8,7 @@ import com.team04.domain.user.repository.UserRepository;
 import com.team04.global.exception.CustomException;
 import com.team04.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,12 +20,14 @@ public class BusinessRegistrationWriter {
     private final UserRepository userRepository;
 
     @Transactional
-    public BusinessRegistrationResponse save(Long userId, String businessNumber) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+    public BusinessRegistrationResponse save(User user, String businessNumber) {
         BusinessRegistration registration = BusinessRegistration.create(user, businessNumber);
         registration.verify();
-        businessRegistrationRepository.save(registration);
+        try {
+            businessRegistrationRepository.save(registration);
+        } catch (DataIntegrityViolationException e) {
+            throw new CustomException(ErrorCode.BUSINESS_ALREADY_REGISTERED);
+        }
         return new BusinessRegistrationResponse(
                 registration.getBusinessNumber(),
                 registration.isVerified(),
