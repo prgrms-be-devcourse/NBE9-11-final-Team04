@@ -58,6 +58,7 @@ public enum ErrorCode {
     DUPLICATE_EXPERT_PROFILE(409, "E004", "이미 등록된 전문가 프로필입니다"),
     EXTERNAL_API_FAILURE(503, "E005", "외부 API 장애가 발생했습니다"),
     EXTERNAL_API_INVALID(400, "E006", "유효하지 않은 자격 정보입니다"),
+    REVIEW_ALREADY_EXISTS(409, "E007", "이미 작성된 리뷰가 존재합니다"),
 
     // 펀딩
     FUNDING_NOT_FOUND(404, "F001", "존재하지 않는 펀딩입니다"),
@@ -105,12 +106,19 @@ public enum ErrorCode {
     PRE_SETTLEMENT_NOT_FOUND(404, "PS004", "존재하지 않는 선정산입니다"),
     PRE_SETTLEMENT_REQUEST_FAILED(500, "PS005", "선정산 신청에 실패했습니다. 잠시 후 다시 시도해주세요"),
 
+    // 매칭
+    MATCH_NOT_FOUND(404, "MA001", "존재하지 않는 매칭입니다"),
+    MATCH_ALREADY_RESPONDED(400, "MA002", "이미 처리된 매칭입니다"),
+    MATCH_NOT_ACCEPTED(400, "MA003", "수락된 매칭이 아닙니다"),
+    MATCH_ACCESS_DENIED(403, "MA004", "해당 매칭에 대한 권한이 없습니다"),
+
     // 자금 사용 내역
     FUND_USAGE_NOT_FOUND(404, "FU001", "존재하지 않는 자금 사용 내역입니다"),
     FUND_USAGE_INVALID_AMOUNT(400, "FU002", "자금 사용 금액은 0보다 커야 합니다"),
     FUND_USAGE_NO_IN_PROGRESS_MILESTONE(400, "FU003", "진행 중인 마일스톤이 없어 자금 사용 내역을 입력할 수 없습니다"),
     FUND_USAGE_EXCEEDS_RECEIVED(400, "FU004", "실제 지급받은 금액을 초과하는 지출은 등록할 수 없습니다"),
     FUND_USAGE_INVALID_DATE(400, "FU005", "자금 사용일은 펀딩 시작일 이후여야 합니다");
+
     private final int status;
     private final String code;
     private final String message;
