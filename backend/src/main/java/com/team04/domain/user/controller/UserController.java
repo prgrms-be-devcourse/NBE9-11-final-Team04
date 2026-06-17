@@ -52,6 +52,13 @@ public class UserController {
         return ResponseEntity.noContent().build();
     }
 
+    @GetMapping("/me/business")
+    public ApiResponse<BusinessRegistrationResponse> getMyBusiness(
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        return ApiResponse.ofSuccess(businessRegistrationService.getMyBusiness(userDetails.getUserId()));
+    }
+
     @PostMapping("/me/business")
     public ApiResponse<BusinessRegistrationResponse> registerBusiness(
             @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -60,5 +67,11 @@ public class UserController {
         return ApiResponse.ofSuccess(businessRegistrationService.register(userDetails.getUserId(), request));
     }
 
-
+    @DeleteMapping("/me/business")
+    public ResponseEntity<Void> deleteMyBusiness(
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        businessRegistrationService.deleteMyBusiness(userDetails.getUserId());
+        return ResponseEntity.noContent().build();
+    }
 }
