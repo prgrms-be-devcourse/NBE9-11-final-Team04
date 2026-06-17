@@ -26,7 +26,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-security")
     implementation("org.springframework.boot:spring-boot-starter-data-redis")
     implementation("org.springframework.boot:spring-boot-starter-mail")
-    implementation("io.github.resilience4j:resilience4j-spring-boot4:2.4.0")
+    implementation("org.springframework.retry:spring-retry:2.0.11")
     implementation("org.aspectj:aspectjweaver")
     implementation("io.jsonwebtoken:jjwt-api:0.12.6")
     implementation("io.github.openfeign.querydsl:querydsl-jpa:5.6.1:jakarta")

@@ -175,6 +175,11 @@ public class Idea extends BaseEntity {
         this.status = targetStatus;
     }
 
+    /** 아이디어 검증 이력 또는 인증 상태 배지를 변경합니다. */
+    public void changeBadge(IdeaBadge badge) {
+        this.badge = badge;
+    }
+
     /** 이미 소프트 삭제된 아이디어인지 확인합니다. */
     public boolean isDeleted() {
         return deletedAt != null;

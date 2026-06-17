@@ -38,16 +38,3 @@ openai:
     base-url: https://api.openai.com
     model: gpt-4o-mini
     timeout-seconds: 300
-
-resilience4j:
-  retry:
-    instances:
-      openAiVerification:
-        max-attempts: 3
-        wait-duration: 2s
-  circuitbreaker:
-    instances:
-      openAiVerification:
-        sliding-window-size: 10
-        failure-rate-threshold: 50
-        wait-duration-in-open-state: 30s
