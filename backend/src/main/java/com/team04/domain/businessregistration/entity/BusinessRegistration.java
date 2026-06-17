@@ -29,7 +29,7 @@ public class BusinessRegistration extends BaseEntity {
     private LocalDateTime verifiedAt;
 
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(name = "user_id", nullable = false, unique = true)
     private User user;
 
     public static BusinessRegistration create(User user, String businessNumber) {

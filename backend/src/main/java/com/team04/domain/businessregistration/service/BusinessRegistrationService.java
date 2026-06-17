@@ -71,6 +71,6 @@ public class BusinessRegistrationService {
         }
 
         // 3. 검증 성공 후 저장 (별도 트랜잭션)
-        return businessRegistrationWriter.save(userId, request.businessNumber());
+        return businessRegistrationWriter.save(user, request.businessNumber());
     }
 }
