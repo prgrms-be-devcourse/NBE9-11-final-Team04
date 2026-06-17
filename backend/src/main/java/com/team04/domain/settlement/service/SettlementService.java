@@ -6,7 +6,7 @@ import com.team04.domain.settlement.dto.response.SettlementResponse;
 import com.team04.domain.settlement.entity.Settlement;
 import com.team04.domain.settlement.entity.SettlementType;
 import com.team04.domain.settlement.repository.SettlementRepository;
-import com.team04.global.common.Role;
+import com.team04.domain.user.entity.Role;
 import com.team04.global.exception.CustomException;
 import com.team04.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
