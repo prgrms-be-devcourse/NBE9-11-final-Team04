@@ -86,7 +86,14 @@ public enum ErrorCode {
     SETTLEMENT_DUPLICATE(409, "S003", "중복 정산 요청입니다"),
     SETTLEMENT_INVALID_STATUS(400, "S004", "정산 처리가 불가능한 상태입니다"),
     SETTLEMENT_ACCESS_DENIED(403, "S005", "정산 조회 권한이 없습니다"),
-    SETTLEMENT_INVALID_STATUS_TRANSITION(400, "S006", "현재 상태에서 해당 상태로 전이할 수 없습니다");
+    SETTLEMENT_INVALID_STATUS_TRANSITION(400, "S006", "현재 상태에서 해당 상태로 전이할 수 없습니다"),
+
+    // 선정산
+    PRE_SETTLEMENT_LIMIT_EXCEEDED(400, "PS001", "선정산 신청 금액이 보증금 2배 한도를 초과합니다"),
+    PRE_SETTLEMENT_INVALID_AMOUNT(400, "PS002", "선정산 신청 금액은 0보다 커야 합니다"),
+    PRE_SETTLEMENT_MILESTONE_NOT_IN_PROGRESS(400, "PS003", "진행 중인 마일스톤에서만 선정산 신청이 가능합니다"),
+    PRE_SETTLEMENT_NOT_FOUND(404, "PS004", "존재하지 않는 선정산입니다"),
+    PRE_SETTLEMENT_REQUEST_FAILED(500, "PS005", "선정산 신청에 실패했습니다. 잠시 후 다시 시도해주세요");
 
     private final int status;
     private final String code;

@@ -3,8 +3,10 @@ package com.team04.domain.settlement.service;
 import com.team04.domain.idea.dto.response.IdeaResponse;
 import com.team04.domain.idea.service.IdeaService;
 import com.team04.domain.settlement.dto.response.SettlementResponse;
+import com.team04.domain.settlement.entity.PreSettlementStatus;
 import com.team04.domain.settlement.entity.Settlement;
 import com.team04.domain.settlement.entity.SettlementType;
+import com.team04.domain.settlement.repository.PreSettlementRepository;
 import com.team04.domain.settlement.repository.SettlementRepository;
 import com.team04.global.common.Role;
 import com.team04.global.exception.CustomException;
@@ -23,6 +25,7 @@ public class SettlementService {
 
     private final SettlementRepository settlementRepository;
     private final IdeaService ideaService;
+    private final PreSettlementRepository preSettlementRepository;
 
     /**
      * 프로젝트별 정산 이력 전체 조회
@@ -63,6 +66,7 @@ public class SettlementService {
     /**
      * 최종 정산 장부 생성
      * 플랫폼 수수료 1% 차감 후 제안자 지급액 계산
+     * 누적 선정산 금액(FAILED 제외) 차감 후 실제 지급액 산출
      * 멱등성 키로 중복 정산 방지
      * 마일스톤 3단계 완료 승인 시 내부 호출
      */
@@ -76,8 +80,11 @@ public class SettlementService {
 
         Long totalAmount = ideaService.getIdea(ideaId).currentAmount();
 
+        long preSettlementTotal = preSettlementRepository
+                .sumAmountByIdeaIdAndStatusNot(ideaId, PreSettlementStatus.FAILED);
+
         long platformFee = Math.round(totalAmount * PLATFORM_FEE_RATE);
-        long payoutAmount = totalAmount - platformFee;
+        long payoutAmount = totalAmount - platformFee - preSettlementTotal;
 
         Settlement settlement = Settlement.builder()
                 .ideaId(ideaId)

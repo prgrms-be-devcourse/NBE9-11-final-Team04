@@ -34,17 +34,13 @@ public class Milestone extends BaseEntity {
     @Column
     private LocalDate expectedDate;
 
-    @Column(nullable = false)
-    private Long lockedAmount;
-
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private MilestoneStatus status;
 
     @Builder
     private Milestone(Long ideaId, Integer step, String goal,
-                      String expectedResult, LocalDate expectedDate,
-                      Long lockedAmount) {
+                      String expectedResult, LocalDate expectedDate) {
         if (step == null || step < 1 || step > 3) {
             throw new IllegalArgumentException("마일스톤 단계는 1~3 사이여야 합니다");
         }
@@ -53,29 +49,22 @@ public class Milestone extends BaseEntity {
         this.goal = goal;
         this.expectedResult = expectedResult;
         this.expectedDate = expectedDate;
-        this.lockedAmount = lockedAmount;
         this.status = MilestoneStatus.PENDING;
     }
 
-    /**
-     * 마일스톤을 진행 중 상태로 전이합니다.
-     */
+    /** 마일스톤을 진행 중 상태로 전이합니다. */
     public void start() {
         this.status.validateTransitionTo(MilestoneStatus.IN_PROGRESS);
         this.status = MilestoneStatus.IN_PROGRESS;
     }
 
-    /**
-     * 마일스톤을 완료 상태로 전이합니다.
-     */
+    /** 마일스톤을 완료 상태로 전이합니다. */
     public void complete() {
         this.status.validateTransitionTo(MilestoneStatus.COMPLETED);
         this.status = MilestoneStatus.COMPLETED;
     }
 
-    /**
-     * 마일스톤을 취소 상태로 전이합니다.
-     */
+    /** 마일스톤을 취소 상태로 전이합니다. */
     public void cancel() {
         this.status.validateTransitionTo(MilestoneStatus.CANCELLED);
         this.status = MilestoneStatus.CANCELLED;
