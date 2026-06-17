@@ -1,4 +1,4 @@
-package com.team04.domain.payment.client.dto;
+package com.team04.domain.payment.dto.response;
 
 import java.time.LocalDateTime;
 

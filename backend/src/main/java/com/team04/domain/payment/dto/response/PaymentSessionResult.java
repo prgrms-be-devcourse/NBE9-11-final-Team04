@@ -1,4 +1,4 @@
-package com.team04.domain.payment.client.dto;
+package com.team04.domain.payment.dto.response;
 
 public record PaymentSessionResult(
         String clientKey,

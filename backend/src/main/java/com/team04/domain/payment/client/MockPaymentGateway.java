@@ -1,8 +1,9 @@
 package com.team04.domain.payment.client;
 
-import com.team04.domain.payment.client.dto.PaymentConfirmResult;
-import com.team04.domain.payment.client.dto.PaymentSessionResult;
-import com.team04.domain.payment.client.dto.VirtualAccountIssueResult;
+import com.team04.domain.payment.dto.response.PaymentConfirmResult;
+import com.team04.domain.payment.dto.response.PaymentSessionResult;
+import com.team04.domain.payment.dto.response.PaymentVerifyResult;
+import com.team04.domain.payment.dto.response.VirtualAccountIssueResult;
 import com.team04.domain.payment.entity.PaymentTypes.PaymentMethod;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -48,5 +49,18 @@ public class MockPaymentGateway implements PaymentGateway {
                 String.format("%012d", id),
                 LocalDateTime.now().plusDays(3)
         );
+    }
+
+    /**
+     * Mock 환경: PG 조회 API 대체.
+     * 실제 연동 시 Toss GET /v1/payments/orders/{orderId} 등으로 교체합니다.
+     */
+    @Override
+    public PaymentVerifyResult verifyVirtualAccountDeposit(String orderId, long amount) {
+        log.info("[MockPG] 가상계좌 입금 검증 orderId={}, amount={}", orderId, amount);
+        if (orderId == null || orderId.isBlank() || amount <= 0) {
+            return PaymentVerifyResult.failure("유효하지 않은 검증 요청");
+        }
+        return PaymentVerifyResult.success();
     }
 }
