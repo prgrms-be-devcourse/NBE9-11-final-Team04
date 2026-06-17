@@ -5,6 +5,7 @@ import com.team04.domain.idea.service.IdeaService;
 import com.team04.domain.settlement.dto.response.SettlementResponse;
 import com.team04.domain.settlement.entity.Settlement;
 import com.team04.domain.settlement.entity.SettlementType;
+import com.team04.domain.settlement.repository.PreSettlementRepository;
 import com.team04.domain.settlement.repository.SettlementRepository;
 import com.team04.domain.user.entity.Role;
 import com.team04.global.exception.CustomException;
@@ -23,6 +24,7 @@ public class SettlementService {
 
     private final SettlementRepository settlementRepository;
     private final IdeaService ideaService;
+    private final PreSettlementRepository preSettlementRepository;
 
     /**
      * 프로젝트별 정산 이력 전체 조회
@@ -63,6 +65,7 @@ public class SettlementService {
     /**
      * 최종 정산 장부 생성
      * 플랫폼 수수료 1% 차감 후 제안자 지급액 계산
+     * 누적 선정산 금액(FAILED 제외) 차감 후 실제 지급액 산출
      * 멱등성 키로 중복 정산 방지
      * 마일스톤 3단계 완료 승인 시 내부 호출
      */
@@ -76,8 +79,11 @@ public class SettlementService {
 
         Long totalAmount = ideaService.getIdea(ideaId).currentAmount();
 
+        long preSettlementTotal = preSettlementRepository
+                .findMaxAccumulatedAmountByIdeaId(ideaId);
+
         long platformFee = Math.round(totalAmount * PLATFORM_FEE_RATE);
-        long payoutAmount = totalAmount - platformFee;
+        long payoutAmount = totalAmount - platformFee - preSettlementTotal;
 
         Settlement settlement = Settlement.builder()
                 .ideaId(ideaId)
@@ -95,7 +101,8 @@ public class SettlementService {
 
     /**
      * 목표 미달성 환불 장부 생성
-     * 수수료 없이 전액 환불 처리
+     * 수수료 없이 환불 처리
+     * 선정산으로 이미 지급된 금액 차감 후 실제 환불액 산출
      * 멱등성 키로 중복 환불 방지
      */
     @Transactional
@@ -107,13 +114,18 @@ public class SettlementService {
             throw new CustomException(ErrorCode.SETTLEMENT_DUPLICATE);
         }
 
+        long preSettlementTotal = preSettlementRepository
+                .findMaxAccumulatedAmountByIdeaId(ideaId);
+
+        long refundAmount = totalAmount - preSettlementTotal;
+
         Settlement settlement = Settlement.builder()
                 .ideaId(ideaId)
                 .milestoneId(null)
                 .type(SettlementType.FINAL)
                 .totalAmount(totalAmount)
                 .platformFee(0L)
-                .payoutAmount(totalAmount)
+                .payoutAmount(refundAmount)
                 .idempotencyKey(idempotencyKey)
                 .build();
 
