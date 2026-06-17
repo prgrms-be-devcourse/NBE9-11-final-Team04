@@ -19,7 +19,6 @@ import lombok.NoArgsConstructor;
 public class TrustScore extends BaseEntity {
 
     private static final int ITEM_MAX_SCORE = 20;
-    private static final int BUSINESS_REGISTRATION_BONUS_SCORE = 5;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -44,9 +43,6 @@ public class TrustScore extends BaseEntity {
     private Integer proposerHistoryScore = 0;
 
     @Column(nullable = false)
-    private Integer businessRegistrationBonus = 0;
-
-    @Column(nullable = false)
     private Integer totalScore = 0;
 
     /** 아이디어 식별자로 기본 점수 0점의 신뢰도 점수를 생성합니다. */
@@ -54,21 +50,19 @@ public class TrustScore extends BaseEntity {
         this.ideaId = ideaId;
     }
 
-    /** 항목별 점수를 상한 20점으로 보정하고 사업자등록 가점을 반영해 총점을 갱신합니다. */
+    /** 항목별 점수를 상한 20점으로 보정하고 총점을 갱신합니다. */
     public void updateScores(
             Integer aiVerificationScore,
             Integer milestoneSpecificityScore,
             Integer expertMatchingScore,
             Integer adminApprovalScore,
-            Integer proposerHistoryScore,
-            boolean hasBusinessRegistration
+            Integer proposerHistoryScore
     ) {
         this.aiVerificationScore = limitItemScore(aiVerificationScore);
         this.milestoneSpecificityScore = limitItemScore(milestoneSpecificityScore);
         this.expertMatchingScore = limitItemScore(expertMatchingScore);
         this.adminApprovalScore = limitItemScore(adminApprovalScore);
         this.proposerHistoryScore = limitItemScore(proposerHistoryScore);
-        this.businessRegistrationBonus = hasBusinessRegistration ? BUSINESS_REGISTRATION_BONUS_SCORE : 0;
         this.totalScore = calculateTotalScore();
     }
 
@@ -80,13 +74,14 @@ public class TrustScore extends BaseEntity {
         return Math.max(0, Math.min(score, ITEM_MAX_SCORE));
     }
 
-    /** 항목별 점수와 사업자등록 가점을 합산한 총점을 계산합니다. */
+    /** 항목별 점수를 합산하고 총점 상한 100점을 적용합니다. */
     private int calculateTotalScore() {
-        return aiVerificationScore
+        int total = aiVerificationScore
                 + milestoneSpecificityScore
                 + expertMatchingScore
                 + adminApprovalScore
                 + proposerHistoryScore
-                + businessRegistrationBonus;
+                + proposerHistoryScore;
+        return Math.min(total, ITEM_MAX_SCORE * 5);
     }
 }
