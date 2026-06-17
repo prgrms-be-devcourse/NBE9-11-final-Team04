@@ -103,7 +103,10 @@ public enum ErrorCode {
     PRE_SETTLEMENT_INVALID_AMOUNT(400, "PS002", "선정산 신청 금액은 0보다 커야 합니다"),
     PRE_SETTLEMENT_MILESTONE_NOT_IN_PROGRESS(400, "PS003", "진행 중인 마일스톤에서만 선정산 신청이 가능합니다"),
     PRE_SETTLEMENT_NOT_FOUND(404, "PS004", "존재하지 않는 선정산입니다"),
-    PRE_SETTLEMENT_REQUEST_FAILED(500, "PS005", "선정산 신청에 실패했습니다. 잠시 후 다시 시도해주세요");
+    PRE_SETTLEMENT_REQUEST_FAILED(500, "PS005", "선정산 신청에 실패했습니다. 잠시 후 다시 시도해주세요"),
+
+    //알림
+    NOTIFICATION_NOT_FOUND(404, "N001", "존재하지 않는 알림입니다.");
 
     private final int status;
     private final String code;
