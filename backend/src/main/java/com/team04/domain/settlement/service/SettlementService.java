@@ -3,7 +3,6 @@ package com.team04.domain.settlement.service;
 import com.team04.domain.idea.dto.response.IdeaResponse;
 import com.team04.domain.idea.service.IdeaService;
 import com.team04.domain.settlement.dto.response.SettlementResponse;
-import com.team04.domain.settlement.entity.PreSettlementStatus;
 import com.team04.domain.settlement.entity.Settlement;
 import com.team04.domain.settlement.entity.SettlementType;
 import com.team04.domain.settlement.repository.PreSettlementRepository;
@@ -81,7 +80,7 @@ public class SettlementService {
         Long totalAmount = ideaService.getIdea(ideaId).currentAmount();
 
         long preSettlementTotal = preSettlementRepository
-                .sumAmountByIdeaIdAndStatusNot(ideaId, PreSettlementStatus.FAILED);
+                .findMaxAccumulatedAmountByIdeaId(ideaId);
 
         long platformFee = Math.round(totalAmount * PLATFORM_FEE_RATE);
         long payoutAmount = totalAmount - platformFee - preSettlementTotal;
@@ -116,7 +115,7 @@ public class SettlementService {
         }
 
         long preSettlementTotal = preSettlementRepository
-                .sumAmountByIdeaIdAndStatusNot(ideaId, PreSettlementStatus.FAILED);
+                .findMaxAccumulatedAmountByIdeaId(ideaId);
 
         long refundAmount = totalAmount - preSettlementTotal;
 

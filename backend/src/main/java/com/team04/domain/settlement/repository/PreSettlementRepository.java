@@ -1,7 +1,6 @@
 package com.team04.domain.settlement.repository;
 
 import com.team04.domain.settlement.entity.PreSettlement;
-import com.team04.domain.settlement.entity.PreSettlementStatus;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
@@ -14,21 +13,14 @@ public interface PreSettlementRepository extends JpaRepository<PreSettlement, Lo
 
     List<PreSettlement> findByMilestoneId(Long milestoneId);
 
-    /** 마일스톤의 누적 선정산 금액을 조회합니다. (FAILED 제외) */
-    @Query("SELECT COALESCE(SUM(p.amount), 0) FROM PreSettlement p " +
-            "WHERE p.milestoneId = :milestoneId AND p.status != :status")
-    Long sumAmountByMilestoneIdAndStatusNot(
-            @Param("milestoneId") Long milestoneId,
-            @Param("status") PreSettlementStatus status);
-
     /**
-     * 프로젝트의 누적 선정산 금액을 조회합니다. (FAILED 제외)
+     * 프로젝트의 누적 선정산 금액을 조회합니다.
+     * FAILED 제외, accumulatedAmount의 MAX값으로 현재 누적 금액 파악
      * 비관락으로 동시 요청 제어 — 한도 초과 방지
+     * 선정산 내역이 없으면 0 반환
      */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("SELECT COALESCE(SUM(p.amount), 0) FROM PreSettlement p " +
-            "WHERE p.ideaId = :ideaId AND p.status != :status")
-    Long sumAmountByIdeaIdAndStatusNot(
-            @Param("ideaId") Long ideaId,
-            @Param("status") PreSettlementStatus status);
+    @Query("SELECT COALESCE(MAX(p.accumulatedAmount), 0) FROM PreSettlement p " +
+            "WHERE p.ideaId = :ideaId AND p.status != 'FAILED'")
+    Long findMaxAccumulatedAmountByIdeaId(@Param("ideaId") Long ideaId);
 }

@@ -56,17 +56,19 @@ public class PreSettlementService {
         long limit = Math.round(idea.goalAmount() * 0.3) * 2;
 
         // 비관락으로 누적 금액 조회 — 동시 요청이 끼어들지 못하도록 잠금
-        long accumulated = preSettlementRepository.sumAmountByIdeaIdAndStatusNot(
-                milestone.getIdeaId(), PreSettlementStatus.FAILED);
+        long accumulated = preSettlementRepository.findMaxAccumulatedAmountByIdeaId(milestone.getIdeaId());
 
         if (accumulated + request.amount() > limit) {
             throw new CustomException(ErrorCode.PRE_SETTLEMENT_LIMIT_EXCEEDED);
         }
 
+        long newAccumulatedAmount = accumulated + request.amount();
+
         PreSettlement preSettlement = PreSettlement.builder()
                 .milestoneId(milestoneId)
                 .ideaId(milestone.getIdeaId())
                 .amount(request.amount())
+                .accumulatedAmount(newAccumulatedAmount)
                 .build();
 
         // TODO: 결제팀에 지급 요청 (PaymentService.payout()) 호출 후 REQUESTED 유지
