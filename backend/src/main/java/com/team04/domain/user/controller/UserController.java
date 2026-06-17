@@ -1,8 +1,11 @@
 package com.team04.domain.user.controller;
 
+import com.team04.domain.businessregistration.dto.request.BusinessRegistrationRequest;
+import com.team04.domain.businessregistration.dto.response.BusinessRegistrationResponse;
+import com.team04.domain.businessregistration.service.BusinessRegistrationService;
 import com.team04.domain.user.dto.request.PasswordChangeRequest;
-import com.team04.domain.user.dto.response.UserResponse;
 import com.team04.domain.user.dto.request.UserUpdateRequest;
+import com.team04.domain.user.dto.response.UserResponse;
 import com.team04.domain.user.service.UserService;
 import com.team04.global.response.ApiResponse;
 import com.team04.global.security.CustomUserDetails;
@@ -18,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 public class UserController {
 
     private final UserService userService;
+    private final BusinessRegistrationService businessRegistrationService;
 
     @GetMapping("/me")
     public ApiResponse<UserResponse> getMe(
@@ -45,6 +49,29 @@ public class UserController {
     public ResponseEntity<Void> withdraw(
             @AuthenticationPrincipal CustomUserDetails userDetails){
         userService.withdraw(userDetails.getUserId());
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/me/business")
+    public ApiResponse<BusinessRegistrationResponse> getMyBusiness(
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        return ApiResponse.ofSuccess(businessRegistrationService.getMyBusiness(userDetails.getUserId()));
+    }
+
+    @PostMapping("/me/business")
+    public ApiResponse<BusinessRegistrationResponse> registerBusiness(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestBody @Valid BusinessRegistrationRequest request
+    ) {
+        return ApiResponse.ofSuccess(businessRegistrationService.register(userDetails.getUserId(), request));
+    }
+
+    @DeleteMapping("/me/business")
+    public ResponseEntity<Void> deleteMyBusiness(
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        businessRegistrationService.deleteMyBusiness(userDetails.getUserId());
         return ResponseEntity.noContent().build();
     }
 }

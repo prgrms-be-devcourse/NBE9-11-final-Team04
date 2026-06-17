@@ -1,6 +1,6 @@
 package com.team04.global.security;
 
-import com.team04.global.common.Role;
+import com.team04.domain.user.entity.Role;
 import lombok.Getter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;

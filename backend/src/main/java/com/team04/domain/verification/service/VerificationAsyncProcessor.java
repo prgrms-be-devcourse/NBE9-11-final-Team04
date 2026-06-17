@@ -1,5 +1,8 @@
 package com.team04.domain.verification.service;
 
+import com.team04.domain.idea.entity.Idea;
+import com.team04.domain.idea.entity.IdeaBadge;
+import com.team04.domain.idea.repository.IdeaRepository;
 import com.team04.domain.verification.dto.openai.AiVerificationStructuredResult;
 import com.team04.domain.verification.dto.request.VerificationRequest;
 import com.team04.domain.verification.entity.ProjectVerification;
@@ -41,6 +44,7 @@ public class VerificationAsyncProcessor {
     private final VerificationResultRepository verificationResultRepository;
     private final VerificationAuditLogRepository auditLogRepository;
     private final TrustScoreRepository trustScoreRepository;
+    private final IdeaRepository ideaRepository;
     private final VerificationProperties verificationProperties;
     private final OpenAiVerificationService openAiVerificationService;
     private final ApplicationEventPublisher eventPublisher;
@@ -93,9 +97,26 @@ public class VerificationAsyncProcessor {
 
     /** 검증 결과를 기반으로 미구현 항목은 0점 처리한 신뢰도 점수를 저장합니다. */
     private void updateTrustScore(Long ideaId, AiVerificationStructuredResult result) {
-        TrustScore trustScore = trustScoreRepository.findByIdeaId(ideaId).orElseGet(() -> new TrustScore(ideaId));
-        trustScore.updateScores(averageScore(result, VerificationCheckCode.EXAGGERATED_ADVERTISEMENT, VerificationCheckCode.SIMILAR_SERVICE), averageScore(result, VerificationCheckCode.MILESTONE_SPECIFICITY), 0, 0, 0, false);
-        trustScoreRepository.save(trustScore);
+        TrustScore trustScore = trustScoreRepository.findByIdeaId(ideaId)
+                .orElseGet(() -> new TrustScore(ideaId));
+        trustScore.updateScores(
+                averageScore(
+                        result,
+                        VerificationCheckCode.EXAGGERATED_ADVERTISEMENT,
+                        VerificationCheckCode.SIMILAR_SERVICE
+                ),
+                averageScore(result, VerificationCheckCode.MILESTONE_SPECIFICITY),
+                0,
+                0,
+                0
+        );
+        TrustScore savedTrustScore = trustScoreRepository.save(trustScore);
+        if (savedTrustScore.getTotalScore() >= 80) {
+            Idea idea = ideaRepository.findByIdAndDeletedAtIsNull(ideaId)
+                    .orElseThrow(() -> new CustomException(ErrorCode.IDEA_NOT_FOUND));
+            idea.changeBadge(IdeaBadge.VERIFIED);
+            ideaRepository.save(idea);
+        }
     }
 
     /** 지정한 검증 항목들의 평균 점수를 계산합니다. */
@@ -122,7 +143,10 @@ public class VerificationAsyncProcessor {
 
     /** 금칙어 사전 탐지 결과를 AI 구조화 결과와 동일한 형태로 생성합니다. */
     private AiVerificationStructuredResult forbiddenKeywordResult() {
-        return new AiVerificationStructuredResult(VerificationDecision.REJECT, List.of(new AiVerificationStructuredResult.CheckResult(VerificationCheckCode.EXAGGERATED_ADVERTISEMENT, false, 0, "금칙어 사전에 등록된 과대광고 표현이 포함되었습니다.")), "금칙어 사전 기반 1차 필터링에서 반려되었습니다.");
+        return new AiVerificationStructuredResult(VerificationDecision.REJECT,
+                List.of(new AiVerificationStructuredResult.CheckResult(VerificationCheckCode.EXAGGERATED_ADVERTISEMENT,
+                        false, 0, "금칙어 사전에 등록된 과대광고 표현이 포함되었습니다.")),
+                "금칙어 사전 기반 1차 필터링에서 반려되었습니다.");
     }
 
     /** AI 판단 값을 검증 상태 값으로 변환합니다. */

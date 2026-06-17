@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import com.team04.domain.user.entity.Profile;
 import com.team04.domain.user.entity.User;
 import com.team04.domain.user.status.UserStatus;
-import com.team04.global.common.Role;
+import com.team04.domain.user.entity.Role;
 
 import java.time.LocalDateTime;
 
