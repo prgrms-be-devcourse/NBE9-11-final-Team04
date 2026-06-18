@@ -5,13 +5,7 @@ import com.team04.domain.idea.entity.IdeaBadge;
 import com.team04.domain.idea.repository.IdeaRepository;
 import com.team04.domain.verification.dto.openai.AiVerificationStructuredResult;
 import com.team04.domain.verification.dto.request.VerificationRequest;
-import com.team04.domain.verification.entity.ProjectVerification;
-import com.team04.domain.verification.entity.TrustScore;
-import com.team04.domain.verification.entity.VerificationAuditLog;
-import com.team04.domain.verification.entity.VerificationCheckCode;
-import com.team04.domain.verification.entity.VerificationDecision;
-import com.team04.domain.verification.entity.VerificationResult;
-import com.team04.domain.verification.entity.VerificationStatus;
+import com.team04.domain.verification.entity.*;
 import com.team04.domain.verification.event.NotificationEvent;
 import com.team04.domain.verification.event.VerificationRequestedEvent;
 import com.team04.domain.verification.properties.VerificationProperties;
@@ -92,7 +86,8 @@ public class VerificationAsyncProcessor {
         )));
         updateTrustScore(verification.getIdeaId(), result);
         audit(verification, previous, next, result.reason());
-        eventPublisher.publishEvent(new NotificationEvent(verification.getIdeaId(), "검증 상태 변경", result.reason()));
+        //TODO: NEEDS_REVISION, PENDING_ADMIN_REVIEW 상태에 맞는 NotificationType 추가 후 applyDecision 이벤트 발행 로직 수정 필요
+        eventPublisher.publishEvent(new NotificationEvent(verification.getIdeaId(), null, "검증 상태 변경", result.reason()));
     }
 
     /** 검증 결과를 기반으로 미구현 항목은 0점 처리한 신뢰도 점수를 저장합니다. */

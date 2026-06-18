@@ -112,6 +112,8 @@ public enum ErrorCode {
     MATCH_NOT_ACCEPTED(400, "MA003", "수락된 매칭이 아닙니다"),
     MATCH_ACCESS_DENIED(403, "MA004", "해당 매칭에 대한 권한이 없습니다"),
     MATCH_ALREADY_REQUESTED(409, "MA005", "이미 요청한 매칭입니다"),
+    //알림
+    NOTIFICATION_NOT_FOUND(404, "N001", "존재하지 않는 알림입니다."),
 
     // 자금 사용 내역
     FUND_USAGE_NOT_FOUND(404, "FU001", "존재하지 않는 자금 사용 내역입니다"),
