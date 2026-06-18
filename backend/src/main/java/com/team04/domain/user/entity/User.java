@@ -1,7 +1,6 @@
 package com.team04.domain.user.entity;
 
 import com.team04.domain.user.status.UserStatus;
-import com.team04.global.common.Role;
 import com.team04.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;

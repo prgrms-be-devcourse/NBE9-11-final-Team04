@@ -3,7 +3,7 @@ package com.team04.domain.milestone.controller;
 import com.team04.domain.milestone.dto.request.CompletionReportRequest;
 import com.team04.domain.milestone.dto.response.CompletionReportResponse;
 import com.team04.domain.milestone.service.MilestoneService;
-import com.team04.global.common.Role;
+import com.team04.domain.user.entity.Role;
 import com.team04.global.exception.CustomException;
 import com.team04.global.exception.ErrorCode;
 import com.team04.global.response.ApiResponse;

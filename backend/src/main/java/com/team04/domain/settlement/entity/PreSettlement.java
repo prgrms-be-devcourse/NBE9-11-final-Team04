@@ -1,5 +1,7 @@
 package com.team04.domain.settlement.entity;
 
+import com.team04.global.exception.CustomException;
+import com.team04.global.exception.ErrorCode;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -54,13 +56,25 @@ public class PreSettlement {
         this.requestedAt = LocalDateTime.now();
     }
 
-    /** 선정산 지급을 완료 처리합니다. */
+    /**
+     * 선정산 지급을 완료 처리합니다.
+     * REQUESTED 상태에서만 가능합니다.
+     */
     public void complete() {
+        if (this.status != PreSettlementStatus.REQUESTED) {
+            throw new CustomException(ErrorCode.SETTLEMENT_INVALID_STATUS_TRANSITION);
+        }
         this.status = PreSettlementStatus.COMPLETED;
     }
 
-    /** 선정산 지급을 실패 처리합니다. */
+    /**
+     * 선정산 지급을 실패 처리합니다.
+     * REQUESTED 상태에서만 가능합니다.
+     */
     public void fail() {
+        if (this.status != PreSettlementStatus.REQUESTED) {
+            throw new CustomException(ErrorCode.SETTLEMENT_INVALID_STATUS_TRANSITION);
+        }
         this.status = PreSettlementStatus.FAILED;
     }
 }

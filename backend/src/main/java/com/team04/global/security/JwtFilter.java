@@ -1,6 +1,6 @@
 package com.team04.global.security;
 
-import com.team04.global.common.Role;
+import com.team04.domain.user.entity.Role;
 import com.team04.global.util.JwtUtil;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;

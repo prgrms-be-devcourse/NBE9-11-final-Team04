@@ -3,11 +3,12 @@ package com.team04.domain.settlement.service;
 import com.team04.domain.idea.dto.response.IdeaResponse;
 import com.team04.domain.idea.service.IdeaService;
 import com.team04.domain.settlement.dto.response.SettlementResponse;
+import com.team04.domain.settlement.entity.PreSettlementStatus;
 import com.team04.domain.settlement.entity.Settlement;
 import com.team04.domain.settlement.entity.SettlementType;
 import com.team04.domain.settlement.repository.PreSettlementRepository;
 import com.team04.domain.settlement.repository.SettlementRepository;
-import com.team04.global.common.Role;
+import com.team04.domain.user.entity.Role;
 import com.team04.global.exception.CustomException;
 import com.team04.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -80,7 +81,7 @@ public class SettlementService {
         Long totalAmount = ideaService.getIdea(ideaId).currentAmount();
 
         long preSettlementTotal = preSettlementRepository
-                .findMaxAccumulatedAmountByIdeaId(ideaId);
+                .findMaxAccumulatedAmountByIdeaId(ideaId, PreSettlementStatus.FAILED);
 
         long platformFee = Math.round(totalAmount * PLATFORM_FEE_RATE);
         long payoutAmount = totalAmount - platformFee - preSettlementTotal;
@@ -115,7 +116,7 @@ public class SettlementService {
         }
 
         long preSettlementTotal = preSettlementRepository
-                .findMaxAccumulatedAmountByIdeaId(ideaId);
+                .findMaxAccumulatedAmountByIdeaId(ideaId, PreSettlementStatus.FAILED);
 
         long refundAmount = totalAmount - preSettlementTotal;
 

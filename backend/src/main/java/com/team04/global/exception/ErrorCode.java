@@ -26,6 +26,12 @@ public enum ErrorCode {
     ACCOUNT_WITHDRAWN(403, "U005", "탈퇴한 계정입니다"),
     UNDERAGE(403, "U006", "만 19세 미만은 가입할 수 없습니다"),
 
+    // 사업자검증
+    BUSINESS_VERIFICATION_UNAVAILABLE(503, "B001", "사업자 인증 서비스가 일시적으로 불안정합니다. 잠시 후 다시 시도해주세요"),
+    BUSINESS_VERIFICATION_FAILED(400, "B002", "사업자 진위확인에 실패했습니다"),
+    BUSINESS_ALREADY_REGISTERED(409, "B003", "이미 등록된 사업자번호입니다"),
+    BUSINESS_REGISTRATION_NOT_FOUND(404, "B004", "사업자 인증 정보가 존재하지 않습니다"),
+
     // 아이디어
     IDEA_NOT_FOUND(404, "I001", "존재하지 않는 아이디어입니다"),
     IDEA_STATUS_NOT_EDITABLE(400, "I004", "현재 상태에서는 아이디어를 수정할 수 없습니다"),

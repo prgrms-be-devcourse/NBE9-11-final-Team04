@@ -10,11 +10,15 @@ import com.team04.domain.settlement.dto.response.PreSettlementResponse;
 import com.team04.domain.settlement.entity.PreSettlement;
 import com.team04.domain.settlement.entity.PreSettlementStatus;
 import com.team04.domain.settlement.repository.PreSettlementRepository;
+import com.team04.domain.user.entity.Role;
 import com.team04.global.exception.CustomException;
 import com.team04.global.exception.ErrorCode;
-import io.github.resilience4j.retry.annotation.Retry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.PessimisticLockingFailureException;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Recover;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,31 +36,37 @@ public class PreSettlementService {
     /**
      * 선정산 신청
      * 마일스톤 IN_PROGRESS 상태에서만 가능
+     * 요청한 제안자가 해당 아이디어 소유자인지 검증
+     * Milestone 비관락으로 동시 요청 제어 (첫 신청 시 빈 테이블 락 허점 방지)
      * 보증금 2배 한도 내에서 분할 신청 가능 (ideaId 기준 누적 체크)
-     * 비관락으로 동시 요청 제어, resilience4j @Retry로 최대 3회 재시도
+     * spring-retry @Retryable로 최대 3회 재시도
      * 장부 생성 후 REQUESTED 상태 유지 — 결제팀이 지급 완료 후 COMPLETED로 변경
      * TODO: 한도 계산은 idea.getDepositAmount() * 2로 변경 필요 (idea 도메인에 depositAmount 필드 추가 요청)
      */
-    @Retry(name = "preSettlement", fallbackMethod = "requestPreSettlementFallback")
+    @Retryable(
+            retryFor = PessimisticLockingFailureException.class,
+            maxAttempts = 3,
+            backoff = @Backoff(delay = 500)
+    )
     @Transactional
-    public PreSettlementResponse requestPreSettlement(Long milestoneId, PreSettlementRequest request) {
-        if (request.amount() == null || request.amount() <= 0) {
-            throw new CustomException(ErrorCode.PRE_SETTLEMENT_INVALID_AMOUNT);
-        }
-
-        Milestone milestone = milestoneRepository.findById(milestoneId)
+    public PreSettlementResponse requestPreSettlement(Long milestoneId, PreSettlementRequest request, Long userId) {
+        Milestone milestone = milestoneRepository.findByIdWithPessimisticLock(milestoneId)
                 .orElseThrow(() -> new CustomException(ErrorCode.MILESTONE_NOT_FOUND));
 
         if (milestone.getStatus() != MilestoneStatus.IN_PROGRESS) {
             throw new CustomException(ErrorCode.PRE_SETTLEMENT_MILESTONE_NOT_IN_PROGRESS);
         }
 
-        // TODO: idea.getDepositAmount() * 2로 변경 필요 (idea 도메인 담당자에게 depositAmount 필드 추가 요청)
         IdeaResponse idea = ideaService.getIdea(milestone.getIdeaId());
+        if (!idea.userId().equals(userId)) {
+            throw new CustomException(ErrorCode.SETTLEMENT_ACCESS_DENIED);
+        }
+
+        // TODO: idea.getDepositAmount() * 2로 변경 필요 (idea 도메인 담당자에게 depositAmount 필드 추가 요청)
         long limit = Math.round(idea.goalAmount() * 0.3) * 2;
 
-        // 비관락으로 누적 금액 조회 — 동시 요청이 끼어들지 못하도록 잠금
-        long accumulated = preSettlementRepository.findMaxAccumulatedAmountByIdeaId(milestone.getIdeaId());
+        long accumulated = preSettlementRepository.findMaxAccumulatedAmountByIdeaId(
+                milestone.getIdeaId(), PreSettlementStatus.FAILED);
 
         if (accumulated + request.amount() > limit) {
             throw new CustomException(ErrorCode.PRE_SETTLEMENT_LIMIT_EXCEEDED);
@@ -78,8 +88,10 @@ public class PreSettlementService {
 
     /**
      * 선정산 신청 fallback — 3회 재시도 후 모두 실패 시 호출
+     * CustomException(비즈니스 예외)은 그대로 throw — 삼키지 않음
      */
-    public PreSettlementResponse requestPreSettlementFallback(Long milestoneId, PreSettlementRequest request, Exception e) {
+    @Recover
+    public PreSettlementResponse requestPreSettlementRecover(PessimisticLockingFailureException e, Long milestoneId, PreSettlementRequest request, Long userId) {
         log.error("선정산 신청 최종 실패 milestoneId={}, amount={}", milestoneId, request.amount(), e);
         throw new CustomException(ErrorCode.PRE_SETTLEMENT_REQUEST_FAILED);
     }
@@ -100,12 +112,19 @@ public class PreSettlementService {
 
     /**
      * 마일스톤별 선정산 내역 조회
-     * 관리자/제안자만 가능 (컨트롤러에서 권한 체크)
+     * 관리자는 모두 조회 가능, 제안자는 본인 프로젝트만 조회 가능
      */
     @Transactional(readOnly = true)
-    public List<PreSettlementResponse> getPreSettlements(Long milestoneId) {
-        milestoneRepository.findById(milestoneId)
+    public List<PreSettlementResponse> getPreSettlements(Long milestoneId, Long userId, Role role) {
+        Milestone milestone = milestoneRepository.findById(milestoneId)
                 .orElseThrow(() -> new CustomException(ErrorCode.MILESTONE_NOT_FOUND));
+
+        if (role != Role.ADMIN) {
+            IdeaResponse idea = ideaService.getIdea(milestone.getIdeaId());
+            if (!idea.userId().equals(userId)) {
+                throw new CustomException(ErrorCode.SETTLEMENT_ACCESS_DENIED);
+            }
+        }
 
         return preSettlementRepository.findByMilestoneId(milestoneId).stream()
                 .map(PreSettlementResponse::from)
