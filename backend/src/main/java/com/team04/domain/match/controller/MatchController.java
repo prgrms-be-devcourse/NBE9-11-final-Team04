@@ -2,6 +2,7 @@ package com.team04.domain.match.controller;
 
 import com.team04.domain.match.dto.request.ExpertMatchRespondRequest;
 import com.team04.domain.match.dto.request.ExpertReviewRequest;
+import com.team04.domain.match.dto.request.MatchRequest;
 import com.team04.domain.match.dto.response.ExpertMatchResponse;
 import com.team04.domain.match.dto.response.ExpertReviewResponse;
 import com.team04.domain.match.service.ExpertMatchService;
@@ -18,7 +19,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/experts/matches")
+@RequestMapping("/matches")
 @RequiredArgsConstructor
 public class MatchController {
 
@@ -59,4 +60,17 @@ public class MatchController {
         return ResponseEntity.status(201).body(ApiResponse.ofSuccess(response));
     }
 
+    /* 제안자 -> 전문가 매칭 요청 API */
+    @PostMapping("/experts/{expertProfileId}")
+    @PreAuthorize("hasRole('PROPOSER')")
+    public ResponseEntity<ApiResponse<ExpertMatchResponse>> requestMatch(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable Long expertProfileId,
+            @Valid @RequestBody MatchRequest request
+    ) {
+        ExpertMatchResponse response = expertMatchService.requestMatch(
+                userDetails.getUserId(), expertProfileId, request
+        );
+        return ResponseEntity.status(201).body(ApiResponse.ofSuccess(response));
+    }
 }
