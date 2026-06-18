@@ -70,7 +70,7 @@ public class DisputeService {
 
     @Transactional(readOnly = true)
     public DisputeResponse getDispute(Long userId, Long disputeId) {
-        Dispute dispute = disputeRepository.findById(disputeId)
+        Dispute dispute = disputeRepository.findByIdWithDetails(disputeId)
                 .orElseThrow(() -> new CustomException(ErrorCode.DISPUTE_NOT_FOUND));
 
         boolean isAdmin = userRepository.findById(userId)
