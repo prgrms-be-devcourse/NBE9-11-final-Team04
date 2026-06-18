@@ -53,7 +53,7 @@ public class NotificationService {
         notificationRepository.markAllAsReadByUserId(userId);
     }
 
-    @Transactional
+
     public void createNotification(Long userId, NotificationType type, String title, String message, Long referenceId){
 
         User user = userRepository.findById(userId)
@@ -72,7 +72,7 @@ public class NotificationService {
         }
     }
 
-    @Transactional
+
     public void createNotificationsToAdmins(NotificationType type, String title,
                                             String message, Long referenceId) {
         List<User> admins = userRepository.findByRole(Role.ADMIN);
@@ -82,6 +82,18 @@ public class NotificationService {
                 .toList();
 
         notificationRepository.saveAll(notifications);
+
+        for (Notification notification : notifications) {
+            Long userId = notification.getUser().getId();
+            SseEmitter emitter = sseEmitterStorage.get(userId);
+            if (emitter != null) {
+                try {
+                    emitter.send(SseEmitter.event().name("notification").data(new NotificationResponse(notification)));
+                } catch (IOException e) {
+                    sseEmitterStorage.remove(userId);
+                }
+            }
+        }
     }
 
 

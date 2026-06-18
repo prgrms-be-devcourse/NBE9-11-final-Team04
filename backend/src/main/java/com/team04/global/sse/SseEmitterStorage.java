@@ -19,7 +19,7 @@ public class SseEmitterStorage {
         emitters.remove(userId);
     }
 
-    public SseEmitter get(Long id){
-        return emitters.get(id);
+    public SseEmitter get(Long userId){
+        return emitters.get(userId);
     }
 }
