@@ -35,7 +35,16 @@ jobs:
 
       - name: Docker 이미지 빌드
         run: |
-          cp backend/build/libs/*.jar infra/app.jar
+          mkdir -p infra
+          ls -al backend/build/libs
+          JAR_FILE=$(find backend/build/libs -maxdepth 1 -name "*.jar" ! -name "*-plain.jar" | head -n 1)
+
+          if [ -z "$JAR_FILE" ]; then
+            echo "실행 가능한 JAR 파일을 찾지 못했습니다."
+            exit 1
+          fi
+
+          cp "$JAR_FILE" infra/app.jar
           docker build -t seedlink-app:latest infra/
 
       - name: Docker 이미지 저장
