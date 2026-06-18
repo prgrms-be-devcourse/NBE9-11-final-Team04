@@ -30,15 +30,6 @@ public class PreSettlement {
     @Column(nullable = false)
     private Long amount;
 
-    /**
-     * 이 선정산 시점까지의 누적 선정산 금액 (FAILED 제외)
-     * 직전 성공한 선정산의 accumulatedAmount + 현재 신청 금액으로 계산
-     * FAILED 시 이전 성공 기준값 그대로 유지
-     * MAX(accumulatedAmount)로 현재 누적 금액 조회 가능
-     */
-    @Column(nullable = false)
-    private Long accumulatedAmount;
-
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private PreSettlementStatus status;
@@ -47,11 +38,10 @@ public class PreSettlement {
     private LocalDateTime requestedAt;
 
     @Builder
-    private PreSettlement(Long milestoneId, Long ideaId, Long amount, Long accumulatedAmount) {
+    private PreSettlement(Long milestoneId, Long ideaId, Long amount) {
         this.milestoneId = milestoneId;
         this.ideaId = ideaId;
         this.amount = amount;
-        this.accumulatedAmount = accumulatedAmount;
         this.status = PreSettlementStatus.REQUESTED;
         this.requestedAt = LocalDateTime.now();
     }

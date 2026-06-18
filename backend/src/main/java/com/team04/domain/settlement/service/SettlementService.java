@@ -81,7 +81,7 @@ public class SettlementService {
         Long totalAmount = ideaService.getIdea(ideaId).currentAmount();
 
         long preSettlementTotal = preSettlementRepository
-                .findMaxAccumulatedAmountByIdeaId(ideaId, PreSettlementStatus.FAILED);
+                .sumAmountByIdeaIdAndStatusNot(ideaId, PreSettlementStatus.FAILED);
 
         long platformFee = Math.round(totalAmount * PLATFORM_FEE_RATE);
         long payoutAmount = totalAmount - platformFee - preSettlementTotal;
@@ -116,7 +116,7 @@ public class SettlementService {
         }
 
         long preSettlementTotal = preSettlementRepository
-                .findMaxAccumulatedAmountByIdeaId(ideaId, PreSettlementStatus.FAILED);
+                .sumAmountByIdeaIdAndStatusNot(ideaId, PreSettlementStatus.FAILED);
 
         long refundAmount = totalAmount - preSettlementTotal;
 

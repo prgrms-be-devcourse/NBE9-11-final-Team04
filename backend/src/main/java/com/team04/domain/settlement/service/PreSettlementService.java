@@ -37,8 +37,8 @@ public class PreSettlementService {
      * 선정산 신청
      * 마일스톤 IN_PROGRESS 상태에서만 가능
      * 요청한 제안자가 해당 아이디어 소유자인지 검증
-     * Milestone 비관락으로 동시 요청 제어 (첫 신청 시 빈 테이블 락 허점 방지)
-     * 보증금 2배 한도 내에서 분할 신청 가능 (ideaId 기준 누적 체크)
+     * Milestone 비관락으로 동시 요청 제어
+     * 보증금 2배 한도 내에서 분할 신청 가능 (ideaId 기준 SUM 누적 체크)
      * spring-retry @Retryable로 최대 3회 재시도
      * 장부 생성 후 REQUESTED 상태 유지 — 결제팀이 지급 완료 후 COMPLETED로 변경
      * TODO: 한도 계산은 idea.getDepositAmount() * 2로 변경 필요 (idea 도메인에 depositAmount 필드 추가 요청)
@@ -65,20 +65,18 @@ public class PreSettlementService {
         // TODO: idea.getDepositAmount() * 2로 변경 필요 (idea 도메인 담당자에게 depositAmount 필드 추가 요청)
         long limit = Math.round(idea.goalAmount() * 0.3) * 2;
 
-        long accumulated = preSettlementRepository.findMaxAccumulatedAmountByIdeaId(
+        // Milestone 비관락으로 동시성 보장 — FAILED 제외 SUM으로 유효 누적액 계산
+        long accumulated = preSettlementRepository.sumAmountByIdeaIdAndStatusNot(
                 milestone.getIdeaId(), PreSettlementStatus.FAILED);
 
         if (accumulated + request.amount() > limit) {
             throw new CustomException(ErrorCode.PRE_SETTLEMENT_LIMIT_EXCEEDED);
         }
 
-        long newAccumulatedAmount = accumulated + request.amount();
-
         PreSettlement preSettlement = PreSettlement.builder()
                 .milestoneId(milestoneId)
                 .ideaId(milestone.getIdeaId())
                 .amount(request.amount())
-                .accumulatedAmount(newAccumulatedAmount)
                 .build();
 
         // TODO: 결제팀에 지급 요청 (PaymentService.payout()) 호출 후 REQUESTED 유지
