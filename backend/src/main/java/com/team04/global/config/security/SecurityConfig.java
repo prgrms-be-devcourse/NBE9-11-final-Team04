@@ -44,6 +44,7 @@ public class SecurityConfig {
                         .requestMatchers("/users/me/business").hasRole("PROPOSER")
                         .requestMatchers(HttpMethod.POST, "/auth/logout").authenticated()
                         .requestMatchers("/auth/**").permitAll()
+                        .requestMatchers("/actuator/health").permitAll() // 헬스체크
                         .requestMatchers("/payments/webhooks/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/ideas", "/ideas/search").permitAll()
                         .requestMatchers(HttpMethod.GET, "/experts/{expertId}").authenticated()
