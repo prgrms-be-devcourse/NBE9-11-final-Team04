@@ -42,7 +42,7 @@ public class FundUsageService {
             throw new CustomException(ErrorCode.FORBIDDEN);
         }
 
-        milestoneRepository.findByIdeaIdAndStatus(ideaId, MilestoneStatus.IN_PROGRESS)
+        milestoneRepository.findByIdeaIdAndStatusWithPessimisticLock(ideaId, MilestoneStatus.IN_PROGRESS)
                 .orElseThrow(() -> new CustomException(ErrorCode.FUND_USAGE_NO_IN_PROGRESS_MILESTONE));
 
         // 지출 일자 하한선 검증 — 펀딩 시작일 이전 날짜 불가
