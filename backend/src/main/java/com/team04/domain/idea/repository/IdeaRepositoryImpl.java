@@ -1,0 +1,96 @@
+package com.team04.domain.idea.repository;
+
+import com.querydsl.core.types.OrderSpecifier;
+import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.jpa.impl.JPAQueryFactory;
+import com.team04.domain.idea.entity.Idea;
+import com.team04.domain.idea.entity.IdeaCategory;
+import com.team04.domain.idea.entity.QIdea;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
+import org.springframework.data.domain.SliceImpl;
+import org.springframework.util.StringUtils;
+
+import java.time.LocalDateTime;
+import java.util.List;
+
+/** QueryDSL로 프로젝트 목록 조회와 키워드 검색 쿼리를 구현하는 레포지토리입니다. */
+@RequiredArgsConstructor
+public class IdeaRepositoryImpl implements IdeaRepositoryCustom {
+
+    private static final String SORT_DEADLINE = "deadline";
+
+    private final JPAQueryFactory queryFactory;
+
+    /** 조건에 맞는 프로젝트를 페이지 크기보다 하나 더 조회해 다음 Slice 존재 여부를 계산합니다. */
+    @Override
+    public Slice<Idea> searchProjects(
+            IdeaCategory category,
+            Boolean closingSoonOnly,
+            String keyword,
+            String sort,
+            Pageable pageable
+    ) {
+        QIdea idea = QIdea.idea;
+        List<Idea> ideas = queryFactory
+                .selectFrom(idea)
+                .where(
+                        idea.deletedAt.isNull(),
+                        categoryEq(idea, category),
+                        closingSoon(idea, closingSoonOnly),
+                        titleContains(idea, keyword)
+                )
+                .orderBy(orderBy(idea, sort), idea.id.desc())
+                .offset(pageable.getOffset())
+                .limit(pageable.getPageSize() + 1L)
+                .fetch();
+
+        boolean hasNext = ideas.size() > pageable.getPageSize();
+        if (hasNext) {
+            ideas.remove(pageable.getPageSize());
+        }
+        return new SliceImpl<>(ideas, pageable, hasNext);
+    }
+
+    /** 카테고리 값이 있는 경우에만 카테고리 조건을 추가합니다. */
+    private BooleanExpression categoryEq(QIdea idea, IdeaCategory category) {
+        return category == null ? null : idea.category.eq(category);
+    }
+
+    /** 마감임박 필터가 켜진 경우 펀딩 마감 7일 이내 프로젝트 조건을 추가합니다. */
+    private BooleanExpression closingSoon(QIdea idea, Boolean closingSoonOnly) {
+        if (!Boolean.TRUE.equals(closingSoonOnly)) {
+            return null;
+        }
+        LocalDateTime now = LocalDateTime.now();
+        return idea.fundingEndAt.between(now, now.plusDays(7));
+    }
+
+    /** 검색어가 있는 경우 프로젝트명 부분 일치 조건을 추가합니다. */
+    private BooleanExpression titleContains(QIdea idea, String keyword) {
+        return StringUtils.hasText(keyword) ? idea.title.containsIgnoreCase(keyword) : null;
+    }
+
+    /** 마감임박 정렬이면 펀딩 종료일 오름차순, 기본값은 최신순으로 정렬합니다. */
+    private OrderSpecifier<?> orderBy(QIdea idea, String sort) {
+        if (SORT_DEADLINE.equalsIgnoreCase(sort)) {
+            return idea.fundingEndAt.asc();
+        }
+        return idea.createdAt.desc();
+    }
+    /** 펀딩 종료일이 지났고 현재 모금액이 목표액에 미달한 아이디어 ID 목록을 반환합니다. */
+    @Override
+    public List<Long> findFailedFundingIdeaIds(LocalDateTime now) {
+        QIdea idea = QIdea.idea;
+        return queryFactory
+                .select(idea.id)
+                .from(idea)
+                .where(
+                        idea.deletedAt.isNull(),
+                        idea.fundingEndAt.lt(now),
+                        idea.currentAmount.lt(idea.goalAmount)
+                )
+                .fetch();
+    }
+}

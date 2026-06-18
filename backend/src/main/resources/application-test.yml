@@ -1,0 +1,47 @@
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/seedlink_test?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+    username: root
+    password: test
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+  mail:
+    host: localhost
+    port: 25
+    username: test@test.com
+    password: test
+    properties:
+      mail.smtp.auth: false
+      mail.smtp.starttls.enable: false
+
+jwt:
+  secret: test-secret-key-minimum-256-bits-long-for-hs256-algorithm
+  access-expiry: 30m
+  refresh-expiry: 14d
+
+nts:
+  api:
+    service-key: test-service-key
+
+verification:
+  forbidden-keywords:
+    - 100% 보장
+    - 수익 확정
+    - 원금 보장
+
+openai:
+  verification:
+    base-url: https://api.openai.com
+    api-key: test-api-key
+    model: gpt-4o-mini
+    timeout-seconds: 300

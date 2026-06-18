@@ -35,3 +35,10 @@ out/
 
 ### VS Code ###
 .vscode/
+
+# 환경 설정
+application-local.yml
+application-dev.yml
+
+# Custom
+.DS_Store

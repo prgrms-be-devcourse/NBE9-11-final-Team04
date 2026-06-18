@@ -1,0 +1,44 @@
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/seedlink?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+    username: root
+    password: test
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      # 💡 로컬 개발 환경용 테이블 자동 생성/삭제 옵션
+      ddl-auto: update
+    show-sql: true
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    # ⚠️ [입력 필요] 본인의 구글 이메일 주소 전체 입력
+    username: "NEED_TO_INPUT_YOUR_GMAIL_ADDRESS"
+    # ⚠️ [입력 필요] 구글 계정 보안 메뉴에서 발급받은 16자리 '앱 비밀번호' 입력
+    password: "NEED_TO_INPUT_YOUR_GOOGLE_APP_PASSWORD"
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
+
+jwt:
+  # ⚠️ [입력 필요] HS256 알고리즘을 충족하는 최소 256비트(32바이트) 이상의 랜덤 문자열 입력
+  secret: "NEED_TO_INPUT_YOUR_JWT_SECRET_KEY_AT_LEAST_32_BYTES"
+  access-expiry: 30m
+  refresh-expiry: 14d
+
+nts:
+  api:
+    # ⚠️ [입력 필요] 공공데이터포털 마이페이지에서 복사한 국세청 API [Decoding] 인증키 입력
+    service-key: "NEED_TO_INPUT_YOUR_NTS_DECODING_SERVICE_KEY"
+
+openai:
+  verification:
+    # ⚠️ [입력 필요] OpenAI 플랫폼에서 발급받은 API 키 입력
+    api-key: "NEED_TO_INPUT_YOUR_OPENAI_API_KEY"

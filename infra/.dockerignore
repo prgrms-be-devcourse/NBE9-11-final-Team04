@@ -1,0 +1,11 @@
+.git
+.github
+.gradle
+.idea
+build
+out
+*.md
+*.png
+*.jpg
+frontend
+infra
