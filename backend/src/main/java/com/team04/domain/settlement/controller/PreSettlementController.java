@@ -48,6 +48,20 @@ public class PreSettlementController {
         return ApiResponse.ofSuccess(preSettlementService.completePreSettlement(preSettlementId));
     }
 
+    /**
+     * 선정산 지급 실패 처리입니다.
+     * TODO: 결제팀과 호출 방식 협의 후 인증 처리 변경 필요 (현재 ADMIN으로 임시 처리)
+     */
+    @PatchMapping("/{preSettlementId}/fail")
+    public ApiResponse<PreSettlementResponse> failPreSettlement(
+            @PathVariable Long preSettlementId,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails.getRole() != Role.ADMIN) {
+            throw new CustomException(ErrorCode.SETTLEMENT_ACCESS_DENIED);
+        }
+        return ApiResponse.ofSuccess(preSettlementService.failPreSettlement(preSettlementId));
+    }
+
     /** 마일스톤별 선정산 내역을 조회합니다. 관리자/제안자만 가능하며 제안자는 본인 프로젝트만 조회 가능합니다. */
     @GetMapping("/{milestoneId}")
     public ApiResponse<List<PreSettlementResponse>> getPreSettlements(

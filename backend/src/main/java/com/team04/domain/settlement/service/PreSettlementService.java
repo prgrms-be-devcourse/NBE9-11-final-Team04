@@ -109,6 +109,21 @@ public class PreSettlementService {
     }
 
     /**
+     * 선정산 지급 실패 처리
+     * 결제팀이 지급 실패 시 호출
+     * REQUESTED 상태를 FAILED로 전환하여 한도 차감 해제
+     * TODO: 결제팀과 호출 방식 협의 후 인증 처리 변경 필요 (현재 ADMIN으로 임시 처리)
+     */
+    @Transactional
+    public PreSettlementResponse failPreSettlement(Long preSettlementId) {
+        PreSettlement preSettlement = preSettlementRepository.findById(preSettlementId)
+                .orElseThrow(() -> new CustomException(ErrorCode.PRE_SETTLEMENT_NOT_FOUND));
+
+        preSettlement.fail();
+        return PreSettlementResponse.from(preSettlement);
+    }
+
+    /**
      * 마일스톤별 선정산 내역 조회
      * 관리자는 모두 조회 가능, 제안자는 본인 프로젝트만 조회 가능
      */
