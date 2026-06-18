@@ -9,12 +9,15 @@ import com.team04.domain.user.entity.User;
 import com.team04.domain.user.repository.UserRepository;
 import com.team04.global.exception.CustomException;
 import com.team04.global.exception.ErrorCode;
+import com.team04.global.sse.SseEmitterStorage;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.io.IOException;
 import java.util.List;
 
 @Service
@@ -23,6 +26,7 @@ public class NotificationService {
 
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
+    private final SseEmitterStorage sseEmitterStorage;
 
     @Transactional(readOnly = true)
     public Page<NotificationResponse> getMyNotifications(Long userId, Pageable pageable){
@@ -57,6 +61,15 @@ public class NotificationService {
 
         Notification notification = Notification.create(user, type, title, message, referenceId);
         notificationRepository.save(notification);
+
+        SseEmitter emitter = sseEmitterStorage.get(userId);
+        if(emitter != null){
+            try{
+                emitter.send(SseEmitter.event().name("notification").data(new NotificationResponse(notification)));
+            } catch (IOException e) {
+                sseEmitterStorage.remove(userId);
+            }
+        }
     }
 
     @Transactional
@@ -69,6 +82,25 @@ public class NotificationService {
                 .toList();
 
         notificationRepository.saveAll(notifications);
+    }
+
+
+    public SseEmitter subscribe(Long userId) {
+        SseEmitter emitter = new SseEmitter(30 * 60 * 1000L);
+
+        sseEmitterStorage.add(userId, emitter);
+
+        emitter.onCompletion(() -> sseEmitterStorage.remove(userId));
+        emitter.onTimeout(() -> sseEmitterStorage.remove(userId));
+        emitter.onError((e) -> sseEmitterStorage.remove(userId));
+
+        try {
+            emitter.send(SseEmitter.event().name("connect").data("connected"));
+        } catch (IOException e) {
+            sseEmitterStorage.remove(userId);
+        }
+
+        return emitter;
     }
 
 
