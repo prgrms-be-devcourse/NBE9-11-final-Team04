@@ -1,16 +1,20 @@
 package com.team04.domain.expert.controller;
 
 import com.team04.domain.expert.dto.request.ExpertProfileRequest;
+import com.team04.domain.match.dto.request.ExpertReviewRequest;
 import com.team04.domain.expert.dto.request.ExpertVerifyRequest;
 import com.team04.domain.expert.dto.response.ExpertProfileResponse;
+import com.team04.domain.match.dto.response.ExpertReviewResponse;
 import com.team04.domain.expert.dto.response.ExpertVerifyResponse;
 import com.team04.domain.expert.service.ExpertProfileService;
+import com.team04.domain.match.service.ExpertReviewService;
 import com.team04.domain.expert.service.ExpertVerifyService;
 import com.team04.global.response.ApiResponse;
 import com.team04.global.security.CustomUserDetails;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -25,6 +29,7 @@ public class ExpertController {
 
     /* 전문가 프로필 등록 API */
     @PostMapping("/profile")
+    @PreAuthorize("hasRole('EXPERT')")
     public ResponseEntity<ApiResponse<ExpertProfileResponse>> registerProfile(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @Valid @RequestBody ExpertProfileRequest request
@@ -46,6 +51,7 @@ public class ExpertController {
 
     /* 전문가 프로필 검증 API */
     @PostMapping("/verify")
+    @PreAuthorize("hasRole('EXPERT')")
     public ResponseEntity<ApiResponse<ExpertVerifyResponse>> verify(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @Valid @RequestBody ExpertVerifyRequest request
@@ -53,5 +59,4 @@ public class ExpertController {
         ExpertVerifyResponse response = expertVerifyService.verify(userDetails.getUserId(), request);
         return ResponseEntity.status(201).body(ApiResponse.ofSuccess(response));
     }
-
 }
