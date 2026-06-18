@@ -1,11 +1,11 @@
 package com.team04.domain.notification.service;
 
 import com.team04.domain.idea.entity.Idea;
-import com.team04.domain.idea.event.IdeaReportNotificationEvent;
 import com.team04.domain.idea.repository.IdeaRepository;
 import com.team04.domain.notification.entity.NotificationType;
 import com.team04.domain.user.repository.UserRepository;
 import com.team04.domain.verification.event.NotificationEvent;
+import com.team04.global.event.ReportNotificationEvent;
 import com.team04.global.exception.CustomException;
 import com.team04.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -43,12 +43,12 @@ public class NotificationEventListener {
 
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void handleIdeaReportEvent(IdeaReportNotificationEvent event) {
+    public void handleReportEvent(ReportNotificationEvent event) {
         notificationService.createNotificationsToAdmins(
                 NotificationType.REPORT_RECEIVED,
-                "아이디어 신고 접수",
-                "아이디어 ID: " + event.ideaId() + " 신고 사유: " + event.reason(),
-                event.ideaId()
+                event.targetType() + " 신고 접수",
+                "신고 사유: " + event.reason(),
+                event.targetId()
         );
     }
 }
