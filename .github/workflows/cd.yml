@@ -68,6 +68,7 @@ jobs:
           script: |
             cd /home/${{ secrets.EC2_USER }}/seedlink
             docker load < seedlink-app.tar.gz
+            cp infra/docker-compose.yml docker-compose.yml
             
             cat > .env << EOF
             DB_HOST=mysql
