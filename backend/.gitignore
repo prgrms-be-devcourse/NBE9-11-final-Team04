@@ -39,7 +39,6 @@ out/
 # 환경 설정
 application-local.yml
 application-dev.yml
-application-prod.yml
 
 # Custom
 .DS_Store
