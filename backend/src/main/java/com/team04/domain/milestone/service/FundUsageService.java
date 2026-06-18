@@ -8,6 +8,8 @@ import com.team04.domain.milestone.entity.FundUsage;
 import com.team04.domain.milestone.entity.MilestoneStatus;
 import com.team04.domain.milestone.repository.FundUsageRepository;
 import com.team04.domain.milestone.repository.MilestoneRepository;
+import com.team04.domain.settlement.entity.PreSettlementStatus;
+import com.team04.domain.settlement.repository.PreSettlementRepository;
 import com.team04.domain.user.entity.Role;
 import com.team04.global.exception.CustomException;
 import com.team04.global.exception.ErrorCode;
@@ -23,12 +25,15 @@ public class FundUsageService {
 
     private final FundUsageRepository fundUsageRepository;
     private final MilestoneRepository milestoneRepository;
+    private final PreSettlementRepository preSettlementRepository;
     private final IdeaService ideaService;
 
     /**
      * 자금 사용 내역 입력 (Append Only)
      * 제안자만 가능, 본인 프로젝트인지 소유권 검증
      * 진행 중인 마일스톤이 있어야 함
+     * 실제 지급받은 금액(COMPLETED 선정산 누적액) 초과 입력 불가
+     * 펀딩 시작일 이전 날짜 입력 불가
      */
     @Transactional
     public FundUsageResponse addFundUsage(Long ideaId, FundUsageRequest request, Long userId) {
@@ -39,6 +44,20 @@ public class FundUsageService {
 
         milestoneRepository.findByIdeaIdAndStatus(ideaId, MilestoneStatus.IN_PROGRESS)
                 .orElseThrow(() -> new CustomException(ErrorCode.FUND_USAGE_NO_IN_PROGRESS_MILESTONE));
+
+        // 지출 일자 하한선 검증 — 펀딩 시작일 이전 날짜 불가
+        if (request.usedAt().isBefore(idea.fundingStartAt().toLocalDate())) {
+            throw new CustomException(ErrorCode.FUND_USAGE_INVALID_DATE);
+        }
+
+        // 수령액 초과 지출 방지 — 실제 지급 완료된 선정산 누적액 초과 불가
+        long totalReceived = preSettlementRepository.sumAmountByIdeaIdAndStatus(
+                ideaId, PreSettlementStatus.COMPLETED);
+        long totalUsed = fundUsageRepository.sumAmountByIdeaId(ideaId);
+
+        if (totalUsed + request.amount() > totalReceived) {
+            throw new CustomException(ErrorCode.FUND_USAGE_EXCEEDS_RECEIVED);
+        }
 
         FundUsage fundUsage = FundUsage.builder()
                 .ideaId(ideaId)
