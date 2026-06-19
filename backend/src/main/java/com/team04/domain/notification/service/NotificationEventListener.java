@@ -1,13 +1,8 @@
 package com.team04.domain.notification.service;
 
-import com.team04.domain.idea.entity.Idea;
-import com.team04.domain.idea.repository.IdeaRepository;
 import com.team04.domain.notification.entity.NotificationType;
-import com.team04.domain.user.repository.UserRepository;
-import com.team04.domain.verification.event.NotificationEvent;
+import com.team04.global.event.NotificationEvent;
 import com.team04.global.event.ReportNotificationEvent;
-import com.team04.global.exception.CustomException;
-import com.team04.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
@@ -19,28 +14,18 @@ import org.springframework.transaction.event.TransactionalEventListener;
 public class NotificationEventListener {
 
     private final NotificationService notificationService;
-    private final IdeaRepository ideaRepository;
-    private final UserRepository userRepository;
 
+    //대상에게 알림
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void handleNotificationEvent(NotificationEvent notificationEvent){
-        Long ideaId = notificationEvent.ideaId();
-
-        Idea idea = ideaRepository.findById(ideaId)
-                .orElseThrow(() -> new CustomException(ErrorCode.IDEA_NOT_FOUND));
-
-        Long userId = idea.getUserId();
-
+    public void handleNotificationEvent(NotificationEvent event){
         notificationService.createNotification(
-                userId,
-                notificationEvent.notificationType(),
-                notificationEvent.title(),
-                notificationEvent.message(),
-                ideaId
+                event.userId(), event.notificationType(),
+                event.title(), event.message(), event.targetId()
         );
     }
 
+    //관리자 모두에게 알림
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleReportEvent(ReportNotificationEvent event) {

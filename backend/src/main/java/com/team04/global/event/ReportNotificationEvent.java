@@ -2,7 +2,7 @@ package com.team04.global.event;
 
 public record ReportNotificationEvent(
         Long targetId,
-        String targetType,   // "IDEA", "FUNDING" 등
+        ReportTargetType targetType,
         Long reporterUserId,
         String reason
 ) {}

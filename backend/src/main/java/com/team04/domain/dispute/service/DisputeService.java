@@ -12,6 +12,7 @@ import com.team04.domain.idea.repository.IdeaRepository;
 import com.team04.domain.user.entity.User;
 import com.team04.domain.user.repository.UserRepository;
 import com.team04.global.event.ReportNotificationEvent;
+import com.team04.global.event.ReportTargetType;
 import com.team04.global.exception.CustomException;
 import com.team04.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -56,7 +57,7 @@ public class DisputeService {
 
         eventPublisher.publishEvent(new ReportNotificationEvent(
                 dispute.getId(),
-                "DISPUTE",
+                ReportTargetType.DISPUTE,
                 reporterId,
                 request.reason()
         ));
