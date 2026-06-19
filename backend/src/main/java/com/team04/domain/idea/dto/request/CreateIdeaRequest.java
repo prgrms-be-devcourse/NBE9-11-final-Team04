@@ -29,6 +29,7 @@ public record CreateIdeaRequest(
         @NotBlank @Size(max = 5000) String competitor,
         @NotBlank @Size(max = 5000) String teamIntro,
         @NotNull @Min(1_000_000) @Max(100_000_000) Long goalAmount,
+        @NotNull @Min(0) Long depositAmount,
         @NotNull @Future LocalDateTime fundingStartAt,
         @NotNull @Future LocalDateTime fundingEndAt,
         @NotNull RewardType rewardType,

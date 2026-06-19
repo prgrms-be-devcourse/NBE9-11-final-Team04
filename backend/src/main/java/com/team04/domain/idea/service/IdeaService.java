@@ -3,8 +3,10 @@ package com.team04.domain.idea.service;
 import com.team04.domain.idea.dto.request.IdeaDraftRequest;
 import com.team04.domain.idea.dto.response.IdeaDraftResponse;
 import com.team04.domain.idea.dto.response.IdeaSummaryResponse;
+import com.team04.domain.idea.entity.IdeaBookmark;
 import com.team04.domain.idea.entity.IdeaCategory;
 import com.team04.domain.idea.entity.IdeaDraft;
+import com.team04.domain.idea.repository.IdeaBookmarkRepository;
 import com.team04.domain.idea.repository.IdeaDraftRepository;
 import com.team04.global.exception.CustomException;
 import com.team04.global.exception.ErrorCode;
@@ -41,6 +43,7 @@ public class IdeaService {
 
     private final IdeaRepository ideaRepository;
     private final IdeaDraftRepository ideaDraftRepository;
+    private final IdeaBookmarkRepository ideaBookmarkRepository;
     private final ApplicationEventPublisher eventPublisher;
 
     /** 아이디어를 등록하고 마일스톤 생성 이벤트를 발행합니다. */
@@ -60,6 +63,7 @@ public class IdeaService {
                 request.competitor(),
                 request.teamIntro(),
                 request.goalAmount(),
+                request.depositAmount(),
                 request.fundingStartAt(),
                 request.fundingEndAt(),
                 request.rewardType()
@@ -77,10 +81,11 @@ public class IdeaService {
     public Slice<IdeaSummaryResponse> getProjects(
             IdeaCategory category,
             Boolean closingSoonOnly,
+            String keyword,
             String sort,
             Pageable pageable
     ) {
-        return ideaRepository.searchProjects(category, closingSoonOnly, null, sort, pageable)
+        return ideaRepository.searchProjects(category, closingSoonOnly, keyword, sort, pageable)
                 .map(IdeaSummaryResponse::of);
     }
 
@@ -89,6 +94,49 @@ public class IdeaService {
     public Slice<IdeaSummaryResponse> searchProjects(String keyword, String sort, Pageable pageable) {
         return ideaRepository.searchProjects(null, false, keyword, sort, pageable)
                 .map(IdeaSummaryResponse::of);
+    }
+
+    /** 신뢰도와 펀딩 달성률, 후원자 수를 합산한 인기 프로젝트 Top5를 조회합니다. */
+    @Transactional(readOnly = true)
+    public List<IdeaResponse> getTop5Ideas() {
+        return ideaRepository.findTop5PopularIdeas()
+                .stream()
+                .map(IdeaResponse::of)
+                .toList();
+    }
+
+    /** 진행 중인 본인 아이디어를 취소 신청 상태로 바꾸고 환불 처리 이벤트를 발행합니다. */
+    @Transactional
+    public void requestCancellation(Long ideaId, Long userId) {
+        Idea idea = findActiveIdea(ideaId);
+        idea.validateOwner(userId);
+        idea.requestCancellation();
+    }
+
+    /** 중복 여부를 확인한 뒤 로그인 사용자의 관심 프로젝트를 저장합니다. */
+    @Transactional
+    public void addBookmark(Long ideaId, Long userId) {
+        findActiveIdea(ideaId);
+        if (ideaBookmarkRepository.existsByUserIdAndIdeaId(userId, ideaId)) {
+            throw new CustomException(ErrorCode.IDEA_BOOKMARK_ALREADY_EXISTS);
+        }
+        ideaBookmarkRepository.save(new IdeaBookmark(userId, ideaId));
+    }
+
+    /** 존재 여부를 확인한 뒤 로그인 사용자의 관심 프로젝트를 삭제합니다. */
+    @Transactional
+    public void deleteBookmark(Long ideaId, Long userId) {
+        if (!ideaBookmarkRepository.existsByUserIdAndIdeaId(userId, ideaId)) {
+            throw new CustomException(ErrorCode.IDEA_BOOKMARK_NOT_FOUND);
+        }
+        ideaBookmarkRepository.deleteByUserIdAndIdeaId(userId, ideaId);
+    }
+
+    /** 로그인 사용자의 관심 프로젝트 목록을 Slice 페이지네이션으로 조회합니다. */
+    @Transactional(readOnly = true)
+    public Slice<IdeaResponse> getBookmarks(Long userId, Pageable pageable) {
+        return ideaBookmarkRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable)
+                .map(bookmark -> IdeaResponse.of(findActiveIdea(bookmark.getIdeaId())));
     }
 
     /** 보관 기간 내 본인 임시저장 목록을 최신 수정순으로 조회합니다. */

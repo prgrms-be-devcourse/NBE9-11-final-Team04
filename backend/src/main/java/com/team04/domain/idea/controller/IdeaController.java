@@ -44,10 +44,26 @@ public class IdeaController {
     public ApiResponse<Slice<IdeaSummaryResponse>> getProjects(
             @RequestParam(required = false) IdeaCategory category,
             @RequestParam(required = false, defaultValue = "false") Boolean closingSoon,
+            @RequestParam(required = false) String keyword,
             @RequestParam(required = false, defaultValue = "latest") String sort,
             @PageableDefault(size = 20) Pageable pageable
     ) {
-        return ApiResponse.ofSuccess(ideaService.getProjects(category, closingSoon, sort, pageable));
+        return ApiResponse.ofSuccess(ideaService.getProjects(category, closingSoon, keyword, sort, pageable));
+    }
+
+    /** 신뢰도와 펀딩 지표 기반 인기 프로젝트 Top5를 제공합니다. */
+    @GetMapping("/top5")
+    public ApiResponse<List<IdeaResponse>> getTop5Ideas() {
+        return ApiResponse.ofSuccess(ideaService.getTop5Ideas());
+    }
+
+    /** 로그인 사용자의 관심 프로젝트 목록을 Slice 페이지네이션으로 제공합니다. */
+    @GetMapping("/bookmarks")
+    public ApiResponse<Slice<IdeaResponse>> getBookmarks(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PageableDefault(size = 20) Pageable pageable
+    ) {
+        return ApiResponse.ofSuccess(ideaService.getBookmarks(userDetails.getUserId(), pageable));
     }
 
     /** 프로젝트명을 기준으로 로그인 사용자에게 프로젝트 검색 결과를 제공합니다. */
@@ -132,6 +148,36 @@ public class IdeaController {
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         ideaService.deleteIdea(ideaId, userDetails.getUserId());
+        return ApiResponse.ofSuccessWithoutBody();
+    }
+
+    /** 로그인 사용자가 본인의 진행 중인 아이디어에 대해 취소를 신청합니다. */
+    @PostMapping("/{ideaId}/cancel")
+    public ApiResponse<Void> requestCancellation(
+            @PathVariable Long ideaId,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        ideaService.requestCancellation(ideaId, userDetails.getUserId());
+        return ApiResponse.ofSuccessWithoutBody();
+    }
+
+    /** 로그인 사용자가 아이디어를 관심 프로젝트로 저장합니다. */
+    @PostMapping("/{ideaId}/bookmark")
+    public ApiResponse<Void> addBookmark(
+            @PathVariable Long ideaId,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        ideaService.addBookmark(ideaId, userDetails.getUserId());
+        return ApiResponse.ofSuccessWithoutBody();
+    }
+
+    /** 로그인 사용자가 저장한 관심 프로젝트를 삭제합니다. */
+    @DeleteMapping("/{ideaId}/bookmark")
+    public ApiResponse<Void> deleteBookmark(
+            @PathVariable Long ideaId,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        ideaService.deleteBookmark(ideaId, userDetails.getUserId());
         return ApiResponse.ofSuccessWithoutBody();
     }
 
