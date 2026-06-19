@@ -41,7 +41,6 @@ public class PreSettlementService {
      * 보증금 2배 한도 내에서 분할 신청 가능 (ideaId 기준 SUM 누적 체크)
      * spring-retry @Retryable로 최대 3회 재시도
      * 장부 생성 후 REQUESTED 상태 유지 — 결제팀이 지급 완료 후 COMPLETED로 변경
-     * TODO: 한도 계산은 idea.getDepositAmount() * 2로 변경 필요 (idea 도메인에 depositAmount 필드 추가 요청)
      */
     @Retryable(
             retryFor = PessimisticLockingFailureException.class,
@@ -58,8 +57,7 @@ public class PreSettlementService {
             throw new CustomException(ErrorCode.SETTLEMENT_ACCESS_DENIED);
         }
 
-        // TODO: idea.getDepositAmount() * 2로 변경 필요 (idea 도메인 담당자에게 depositAmount 필드 추가 요청)
-        long limit = Math.round(idea.goalAmount() * 0.3) * 2;
+        long limit = idea.depositAmount() * 2;
 
         long accumulated = preSettlementRepository.sumAmountByIdeaIdAndStatusNot(
                 ideaId, PreSettlementStatus.FAILED);
