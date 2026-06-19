@@ -46,8 +46,8 @@ public class Settlement extends BaseEntity {
     private Settlement(Long ideaId, SettlementType type,
                        Long totalAmount, Long platformFee, Long payoutAmount,
                        String idempotencyKey) {
-        if (platformFee + payoutAmount != totalAmount) {
-            throw new IllegalArgumentException("totalAmount는 platformFee + payoutAmount와 일치해야 합니다");
+        if (platformFee + payoutAmount > totalAmount) {
+            throw new IllegalArgumentException("platformFee와 payoutAmount의 합은 totalAmount를 초과할 수 없습니다");
         }
         this.ideaId = ideaId;
         this.type = type;

@@ -131,7 +131,7 @@ public class MilestoneService {
      */
     @Transactional
     public void cancelMilestone(Long ideaId) {
-        Milestone milestone = milestoneRepository.findByIdeaIdAndStatus(ideaId, MilestoneStatus.IN_PROGRESS)
+        Milestone milestone = milestoneRepository.findByIdeaIdAndStatusWithPessimisticLock(ideaId, MilestoneStatus.IN_PROGRESS)
                 .orElseThrow(() -> new CustomException(ErrorCode.MILESTONE_NOT_FOUND));
         milestone.cancel();
         settlementService.createRefundSettlement(ideaId);
