@@ -4,6 +4,9 @@ import com.team04.domain.idea.dto.request.IdeaDraftRequest;
 import com.team04.domain.idea.dto.response.IdeaDraftResponse;
 import com.team04.domain.idea.dto.response.IdeaSummaryResponse;
 import com.team04.domain.idea.entity.IdeaCategory;
+import com.team04.domain.user.entity.Role;
+import com.team04.global.exception.CustomException;
+import com.team04.global.exception.ErrorCode;
 import com.team04.global.response.ApiResponse;
 import com.team04.domain.idea.dto.request.CreateIdeaRequest;
 import com.team04.domain.idea.dto.request.ReportIdeaRequest;
@@ -66,16 +69,6 @@ public class IdeaController {
         return ApiResponse.ofSuccess(ideaService.getBookmarks(userDetails.getUserId(), pageable));
     }
 
-    /** 프로젝트명을 기준으로 로그인 사용자에게 프로젝트 검색 결과를 제공합니다. */
-    @GetMapping("/search")
-    public ApiResponse<Slice<IdeaSummaryResponse>> searchProjects(
-            @RequestParam String keyword,
-            @RequestParam(required = false, defaultValue = "latest") String sort,
-            @PageableDefault(size = 20) Pageable pageable
-    ) {
-        return ApiResponse.ofSuccess(ideaService.searchProjects(keyword, sort, pageable));
-    }
-
     /** 보관 기간 내 로그인 사용자 본인의 임시저장 목록을 조회합니다. */
     @GetMapping("/drafts")
     public ApiResponse<List<IdeaDraftResponse>> getDrafts(
@@ -126,7 +119,8 @@ public class IdeaController {
     /** 로그인 사용자만 접근 가능한 아이디어 상세 정보를 조회합니다. */
     @GetMapping("/{ideaId}")
     public ApiResponse<IdeaResponse> getIdea(
-            @PathVariable Long ideaId
+            @PathVariable Long ideaId,
+            @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         return ApiResponse.ofSuccess(ideaService.getIdea(ideaId));
     }
@@ -157,6 +151,9 @@ public class IdeaController {
             @PathVariable Long ideaId,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
+        if (userDetails.getRole() != Role.PROPOSER) {
+            throw new CustomException(ErrorCode.FORBIDDEN);
+        }
         ideaService.requestCancellation(ideaId, userDetails.getUserId());
         return ApiResponse.ofSuccessWithoutBody();
     }

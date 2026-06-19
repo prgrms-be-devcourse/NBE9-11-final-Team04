@@ -44,6 +44,7 @@ public class IdeaRepositoryImpl implements IdeaRepositoryCustom {
                 .selectFrom(idea)
                 .where(
                         idea.deletedAt.isNull(),
+                        idea.trustScore.goe(MIN_TRUST_SCORE),
                         categoryEq(idea, category),
                         closingSoon(idea, closingSoonOnly),
                         titleContains(idea, keyword)
