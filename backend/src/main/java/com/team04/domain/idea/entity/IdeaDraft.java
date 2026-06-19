@@ -71,6 +71,9 @@ public class IdeaDraft extends BaseEntity {
     @Column(length = 50)
     private RewardType rewardType;
 
+    @Column(length = 2048)
+    private String imageUrl;
+
     /** 신규 임시저장을 작성자 식별자와 요청 내용으로 생성합니다. */
     public IdeaDraft(Long userId) {
         this.userId = userId;
@@ -98,7 +101,8 @@ public class IdeaDraft extends BaseEntity {
             Long depositAmount,
             LocalDateTime fundingStartAt,
             LocalDateTime fundingEndAt,
-            RewardType rewardType
+            RewardType rewardType,
+            String imageUrl
     ) {
         this.title = title;
         this.category = category;
@@ -114,5 +118,6 @@ public class IdeaDraft extends BaseEntity {
         this.fundingStartAt = fundingStartAt;
         this.fundingEndAt = fundingEndAt;
         this.rewardType = rewardType;
+        this.imageUrl = imageUrl;
     }
 }

@@ -25,12 +25,13 @@ public record IdeaResponse(
         LocalDateTime fundingStartAt,
         LocalDateTime fundingEndAt,
         String rewardType,
+        String imageUrl,
         String status,
         Integer trustScore,
         String badge,
         LocalDateTime createdAt,
         LocalDateTime updatedAt,
-        List<IdeaMilestoneResponse>milestones
+        List<IdeaMilestoneResponse> milestones
 ) {
 
     /** 아이디어 엔티티와 마일스톤 응답 목록을 조합해 응답 DTO를 생성합니다. */
@@ -54,6 +55,7 @@ public record IdeaResponse(
                 idea.getFundingStartAt(),
                 idea.getFundingEndAt(),
                 idea.getRewardType().name(),
+                idea.getImageUrl(),
                 idea.getStatus().name(),
                 idea.getTrustScore(),
                 idea.getBadge().name(),

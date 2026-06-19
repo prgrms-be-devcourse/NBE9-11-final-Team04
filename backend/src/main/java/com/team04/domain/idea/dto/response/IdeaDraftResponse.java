@@ -22,6 +22,7 @@ public record IdeaDraftResponse(
         LocalDateTime fundingStartAt,
         LocalDateTime fundingEndAt,
         String rewardType,
+        String imageUrl,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {
@@ -45,6 +46,7 @@ public record IdeaDraftResponse(
                 draft.getFundingStartAt(),
                 draft.getFundingEndAt(),
                 draft.getRewardType() == null ? null : draft.getRewardType().name(),
+                draft.getImageUrl(),
                 draft.getCreatedAt(),
                 draft.getUpdatedAt()
         );

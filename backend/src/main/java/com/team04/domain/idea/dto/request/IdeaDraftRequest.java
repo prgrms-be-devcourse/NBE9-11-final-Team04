@@ -23,6 +23,7 @@ public record IdeaDraftRequest(
         @Min(0) Long depositAmount,
         LocalDateTime fundingStartAt,
         LocalDateTime fundingEndAt,
-        RewardType rewardType
+        RewardType rewardType,
+        @Size(max = 2048) String imageUrl
 ) {
 }

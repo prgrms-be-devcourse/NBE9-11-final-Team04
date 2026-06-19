@@ -81,6 +81,9 @@ public class Idea extends BaseEntity {
     @Column(nullable = false, length = 50)
     private RewardType rewardType;
 
+    @Column(length = 2048)
+    private String imageUrl;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 50)
     private IdeaStatus status = IdeaStatus.AI_PENDING;
@@ -110,7 +113,8 @@ public class Idea extends BaseEntity {
             Long depositAmount,
             LocalDateTime fundingStartAt,
             LocalDateTime fundingEndAt,
-            RewardType rewardType
+            RewardType rewardType,
+            String imageUrl
     ) {
         this.userId = userId;
         this.title = title;
@@ -127,6 +131,7 @@ public class Idea extends BaseEntity {
         this.fundingStartAt = fundingStartAt;
         this.fundingEndAt = fundingEndAt;
         this.rewardType = rewardType;
+        this.imageUrl = imageUrl;
     }
 
     /** 요청한 사용자가 아이디어 작성자인지 검증합니다. */
@@ -150,7 +155,8 @@ public class Idea extends BaseEntity {
             Long goalAmount,
             LocalDateTime fundingStartAt,
             LocalDateTime fundingEndAt,
-            RewardType rewardType
+            RewardType rewardType,
+            String imageUrl
     ) {
         validateEditable();
         this.title = title;
@@ -165,7 +171,13 @@ public class Idea extends BaseEntity {
         this.goalAmount = goalAmount;
         this.fundingStartAt = fundingStartAt;
         this.fundingEndAt = fundingEndAt;
-        this.rewardType = rewardType;
+        this.imageUrl = imageUrl;
+    }
+
+    /** 심사 대기 상태에서만 아이디어 대표 이미지를 변경합니다. */
+    public void updateImageUrl(String imageUrl) {
+        validateEditable();
+        this.imageUrl = imageUrl;
     }
 
     /** 심사 대기 상태에서만 아이디어를 소프트 삭제합니다. */

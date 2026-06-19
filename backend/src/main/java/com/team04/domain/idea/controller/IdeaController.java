@@ -22,6 +22,7 @@ import org.springframework.data.domain.Slice;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -133,6 +134,19 @@ public class IdeaController {
             @Valid @RequestBody UpdateIdeaRequest request
     ) {
         return ApiResponse.ofSuccess(ideaService.updateIdea(ideaId, userDetails.getUserId(), request));
+    }
+
+    /** 로그인 제안자가 본인의 심사 대기 아이디어 대표 이미지를 업로드합니다. */
+    @PostMapping("/{ideaId}/image")
+    public ApiResponse<IdeaResponse> uploadIdeaImage(
+            @PathVariable Long ideaId,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestPart("image") MultipartFile image
+    ) {
+        if (userDetails.getRole() != Role.PROPOSER) {
+            throw new CustomException(ErrorCode.FORBIDDEN);
+        }
+        return ApiResponse.ofSuccess(ideaService.uploadIdeaImage(ideaId, userDetails.getUserId(), image));
     }
 
     /** 로그인 사용자가 본인의 심사 대기 아이디어를 소프트 삭제합니다. */

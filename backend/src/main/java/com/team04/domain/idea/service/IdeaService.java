@@ -18,11 +18,13 @@ import com.team04.domain.idea.dto.request.ReportIdeaRequest;
 import com.team04.domain.idea.dto.request.UpdateIdeaRequest;
 import com.team04.domain.idea.entity.Idea;
 import com.team04.domain.idea.repository.IdeaRepository;
+import com.team04.global.storage.StorageClient;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.util.HashSet;
@@ -43,6 +45,7 @@ public class IdeaService {
     private final IdeaBookmarkRepository ideaBookmarkRepository;
     private final MilestoneRepository milestoneRepository;
     private final DisputeService disputeService;
+    private final StorageClient storageClient;
 
     /** 아이디어를 등록하고 마일스톤을 함께 저장합니다. */
     @Transactional
@@ -64,7 +67,8 @@ public class IdeaService {
                 request.depositAmount(),
                 request.fundingStartAt(),
                 request.fundingEndAt(),
-                request.rewardType()
+                request.rewardType(),
+                request.imageUrl()
         );
         Idea savedIdea = ideaRepository.save(idea);
 
@@ -165,7 +169,8 @@ public class IdeaService {
                 request.depositAmount(),
                 request.fundingStartAt(),
                 request.fundingEndAt(),
-                request.rewardType()
+                request.rewardType(),
+                request.imageUrl()
         );
         return IdeaDraftResponse.of(ideaDraftRepository.save(draft));
     }
@@ -188,7 +193,8 @@ public class IdeaService {
                 request.depositAmount(),
                 request.fundingStartAt(),
                 request.fundingEndAt(),
-                request.rewardType()
+                request.rewardType(),
+                request.imageUrl()
         );
         return IdeaDraftResponse.of(draft);
     }
@@ -238,8 +244,22 @@ public class IdeaService {
                 request.goalAmount(),
                 request.fundingStartAt(),
                 request.fundingEndAt(),
-                request.rewardType()
+                request.rewardType(),
+                request.imageUrl()
         );
+        return IdeaResponse.of(idea);
+    }
+
+    /** 작성자 본인이고 심사 대기 상태인 경우에만 대표 이미지를 업로드하고 URL을 저장합니다. */
+    @Transactional
+    public IdeaResponse uploadIdeaImage(Long ideaId, Long userId, MultipartFile image) {
+        Idea idea = findActiveIdea(ideaId);
+        idea.validateOwner(userId);
+        validateImageFile(image);
+
+        String imageUrl = storageClient.upload(image, "idea/image");
+        idea.updateImageUrl(imageUrl);
+
         return IdeaResponse.of(idea);
     }
 
@@ -272,6 +292,13 @@ public class IdeaService {
     private void validateDraftLimit(Long userId) {
         if (ideaDraftRepository.countByUserIdAndUpdatedAtAfter(userId, draftRetentionStartAt()) >= MAX_DRAFT_COUNT) {
             throw new CustomException(ErrorCode.IDEA_DRAFT_LIMIT_EXCEEDED);
+        }
+    }
+
+    /** 업로드할 이미지 파일이 비어 있지 않은지 검증합니다. */
+    private void validateImageFile(MultipartFile image) {
+        if (image == null || image.isEmpty()) {
+            throw new CustomException(ErrorCode.INVALID_INPUT);
         }
     }
 

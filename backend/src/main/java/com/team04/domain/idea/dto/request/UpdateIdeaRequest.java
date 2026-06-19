@@ -27,7 +27,8 @@ public record UpdateIdeaRequest(
         @NotNull @Min(1_000_000) @Max(100_000_000) Long goalAmount,
         @NotNull @Future LocalDateTime fundingStartAt,
         @NotNull @Future LocalDateTime fundingEndAt,
-        @NotNull RewardType rewardType
+        @NotNull RewardType rewardType,
+        @Size(max = 2048) String imageUrl
 ) {
 
     /** 펀딩 종료일이 시작일보다 이후인지 검증합니다. */
