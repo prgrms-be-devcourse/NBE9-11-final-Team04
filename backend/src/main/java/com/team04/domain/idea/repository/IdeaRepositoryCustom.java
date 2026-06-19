@@ -19,6 +19,9 @@ public interface IdeaRepositoryCustom {
             Pageable pageable
     );
 
+    /** 인기 프로젝트 점수 기준 상위 5개 아이디어를 조회합니다. */
+    List<Idea> findTop5PopularIdeas();
+
     /** 펀딩 마감됐고 목표 금액 미달성인 아이디어 ID 목록을 조회합니다. */
     List<Long> findFailedFundingIdeaIds(LocalDateTime now);
 }
