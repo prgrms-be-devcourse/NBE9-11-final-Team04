@@ -81,7 +81,8 @@ public class MilestoneService {
     /**
      * 완료 보고서 승인
      * 관리자만 가능
-     * 마일스톤 3단계 완료 승인 시 최종 정산 생성
+     * 3단계 완료 승인 시 최종 정산 생성
+     * 3단계 미만 완료 승인 시 다음 마일스톤 자동 시작 (단일 트랜잭션)
      */
     @Transactional
     public CompletionReportResponse approveReport(Long milestoneId) {
@@ -93,6 +94,8 @@ public class MilestoneService {
 
         if (milestone.getStep() == 3) {
             settlementService.createFinalSettlement(milestone.getIdeaId());
+        } else {
+            startNextMilestone(milestone.getIdeaId(), milestone.getStep() + 1);
         }
 
         return CompletionReportResponse.from(report);
@@ -110,6 +113,38 @@ public class MilestoneService {
         report.reject();
 
         return CompletionReportResponse.from(report);
+    }
+
+    /**
+     * 펀딩 목표 달성 시 1단계 마일스톤 자동 시작
+     * TODO: 펀딩 도메인 담당자에게 FundingSuccessEvent 발행 요청 필요
+     */
+    @Transactional
+    public void startFirstMilestone(Long ideaId) {
+        startNextMilestone(ideaId, 1);
+    }
+
+    /**
+     * 이행 중단 처리
+     * 관리자만 가능
+     * 현재 IN_PROGRESS 마일스톤 CANCELLED 전환 후 환불 장부 생성
+     */
+    @Transactional
+    public void cancelMilestone(Long ideaId) {
+        Milestone milestone = milestoneRepository.findByIdeaIdAndStatus(ideaId, MilestoneStatus.IN_PROGRESS)
+                .orElseThrow(() -> new CustomException(ErrorCode.MILESTONE_NOT_FOUND));
+        milestone.cancel();
+        settlementService.createRefundSettlement(ideaId);
+    }
+
+    /**
+     * 다음 단계 마일스톤을 IN_PROGRESS로 전이
+     * 현재 트랜잭션 내에서 실행 — 중간 실패 시 전체 롤백
+     */
+    private void startNextMilestone(Long ideaId, int step) {
+        Milestone nextMilestone = milestoneRepository.findByIdeaIdAndStep(ideaId, step)
+                .orElseThrow(() -> new CustomException(ErrorCode.MILESTONE_NOT_FOUND));
+        nextMilestone.start();
     }
 
     private Milestone findMilestone(Long milestoneId) {

@@ -72,7 +72,7 @@ public class SettlementService {
      */
     @Transactional
     public SettlementResponse createFinalSettlement(Long ideaId) {
-        String idempotencyKey = generateIdempotencyKey(ideaId, SettlementType.FINAL, null);
+        String idempotencyKey = "idea-" + ideaId + "-FINAL";
 
         if (settlementRepository.findByIdempotencyKey(idempotencyKey).isPresent()) {
             throw new CustomException(ErrorCode.SETTLEMENT_DUPLICATE);
@@ -88,7 +88,6 @@ public class SettlementService {
 
         Settlement settlement = Settlement.builder()
                 .ideaId(ideaId)
-                .milestoneId(null)
                 .type(SettlementType.FINAL)
                 .totalAmount(totalAmount)
                 .platformFee(platformFee)
@@ -108,7 +107,7 @@ public class SettlementService {
      */
     @Transactional
     public SettlementResponse createRefundSettlement(Long ideaId) {
-        String idempotencyKey = generateIdempotencyKey(ideaId, SettlementType.FINAL, null) + "-REFUND";
+        String idempotencyKey = "idea-" + ideaId + "-FINAL-REFUND";
         Long totalAmount = ideaService.getIdea(ideaId).currentAmount();
 
         if (settlementRepository.findByIdempotencyKey(idempotencyKey).isPresent()) {
@@ -122,7 +121,6 @@ public class SettlementService {
 
         Settlement settlement = Settlement.builder()
                 .ideaId(ideaId)
-                .milestoneId(null)
                 .type(SettlementType.FINAL)
                 .totalAmount(totalAmount)
                 .platformFee(0L)
@@ -132,17 +130,5 @@ public class SettlementService {
 
         settlement.refund();
         return SettlementResponse.from(settlementRepository.save(settlement));
-    }
-
-    /**
-     * 멱등성 키 생성
-     * 최종 정산: idea-{ideaId}-FINAL
-     * 중간 정산: idea-{ideaId}-INTERIM-{milestoneId}
-     */
-    private String generateIdempotencyKey(Long ideaId, SettlementType type, Long milestoneId) {
-        if (type == SettlementType.FINAL) {
-            return "idea-" + ideaId + "-FINAL";
-        }
-        return "idea-" + ideaId + "-INTERIM-" + milestoneId;
     }
 }
