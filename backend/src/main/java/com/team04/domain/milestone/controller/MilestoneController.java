@@ -43,7 +43,7 @@ public class MilestoneController {
         return ApiResponse.ofSuccess(milestoneService.submitAppealReport(milestoneId, request));
     }
 
-    /** 완료 보고서를 승인합니다. 관리자만 가능합니다. 3단계 승인 시 최종 정산이 생성됩니다. */
+    /** 완료 보고서를 승인합니다. 관리자만 가능합니다. 3단계 승인 시 최종 정산, 미만 시 다음 단계 자동 시작됩니다. */
     @PostMapping("/{milestoneId}/reports/approve")
     public ApiResponse<CompletionReportResponse> approveReport(
             @PathVariable Long milestoneId,
@@ -63,5 +63,20 @@ public class MilestoneController {
             throw new CustomException(ErrorCode.FORBIDDEN);
         }
         return ApiResponse.ofSuccess(milestoneService.rejectReport(milestoneId));
+    }
+
+    /**
+     * 마일스톤 이행 중단 처리입니다. 관리자만 가능합니다.
+     * 현재 진행 중인 마일스톤을 취소하고 환불 장부를 생성합니다.
+     */
+    @PostMapping("/ideas/{ideaId}/cancel")
+    public ApiResponse<Void> cancelMilestone(
+            @PathVariable Long ideaId,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails.getRole() != Role.ADMIN) {
+            throw new CustomException(ErrorCode.FORBIDDEN);
+        }
+        milestoneService.cancelMilestone(ideaId);
+        return ApiResponse.ofSuccess(null);
     }
 }

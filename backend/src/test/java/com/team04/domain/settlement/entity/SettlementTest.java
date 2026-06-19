@@ -12,7 +12,6 @@ class SettlementTest {
     private Settlement createSettlement() {
         return Settlement.builder()
                 .ideaId(1L)
-                .milestoneId(null)
                 .type(SettlementType.FINAL)
                 .totalAmount(100000L)
                 .platformFee(10000L)
@@ -64,14 +63,14 @@ class SettlementTest {
     }
 
     @Test
-    @DisplayName("금액 정합성 검증 실패 시 예외 발생")
+    @DisplayName("금액 정합성 검증 실패 시 예외 발생 — platformFee + payoutAmount가 totalAmount 초과")
     void builder_invalidAmount() {
         assertThatThrownBy(() -> Settlement.builder()
                 .ideaId(1L)
                 .type(SettlementType.FINAL)
                 .totalAmount(100000L)
                 .platformFee(10000L)
-                .payoutAmount(80000L)
+                .payoutAmount(110000L)
                 .idempotencyKey("idea-1-FINAL")
                 .build())
                 .isInstanceOf(IllegalArgumentException.class);
