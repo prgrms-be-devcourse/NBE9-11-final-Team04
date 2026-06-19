@@ -61,6 +61,8 @@ public class IdeaDraft extends BaseEntity {
 
     private Long goalAmount;
 
+    private Long depositAmount;
+
     private LocalDateTime fundingStartAt;
 
     private LocalDateTime fundingEndAt;
@@ -93,6 +95,7 @@ public class IdeaDraft extends BaseEntity {
             String competitor,
             String teamIntro,
             Long goalAmount,
+            Long depositAmount,
             LocalDateTime fundingStartAt,
             LocalDateTime fundingEndAt,
             RewardType rewardType
@@ -107,6 +110,7 @@ public class IdeaDraft extends BaseEntity {
         this.competitor = competitor;
         this.teamIntro = teamIntro;
         this.goalAmount = goalAmount;
+        this.depositAmount = depositAmount;
         this.fundingStartAt = fundingStartAt;
         this.fundingEndAt = fundingEndAt;
         this.rewardType = rewardType;
