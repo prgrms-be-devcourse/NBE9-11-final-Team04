@@ -9,6 +9,7 @@ import com.team04.domain.milestone.entity.Milestone;
 import com.team04.domain.milestone.entity.MilestoneStatus;
 import com.team04.domain.milestone.repository.CompletionReportRepository;
 import com.team04.domain.milestone.repository.MilestoneRepository;
+import com.team04.domain.settlement.service.RefundService;
 import com.team04.domain.settlement.service.SettlementService;
 import com.team04.global.exception.CustomException;
 import com.team04.global.exception.ErrorCode;
@@ -23,6 +24,7 @@ public class MilestoneService {
     private final MilestoneRepository milestoneRepository;
     private final CompletionReportRepository completionReportRepository;
     private final SettlementService settlementService;
+    private final RefundService refundService;
 
     /**
      * 완료 보고서 제출
@@ -128,14 +130,15 @@ public class MilestoneService {
     /**
      * 이행 중단 처리
      * 관리자만 가능
-     * 현재 IN_PROGRESS 마일스톤 CANCELLED 전환 후 환불 장부 생성
+     * 현재 IN_PROGRESS 마일스톤 CANCELLED 전환 후 환불 장부 + 후원자별 환불 레코드 생성
      */
     @Transactional
     public void cancelMilestone(Long ideaId) {
         Milestone milestone = milestoneRepository.findByIdeaIdAndStatusWithPessimisticLock(ideaId, MilestoneStatus.IN_PROGRESS)
                 .orElseThrow(() -> new CustomException(ErrorCode.MILESTONE_NOT_FOUND));
         milestone.cancel();
-        settlementService.createRefundSettlement(ideaId);
+        settlementService.createCancelRefundSettlement(ideaId);
+        refundService.createCancelRefunds(ideaId);
     }
 
     /**

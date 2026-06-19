@@ -124,6 +124,10 @@ public enum ErrorCode {
     FUND_USAGE_EXCEEDS_RECEIVED(400, "FU004", "실제 지급받은 금액을 초과하는 지출은 등록할 수 없습니다"),
     FUND_USAGE_INVALID_DATE(400, "FU005", "자금 사용일은 펀딩 시작일 이후여야 합니다"),
 
+    // 환불
+    REFUND_NOT_FOUND(404, "RF001", "존재하지 않는 환불 내역입니다"),
+    REFUND_ALREADY_COMPLETED(409, "RF002", "이미 완료된 환불입니다"),
+
     // 파일 업로드
     FILE_UPLOAD_FAILED(500, "FL001", "파일 업로드에 실패했습니다"),
 
