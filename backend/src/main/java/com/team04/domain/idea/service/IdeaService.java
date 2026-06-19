@@ -1,27 +1,24 @@
 package com.team04.domain.idea.service;
 
+import com.team04.domain.dispute.dto.request.CreateDisputeRequest;
+import com.team04.domain.dispute.service.DisputeService;
 import com.team04.domain.idea.dto.request.IdeaDraftRequest;
-import com.team04.domain.idea.dto.response.IdeaDraftResponse;
-import com.team04.domain.idea.dto.response.IdeaSummaryResponse;
+import com.team04.domain.idea.dto.response.*;
 import com.team04.domain.idea.entity.IdeaBookmark;
 import com.team04.domain.idea.entity.IdeaCategory;
 import com.team04.domain.idea.entity.IdeaDraft;
 import com.team04.domain.idea.repository.IdeaBookmarkRepository;
 import com.team04.domain.idea.repository.IdeaDraftRepository;
+import com.team04.domain.milestone.entity.Milestone;
+import com.team04.domain.milestone.repository.MilestoneRepository;
 import com.team04.global.exception.CustomException;
 import com.team04.global.exception.ErrorCode;
 import com.team04.domain.idea.dto.request.CreateIdeaRequest;
 import com.team04.domain.idea.dto.request.ReportIdeaRequest;
 import com.team04.domain.idea.dto.request.UpdateIdeaRequest;
-import com.team04.domain.idea.dto.response.IdeaResponse;
-import com.team04.domain.idea.dto.response.ReportIdeaResponse;
 import com.team04.domain.idea.entity.Idea;
-import com.team04.domain.idea.event.IdeaCreatedEvent;
-import com.team04.domain.idea.event.IdeaPlagiarismReportedEvent;
-import com.team04.domain.idea.event.IdeaReportNotificationEvent;
 import com.team04.domain.idea.repository.IdeaRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
@@ -44,9 +41,10 @@ public class IdeaService {
     private final IdeaRepository ideaRepository;
     private final IdeaDraftRepository ideaDraftRepository;
     private final IdeaBookmarkRepository ideaBookmarkRepository;
-    private final ApplicationEventPublisher eventPublisher;
+    private final MilestoneRepository milestoneRepository;
+    private final DisputeService disputeService;
 
-    /** 아이디어를 등록하고 마일스톤 생성 이벤트를 발행합니다. */
+    /** 아이디어를 등록하고 마일스톤을 함께 저장합니다. */
     @Transactional
     public IdeaResponse createIdea(Long userId, CreateIdeaRequest request) {
         validateMilestones(request);
@@ -70,8 +68,15 @@ public class IdeaService {
         );
         Idea savedIdea = ideaRepository.save(idea);
 
-        // 마일스톤 도메인 담당자가 핸들러 구현 후 처리
-        eventPublisher.publishEvent(new IdeaCreatedEvent(savedIdea.getId(), request.milestones()));
+        request.milestones().forEach(m ->
+                milestoneRepository.save(Milestone.builder()
+                        .ideaId(savedIdea.getId())
+                        .step(m.step())
+                        .goal(m.goal())
+                        .expectedResult(m.expectedResult())
+                        .expectedDate(m.expectedDate())
+                        .build())
+        );
 
         return IdeaResponse.of(savedIdea);
     }
@@ -89,13 +94,6 @@ public class IdeaService {
                 .map(IdeaSummaryResponse::of);
     }
 
-    /** 프로젝트명을 기준으로 LIKE 검색하고 목록 조회와 동일한 Slice 응답 구조로 반환합니다. */
-    @Transactional(readOnly = true)
-    public Slice<IdeaSummaryResponse> searchProjects(String keyword, String sort, Pageable pageable) {
-        return ideaRepository.searchProjects(null, false, keyword, sort, pageable)
-                .map(IdeaSummaryResponse::of);
-    }
-
     /** 신뢰도와 펀딩 달성률, 후원자 수를 합산한 인기 프로젝트 Top5를 조회합니다. */
     @Transactional(readOnly = true)
     public List<IdeaResponse> getTop5Ideas() {
@@ -105,7 +103,7 @@ public class IdeaService {
                 .toList();
     }
 
-    /** 진행 중인 본인 아이디어를 취소 신청 상태로 바꾸고 환불 처리 이벤트를 발행합니다. */
+    /** 진행 중인 본인 아이디어를 취소 신청 상태로 전이합니다. */
     @Transactional
     public void requestCancellation(Long ideaId, Long userId) {
         Idea idea = findActiveIdea(ideaId);
@@ -164,6 +162,7 @@ public class IdeaService {
                 request.competitor(),
                 request.teamIntro(),
                 request.goalAmount(),
+                request.depositAmount(),
                 request.fundingStartAt(),
                 request.fundingEndAt(),
                 request.rewardType()
@@ -186,6 +185,7 @@ public class IdeaService {
                 request.competitor(),
                 request.teamIntro(),
                 request.goalAmount(),
+                request.depositAmount(),
                 request.fundingStartAt(),
                 request.fundingEndAt(),
                 request.rewardType()
@@ -213,7 +213,11 @@ public class IdeaService {
     @Transactional(readOnly = true)
     public IdeaResponse getIdea(Long ideaId) {
         Idea idea = findActiveIdea(ideaId);
-        return IdeaResponse.of(idea);
+        List<IdeaMilestoneResponse> milestones = milestoneRepository.findByIdeaIdOrderByStep(ideaId)
+                .stream()
+                .map(IdeaMilestoneResponse::of)
+                .toList();
+        return IdeaResponse.of(idea, milestones);
     }
 
     /** 작성자 본인이고 심사 대기 상태인 경우에만 아이디어 정보를 수정합니다. */
@@ -247,19 +251,15 @@ public class IdeaService {
         idea.softDelete();
     }
 
-    /** 아이디어 도용 신고 이벤트와 관리자 알림 이벤트를 발행합니다. */
+    /** 아이디어 도용 신고를 접수하고 분쟁을 생성합니다. */
     @Transactional
     public ReportIdeaResponse reportIdea(Long ideaId, Long reporterUserId, ReportIdeaRequest request) {
         Idea idea = findActiveIdea(ideaId);
         if (idea.getUserId().equals(reporterUserId)) {
             throw new CustomException(ErrorCode.SELF_REPORT_NOT_ALLOWED);
         }
-        eventPublisher.publishEvent(
-                new IdeaPlagiarismReportedEvent(idea.getId(), idea.getUserId(), reporterUserId, request.reason())
-        );
-        eventPublisher.publishEvent(
-                new IdeaReportNotificationEvent(idea.getId(), reporterUserId, request.reason())
-        );
+        disputeService.createDispute(reporterUserId,
+                new CreateDisputeRequest(ideaId, request.reason(), null));
         return new ReportIdeaResponse(idea.getId(), reporterUserId, "아이디어 도용 신고가 접수되었습니다.");
     }
 
