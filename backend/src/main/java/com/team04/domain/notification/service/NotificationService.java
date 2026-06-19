@@ -11,6 +11,7 @@ import com.team04.global.exception.CustomException;
 import com.team04.global.exception.ErrorCode;
 import com.team04.global.sse.SseEmitterStorage;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -20,6 +21,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import java.io.IOException;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class NotificationService {
@@ -37,7 +39,7 @@ public class NotificationService {
     @Transactional
     public void markAsRead(Long userId, Long notificationId){
 
-        Notification notification = notificationRepository.findById(notificationId)
+        Notification notification = notificationRepository.findByIdWithUser(notificationId)
                 .orElseThrow(() -> new CustomException(ErrorCode.NOTIFICATION_NOT_FOUND));
 
         if (!userId.equals(notification.getUser().getId())) {
@@ -77,6 +79,11 @@ public class NotificationService {
                                             String message, Long referenceId) {
         List<User> admins = userRepository.findByRole(Role.ADMIN);
 
+        if (admins.isEmpty()) {
+            log.warn("[Notification] 관리자 계정이 존재하지 않아 알림을 전송하지 못했습니다. type={}", type);
+            return;
+        }
+
         List<Notification> notifications = admins.stream()
                 .map(admin -> Notification.create(admin, type, title, message, referenceId))
                 .toList();
@@ -99,6 +106,9 @@ public class NotificationService {
 
     public SseEmitter subscribe(Long userId) {
         SseEmitter emitter = new SseEmitter(30 * 60 * 1000L);
+
+        SseEmitter old = sseEmitterStorage.get(userId);
+        if (old != null) old.complete();
 
         sseEmitterStorage.add(userId, emitter);
 
