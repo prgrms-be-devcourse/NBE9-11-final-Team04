@@ -92,6 +92,8 @@ public enum ErrorCode {
     // 분쟁
     DISPUTE_NOT_FOUND(404, "D001", "존재하지 않는 분쟁입니다"),
     DISPUTE_ALREADY_RESOLVED(400, "D002", "이미 처리된 분쟁입니다"),
+    DISPUTE_APPEAL_ALREADY_EXISTS(409, "D003", "이미 이의제기를 제출했습니다."),
+    DISPUTE_CANNOT_REPORT_YOURSELF(400, "D004", "자기 자신을 신고할 수 없습니다."),
 
     //정산
     SETTLEMENT_NOT_FOUND(404, "S001", "존재하지 않는 정산입니다"),
