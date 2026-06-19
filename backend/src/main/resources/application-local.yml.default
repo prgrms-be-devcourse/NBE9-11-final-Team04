@@ -42,3 +42,11 @@ openai:
   verification:
     # ⚠️ [입력 필요] OpenAI 플랫폼에서 발급받은 API 키 입력
     api-key: "NEED_TO_INPUT_YOUR_OPENAI_API_KEY"
+
+storage:
+  local:
+    # ⚠️ [입력 필요] 파일 업로드 로컬 저장 경로 (절대 경로 입력)
+    # 예) Mac/Linux: /Users/username/uploads
+    # 예) Windows: C:/Users/username/uploads
+    base-path: "NEED_TO_INPUT_YOUR_LOCAL_UPLOAD_ABSOLUTE_PATH"
+    base-url: http://localhost:8080/uploads

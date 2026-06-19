@@ -59,6 +59,12 @@ public class ExpertProfile {
     @Column(name = "representative_name")
     private String representativeName;  // 대표자명 (BUSINESS_REGISTRATION 재검증용)
 
+    @Column(name = "suspended_at")
+    private LocalDateTime suspendedAt;  // 격리 처리 시각
+
+    @Column(nullable = false)
+    private int appealCount = 0;  // 소명 자료 제출 횟수
+
 
     // /experts/verify 성공 시 생성 (verified=true)
     @Builder
@@ -104,5 +110,16 @@ public class ExpertProfile {
         this.techStack = techStack;
         this.portfolioUrl = portfolioUrl;
         this.career = career;
+    }
+
+    // 격리 처리 (추후 계정 격리 기능에서 사용)
+    public void suspend() {
+        this.status = ExpertStatus.SUSPENDED;
+        this.suspendedAt = LocalDateTime.now();
+    }
+
+    // 소명 횟수 증가
+    public void increaseAppealCount() {
+        this.appealCount++;
     }
 }

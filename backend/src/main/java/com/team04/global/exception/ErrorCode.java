@@ -122,7 +122,15 @@ public enum ErrorCode {
     FUND_USAGE_INVALID_AMOUNT(400, "FU002", "자금 사용 금액은 0보다 커야 합니다"),
     FUND_USAGE_NO_IN_PROGRESS_MILESTONE(400, "FU003", "진행 중인 마일스톤이 없어 자금 사용 내역을 입력할 수 없습니다"),
     FUND_USAGE_EXCEEDS_RECEIVED(400, "FU004", "실제 지급받은 금액을 초과하는 지출은 등록할 수 없습니다"),
-    FUND_USAGE_INVALID_DATE(400, "FU005", "자금 사용일은 펀딩 시작일 이후여야 합니다");
+    FUND_USAGE_INVALID_DATE(400, "FU005", "자금 사용일은 펀딩 시작일 이후여야 합니다"),
+
+    // 파일 업로드
+    FILE_UPLOAD_FAILED(500, "FL001", "파일 업로드에 실패했습니다"),
+
+    // 소명
+    APPEAL_LIMIT_EXCEEDED(400, "AP001", "소명 자료 제출 횟수를 초과했습니다 (최대 3회)"),
+    APPEAL_PERIOD_EXPIRED(400, "AP002", "소명 자료 제출 기한이 만료되었습니다 (7일 이내)"),
+    EXPERT_NOT_SUSPENDED(400, "AP003", "격리된 계정이 아닙니다");
 
     private final int status;
     private final String code;
