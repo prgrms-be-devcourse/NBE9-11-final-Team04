@@ -3,9 +3,16 @@ package com.team04.global.event;
 import com.team04.domain.notification.entity.NotificationType;
 
 public record NotificationEvent(
-        Long userId,                       // 알림 받을 유저 ID (발행자가 직접 전달)
+        Long userId,
         NotificationType notificationType,
         String title,
         String message,
-        Long targetId                      // 연관 리소스 ID (ideaId, fundingId 등)
-) {}
+        Long targetId
+) {
+    public NotificationEvent {
+        java.util.Objects.requireNonNull(userId, "userId must not be null");
+        java.util.Objects.requireNonNull(notificationType, "notificationType must not be null");
+        java.util.Objects.requireNonNull(title, "title must not be null");
+        java.util.Objects.requireNonNull(message, "message must not be null");
+    }
+}

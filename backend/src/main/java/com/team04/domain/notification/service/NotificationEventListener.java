@@ -31,7 +31,7 @@ public class NotificationEventListener {
     public void handleReportEvent(ReportNotificationEvent event) {
         notificationService.createNotificationsToAdmins(
                 NotificationType.REPORT_RECEIVED,
-                event.targetType() + " 신고 접수",
+                event.targetType().getDescription() + " 신고 접수",
                 "신고 사유: " + event.reason(),
                 event.targetId()
         );
