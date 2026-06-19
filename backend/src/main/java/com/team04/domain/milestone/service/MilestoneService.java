@@ -86,7 +86,8 @@ public class MilestoneService {
      */
     @Transactional
     public CompletionReportResponse approveReport(Long milestoneId) {
-        Milestone milestone = findMilestone(milestoneId);
+        Milestone milestone = milestoneRepository.findByIdWithPessimisticLock(milestoneId)
+                .orElseThrow(() -> new CustomException(ErrorCode.MILESTONE_NOT_FOUND));
 
         CompletionReport report = findLatestReport(milestoneId);
         report.approve();
