@@ -4,6 +4,7 @@ import com.team04.domain.dispute.dto.request.CreateAppealRequest;
 import com.team04.domain.dispute.dto.request.CreateDisputeRequest;
 import com.team04.domain.dispute.dto.response.DisputeResponse;
 import com.team04.domain.dispute.service.DisputeService;
+import com.team04.domain.user.entity.Role;
 import com.team04.global.response.ApiResponse;
 import com.team04.global.security.CustomUserDetails;
 import jakarta.validation.Valid;
@@ -29,8 +30,8 @@ public class DisputeController {
     public ApiResponse<DisputeResponse> getDispute(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long disputeId){
-
-        return ApiResponse.ofSuccess(disputeService.getDispute(userDetails.getUserId(),disputeId));
+        boolean isAdmin = userDetails.getRole() == Role.ADMIN;
+        return ApiResponse.ofSuccess(disputeService.getDispute(userDetails.getUserId(), disputeId, isAdmin));
     }
 
     @PostMapping("/{disputeId}/appeal")

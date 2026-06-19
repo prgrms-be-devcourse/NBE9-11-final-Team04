@@ -9,7 +9,6 @@ import com.team04.domain.dispute.repository.DisputeAppealRepository;
 import com.team04.domain.dispute.repository.DisputeRepository;
 import com.team04.domain.idea.entity.Idea;
 import com.team04.domain.idea.repository.IdeaRepository;
-import com.team04.domain.user.entity.Role;
 import com.team04.domain.user.entity.User;
 import com.team04.domain.user.repository.UserRepository;
 import com.team04.global.event.ReportNotificationEvent;
@@ -42,11 +41,8 @@ public class DisputeService {
             throw new CustomException(ErrorCode.DISPUTE_CANNOT_REPORT_YOURSELF);
         }
 
-        User reporter = userRepository.findById(reporterId)
-                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
-
-        User proposer = userRepository.findById(idea.getUserId())
-                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+        User reporter = userRepository.getReferenceById(reporterId);
+        User proposer = userRepository.getReferenceById(idea.getUserId());
 
         Dispute dispute = new Dispute(
                 idea,
@@ -69,12 +65,9 @@ public class DisputeService {
     }
 
     @Transactional(readOnly = true)
-    public DisputeResponse getDispute(Long userId, Long disputeId) {
+    public DisputeResponse getDispute(Long userId, Long disputeId, boolean isAdmin) {
         Dispute dispute = disputeRepository.findByIdWithDetails(disputeId)
                 .orElseThrow(() -> new CustomException(ErrorCode.DISPUTE_NOT_FOUND));
-
-        boolean isAdmin = userRepository.findById(userId)
-                .map(u -> u.getRole() == Role.ADMIN).orElse(false);
 
         if (!isAdmin && !userId.equals(dispute.getReporter().getId()) &&
                 !userId.equals(dispute.getProposer().getId())) {
@@ -88,10 +81,13 @@ public class DisputeService {
     public void createAppeal(Long disputeId, Long userId, CreateAppealRequest request){
         Dispute dispute = disputeRepository.findById(disputeId)
                 .orElseThrow(() -> new CustomException(ErrorCode.DISPUTE_NOT_FOUND));
-
         // 본인 확인 먼저
         if (!userId.equals(dispute.getProposer().getId())) {
             throw new CustomException(ErrorCode.FORBIDDEN);
+        }
+
+        if (dispute.isResolved()) {
+            throw new CustomException(ErrorCode.DISPUTE_ALREADY_RESOLVED);
         }
 
         // 있으면 수정, 없으면 생성

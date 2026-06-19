@@ -57,4 +57,8 @@ public class Dispute extends BaseEntity {
     public void updateStatus(DisputeStatus newStatus) {
         this.status = newStatus;
     }
+
+    public boolean isResolved() {
+        return this.status == DisputeStatus.RESOLVED || this.status == DisputeStatus.REJECTED;
+    }
 }
