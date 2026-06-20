@@ -72,7 +72,7 @@ public class IdeaRepositoryImpl implements IdeaRepositoryCustom {
                 .multiply(0.4);
         NumberTemplate<Double> sponsorScore = Expressions.numberTemplate(
                 Double.class,
-                "({0} / nullif({1}, 0)) * 0.3",
+                "coalesce(({0} / nullif({1}, 0)) * 0.3, 0.0)",
                 idea.sponsorCount.doubleValue(),
                 JPAExpressions
                         .select(subIdea.sponsorCount.max())

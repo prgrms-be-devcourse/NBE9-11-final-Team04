@@ -4,6 +4,9 @@ import com.team04.domain.idea.entity.IdeaBookmark;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 /** 관심 프로젝트 저장, 삭제, 본인 목록 조회를 담당하는 레포지토리입니다. */
 public interface IdeaBookmarkRepository extends JpaRepository<IdeaBookmark, Long> {
@@ -16,4 +19,8 @@ public interface IdeaBookmarkRepository extends JpaRepository<IdeaBookmark, Long
 
     /** 로그인 사용자의 북마크를 최신순 Slice 페이지로 조회합니다. */
     Slice<IdeaBookmark> findByUserIdOrderByCreatedAtDesc(Long userId, Pageable pageable);
+
+    @Modifying
+    @Query("DELETE FROM IdeaBookmark b WHERE b.userId = :userId AND b.ideaId = :ideaId")
+    int deleteByUserIdAndIdeaIdBulk(@Param("userId") Long userId, @Param("ideaId") Long ideaId);
 }

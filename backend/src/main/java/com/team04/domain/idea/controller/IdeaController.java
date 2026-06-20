@@ -120,8 +120,7 @@ public class IdeaController {
     /** 로그인 사용자만 접근 가능한 아이디어 상세 정보를 조회합니다. */
     @GetMapping("/{ideaId}")
     public ApiResponse<IdeaResponse> getIdea(
-            @PathVariable Long ideaId,
-            @AuthenticationPrincipal CustomUserDetails userDetails
+            @PathVariable Long ideaId
     ) {
         return ApiResponse.ofSuccess(ideaService.getIdea(ideaId));
     }

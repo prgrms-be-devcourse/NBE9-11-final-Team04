@@ -72,14 +72,16 @@ public class IdeaService {
         );
         Idea savedIdea = ideaRepository.save(idea);
 
-        request.milestones().forEach(m ->
-                milestoneRepository.save(Milestone.builder()
-                        .ideaId(savedIdea.getId())
-                        .step(m.step())
-                        .goal(m.goal())
-                        .expectedResult(m.expectedResult())
-                        .expectedDate(m.expectedDate())
-                        .build())
+        milestoneRepository.saveAll(
+                request.milestones().stream()
+                        .map(m -> Milestone.builder()
+                                .ideaId(savedIdea.getId())
+                                .step(m.step())
+                                .goal(m.goal())
+                                .expectedResult(m.expectedResult())
+                                .expectedDate(m.expectedDate())
+                                .build())
+                        .toList()
         );
 
         return IdeaResponse.of(savedIdea);
@@ -128,10 +130,10 @@ public class IdeaService {
     /** 존재 여부를 확인한 뒤 로그인 사용자의 관심 프로젝트를 삭제합니다. */
     @Transactional
     public void deleteBookmark(Long ideaId, Long userId) {
-        if (!ideaBookmarkRepository.existsByUserIdAndIdeaId(userId, ideaId)) {
+        int deleted = ideaBookmarkRepository.deleteByUserIdAndIdeaIdBulk(userId, ideaId);
+        if (deleted == 0) {
             throw new CustomException(ErrorCode.IDEA_BOOKMARK_NOT_FOUND);
         }
-        ideaBookmarkRepository.deleteByUserIdAndIdeaId(userId, ideaId);
     }
 
     /** 로그인 사용자의 관심 프로젝트 목록을 Slice 페이지네이션으로 조회합니다. */
