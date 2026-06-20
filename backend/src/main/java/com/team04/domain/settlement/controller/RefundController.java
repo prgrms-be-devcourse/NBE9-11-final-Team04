@@ -24,17 +24,14 @@ public class RefundController {
     /**
      * 분쟁 환불 생성 (관리자 전용)
      * GOAL_NOT_MET, CANCELLED는 내부 자동 생성 — 이 API는 DISPUTE 케이스만 처리
-     * 환불 금액은 실제 결제 금액으로 고정 (과다 환불 방지)
+     * sponsorId와 환불 금액은 payment 정보에서 내부 조회 (오입력/과다 환불 방지)
      */
     @PostMapping("/dispute")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<RefundResponse>> createDisputeRefund(
             @Valid @RequestBody RefundRequest request
     ) {
-        RefundResponse response = refundService.createDisputeRefund(
-                request.paymentId(),
-                request.sponsorId()
-        );
+        RefundResponse response = refundService.createDisputeRefund(request.paymentId());
         return ResponseEntity.ok(ApiResponse.ofSuccess(response));
     }
 

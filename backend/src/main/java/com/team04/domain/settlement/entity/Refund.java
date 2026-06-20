@@ -14,7 +14,7 @@ import lombok.NoArgsConstructor;
  *
  * settlement_id 제거 이유:
  *   환불 추적은 payment_id 하나로 충분합니다.
- *   payment → fundingId, amount, sponsorId 흐름으로 "누가 얼마를 후원했는지" 모두 조회 가능하며,
+ *   payment → fundingId, amount 흐름으로 조회 가능하며,
  *   ideaId 기준으로 Settlement도 조회할 수 있어 settlement_id의 중복 참조가 불필요합니다.
  *   추후 Settlement와의 연결이 필요한 요구사항이 생기면 재검토합니다.
  *
@@ -30,11 +30,14 @@ public class Refund extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /** 환불 대상 결제 — 후원자별 환불 금액 및 추적에 사용 */
-    @Column(nullable = false)
+    /**
+     * 환불 대상 결제 — 후원자별 환불 금액 및 추적에 사용
+     * unique: 하나의 결제에 대해 환불은 반드시 하나만 존재해야 함 (더블 환불 방지)
+     */
+    @Column(nullable = false, unique = true)
     private Long paymentId;
 
-    /** 환불 대상 후원자 — payment 엔티티에 sponsorId가 없어 별도 보관 */
+    /** 환불 대상 후원자 — payment.fundingId → funding.sponsorId 흐름으로 조회하여 저장 */
     @Column(nullable = false)
     private Long sponsorId;
 

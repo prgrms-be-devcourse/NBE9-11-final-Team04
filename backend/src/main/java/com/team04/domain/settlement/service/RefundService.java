@@ -31,7 +31,9 @@ public class RefundService {
      * SettlementScheduler에서 호출 — reason 고정 (GOAL_NOT_MET)
      *
      * TODO: FundingRepository에 findAllByIdeaId(Long ideaId) 추가 요청 필요
-     *       현재 페이징 방식만 존재하여 전체 조회 불가
+     *       현재 Pageable.unpaged() 임시 처리 — 데이터 누락 위험 있음
+     * TODO: Payment를 Funding별로 개별 조회하는 N+1 문제 존재
+     *       findAllByIdeaId() 추가 시 조인 쿼리로 개선 필요
      */
     @Transactional
     public void createGoalNotMetRefunds(Long ideaId) {
@@ -43,7 +45,9 @@ public class RefundService {
      * MilestoneService.cancelMilestone()에서 호출 — reason 고정 (CANCELLED)
      *
      * TODO: FundingRepository에 findAllByIdeaId(Long ideaId) 추가 요청 필요
-     *       현재 페이징 방식만 존재하여 전체 조회 불가
+     *       현재 Pageable.unpaged() 임시 처리 — 데이터 누락 위험 있음
+     * TODO: Payment를 Funding별로 개별 조회하는 N+1 문제 존재
+     *       findAllByIdeaId() 추가 시 조인 쿼리로 개선 필요
      */
     @Transactional
     public void createCancelRefunds(Long ideaId) {
@@ -52,17 +56,20 @@ public class RefundService {
 
     /**
      * 분쟁 환불 레코드 생성 (관리자 수동 처리, 단건)
-     * 환불 금액은 실제 결제 금액(payment.getAmount())으로 고정
-     * 관리자가 금액을 직접 입력하지 않아 과다 환불을 방지합니다.
+     * sponsorId는 payment → funding 흐름으로 내부 조회 (오입력 방지)
+     * 환불 금액은 실제 결제 금액(payment.getAmount())으로 고정 (과다 환불 방지)
      */
     @Transactional
-    public RefundResponse createDisputeRefund(Long paymentId, Long sponsorId) {
+    public RefundResponse createDisputeRefund(Long paymentId) {
         Payment payment = paymentRepository.findById(paymentId)
                 .orElseThrow(() -> new CustomException(ErrorCode.PAYMENT_NOT_FOUND));
 
+        Funding funding = fundingRepository.findById(payment.getFundingId())
+                .orElseThrow(() -> new CustomException(ErrorCode.FUNDING_NOT_FOUND));
+
         Refund refund = Refund.builder()
                 .paymentId(payment.getId())
-                .sponsorId(sponsorId)
+                .sponsorId(funding.getSponsorId())
                 .amount(payment.getAmount())
                 .reason(RefundReason.DISPUTE)
                 .build();
@@ -97,13 +104,14 @@ public class RefundService {
      * ideaId 기준으로 모든 후원자의 환불 레코드를 일괄 생성합니다.
      * Funding → Payment 순으로 조회하여 후원자별 Refund를 생성합니다.
      * saveAll()로 일괄 저장하여 DB 쓰기 횟수를 최소화합니다.
+     * paymentId unique 제약으로 DB 레벨에서 중복 환불이 방지됩니다.
      *
-     * TODO: FundingRepository.findAllByIdeaId() 추가 후 아래 코드 변경 필요
-     *       현재는 Pageable.unpaged() 임시 처리 — 데이터 누락 위험 있음
+     * TODO: fundingRepository.findAllByIdeaId(ideaId) 추가 후 변경 필요
+     *       현재 Pageable.unpaged() 임시 처리 — 데이터 누락 위험 있음
      */
     private void createRefundsForIdea(Long ideaId, RefundReason reason) {
-        // TODO: fundingRepository.findAllByIdeaId(ideaId) 로 변경 필요
-        List<Funding> fundings = fundingRepository.findByIdeaIdOrderByCreatedAtDesc(ideaId, org.springframework.data.domain.Pageable.unpaged())
+        List<Funding> fundings = fundingRepository
+                .findByIdeaIdOrderByCreatedAtDesc(ideaId, org.springframework.data.domain.Pageable.unpaged())
                 .getContent();
 
         List<Refund> refundsToSave = new ArrayList<>();
