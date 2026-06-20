@@ -1,6 +1,5 @@
 package com.team04.domain.notification.service;
 
-import com.team04.domain.notification.entity.NotificationType;
 import com.team04.global.event.NotificationEvent;
 import com.team04.global.event.ReportNotificationEvent;
 import lombok.RequiredArgsConstructor;
@@ -15,25 +14,24 @@ public class NotificationEventListener {
 
     private final NotificationService notificationService;
 
-    //대상에게 알림
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void handleNotificationEvent(NotificationEvent event){
+    public void handleNotificationEvent(NotificationEvent event) {
         notificationService.createNotification(
                 event.userId(), event.notificationType(),
                 event.title(), event.message(), event.targetId()
         );
     }
 
-    //관리자 모두에게 알림
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleReportEvent(ReportNotificationEvent event) {
-        notificationService.createNotificationsToAdmins(
-                NotificationType.REPORT_RECEIVED,
-                event.targetType().getDescription() + " 신고 접수",
-                "신고 사유: " + event.reason(),
-                event.targetId()
+        notificationService.createAnnouncementToRole(
+                event.notifyRole(),
+                event.notificationType(),
+                event.title(),
+                event.message(),
+                event.referenceId()
         );
     }
 }

@@ -1,15 +1,18 @@
 package com.team04.global.event;
 
+import com.team04.domain.notification.entity.NotificationType;
+import com.team04.domain.user.entity.Role;
+
 public record ReportNotificationEvent(
-        Long targetId,
-        ReportTargetType targetType,
-        Long reporterUserId,
-        String reason
+        Role notifyRole,                // null이면 전체 사용자
+        NotificationType notificationType,
+        String title,
+        String message,
+        Long referenceId
 ) {
     public ReportNotificationEvent {
-        java.util.Objects.requireNonNull(targetId, "targetId must not be null");
-        java.util.Objects.requireNonNull(targetType, "targetType must not be null");
-        java.util.Objects.requireNonNull(reporterUserId, "reporterUserId must not be null");
-        java.util.Objects.requireNonNull(reason, "reason must not be null");
+        java.util.Objects.requireNonNull(notificationType, "notificationType must not be null");
+        java.util.Objects.requireNonNull(title, "title must not be null");
+        java.util.Objects.requireNonNull(message, "message must not be null");
     }
 }

@@ -9,10 +9,11 @@ import com.team04.domain.dispute.repository.DisputeAppealRepository;
 import com.team04.domain.dispute.repository.DisputeRepository;
 import com.team04.domain.idea.entity.Idea;
 import com.team04.domain.idea.repository.IdeaRepository;
+import com.team04.domain.notification.entity.NotificationType;
+import com.team04.domain.user.entity.Role;
 import com.team04.domain.user.entity.User;
 import com.team04.domain.user.repository.UserRepository;
 import com.team04.global.event.ReportNotificationEvent;
-import com.team04.global.event.ReportTargetType;
 import com.team04.global.exception.CustomException;
 import com.team04.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -56,10 +57,11 @@ public class DisputeService {
         disputeRepository.save(dispute);
 
         eventPublisher.publishEvent(new ReportNotificationEvent(
-                dispute.getId(),
-                ReportTargetType.DISPUTE,
-                reporterId,
-                request.reason()
+                Role.ADMIN,
+                NotificationType.REPORT_RECEIVED,
+                "분쟁 신고 접수",
+                "신고 사유: " + request.reason(),
+                dispute.getId()
         ));
 
         return DisputeResponse.of(dispute);
