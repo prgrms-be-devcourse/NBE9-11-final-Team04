@@ -9,6 +9,7 @@ import com.team04.domain.dispute.repository.DisputeAppealRepository;
 import com.team04.domain.dispute.repository.DisputeRepository;
 import com.team04.domain.idea.entity.Idea;
 import com.team04.domain.idea.repository.IdeaRepository;
+import com.team04.domain.user.entity.Role;
 import com.team04.domain.user.entity.User;
 import com.team04.domain.user.repository.UserRepository;
 import com.team04.global.event.ReportNotificationEvent;
@@ -34,7 +35,7 @@ public class DisputeService {
     public DisputeResponse createDispute(Long reporterId, CreateDisputeRequest request) {
 
 
-        Idea idea = ideaRepository.findById(request.ideaId())
+        Idea idea = ideaRepository.findByIdAndDeletedAtIsNull(request.ideaId())
                 .orElseThrow(() -> new CustomException(ErrorCode.IDEA_NOT_FOUND));
 
         if (reporterId.equals(idea.getUserId())) {
@@ -65,11 +66,11 @@ public class DisputeService {
     }
 
     @Transactional(readOnly = true)
-    public DisputeResponse getDispute(Long userId, Long disputeId, boolean isAdmin) {
+    public DisputeResponse getDispute(Long userId, Long disputeId, Role role) {
         Dispute dispute = disputeRepository.findByIdWithDetails(disputeId)
                 .orElseThrow(() -> new CustomException(ErrorCode.DISPUTE_NOT_FOUND));
 
-        if (!isAdmin && !userId.equals(dispute.getReporter().getId()) &&
+        if (role != Role.ADMIN && !userId.equals(dispute.getReporter().getId()) &&
                 !userId.equals(dispute.getProposer().getId())) {
             throw new CustomException(ErrorCode.FORBIDDEN);
         }
