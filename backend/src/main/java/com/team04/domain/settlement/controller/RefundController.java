@@ -24,6 +24,7 @@ public class RefundController {
     /**
      * 분쟁 환불 생성 (관리자 전용)
      * GOAL_NOT_MET, CANCELLED는 내부 자동 생성 — 이 API는 DISPUTE 케이스만 처리
+     * 환불 금액은 실제 결제 금액으로 고정 (과다 환불 방지)
      */
     @PostMapping("/dispute")
     @PreAuthorize("hasRole('ADMIN')")
@@ -32,8 +33,7 @@ public class RefundController {
     ) {
         RefundResponse response = refundService.createDisputeRefund(
                 request.paymentId(),
-                request.sponsorId(),
-                request.amount()
+                request.sponsorId()
         );
         return ResponseEntity.ok(ApiResponse.ofSuccess(response));
     }
@@ -55,6 +55,7 @@ public class RefundController {
      * 내 환불 내역 조회 (후원자 본인)
      */
     @GetMapping("/me")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<List<RefundResponse>>> getMyRefunds(
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {

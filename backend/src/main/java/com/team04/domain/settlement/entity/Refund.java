@@ -1,6 +1,8 @@
 package com.team04.domain.settlement.entity;
 
 import com.team04.global.entity.BaseEntity;
+import com.team04.global.exception.CustomException;
+import com.team04.global.exception.ErrorCode;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -62,7 +64,7 @@ public class Refund extends BaseEntity {
      */
     public void complete() {
         if (this.status != RefundStatus.PENDING) {
-            throw new IllegalStateException("PENDING 상태에서만 완료 처리가 가능합니다.");
+            throw new CustomException(ErrorCode.REFUND_ALREADY_COMPLETED);
         }
         this.status = RefundStatus.COMPLETED;
     }

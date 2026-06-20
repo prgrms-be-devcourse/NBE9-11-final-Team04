@@ -15,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -28,7 +29,6 @@ public class RefundService {
     /**
      * 목표 미달성 환불 레코드 일괄 생성
      * SettlementScheduler에서 호출 — reason 고정 (GOAL_NOT_MET)
-     * 후원자별로 Refund 레코드를 각각 생성합니다.
      *
      * TODO: FundingRepository에 findAllByIdeaId(Long ideaId) 추가 요청 필요
      *       현재 페이징 방식만 존재하여 전체 조회 불가
@@ -41,7 +41,6 @@ public class RefundService {
     /**
      * 이행 중단 환불 레코드 일괄 생성
      * MilestoneService.cancelMilestone()에서 호출 — reason 고정 (CANCELLED)
-     * 후원자별로 Refund 레코드를 각각 생성합니다.
      *
      * TODO: FundingRepository에 findAllByIdeaId(Long ideaId) 추가 요청 필요
      *       현재 페이징 방식만 존재하여 전체 조회 불가
@@ -52,19 +51,19 @@ public class RefundService {
     }
 
     /**
-     * 분쟁 환불 레코드 생성 (관리자 수동 처리)
-     * reason을 직접 지정해야 하므로 별도 메서드로 분리
-     * 단건 처리 (특정 후원자 한 명에 대한 환불)
+     * 분쟁 환불 레코드 생성 (관리자 수동 처리, 단건)
+     * 환불 금액은 실제 결제 금액(payment.getAmount())으로 고정
+     * 관리자가 금액을 직접 입력하지 않아 과다 환불을 방지합니다.
      */
     @Transactional
-    public RefundResponse createDisputeRefund(Long paymentId, Long sponsorId, Long amount) {
+    public RefundResponse createDisputeRefund(Long paymentId, Long sponsorId) {
         Payment payment = paymentRepository.findById(paymentId)
                 .orElseThrow(() -> new CustomException(ErrorCode.PAYMENT_NOT_FOUND));
 
         Refund refund = Refund.builder()
                 .paymentId(payment.getId())
                 .sponsorId(sponsorId)
-                .amount(amount)
+                .amount(payment.getAmount())
                 .reason(RefundReason.DISPUTE)
                 .build();
 
@@ -97,30 +96,34 @@ public class RefundService {
     /**
      * ideaId 기준으로 모든 후원자의 환불 레코드를 일괄 생성합니다.
      * Funding → Payment 순으로 조회하여 후원자별 Refund를 생성합니다.
+     * saveAll()로 일괄 저장하여 DB 쓰기 횟수를 최소화합니다.
      *
-     * TODO: FundingRepository.findAllByIdeaId() 추가 후 아래 주석 제거 필요
-     *       현재는 임시로 페이징 없이 처리하나, 데이터 누락 위험 있음
+     * TODO: FundingRepository.findAllByIdeaId() 추가 후 아래 코드 변경 필요
+     *       현재는 Pageable.unpaged() 임시 처리 — 데이터 누락 위험 있음
      */
     private void createRefundsForIdea(Long ideaId, RefundReason reason) {
         // TODO: fundingRepository.findAllByIdeaId(ideaId) 로 변경 필요
         List<Funding> fundings = fundingRepository.findByIdeaIdOrderByCreatedAtDesc(ideaId, org.springframework.data.domain.Pageable.unpaged())
                 .getContent();
 
+        List<Refund> refundsToSave = new ArrayList<>();
         for (Funding funding : fundings) {
             List<Payment> payments = paymentRepository.findByFundingIdOrderByCreatedAtDesc(funding.getId());
 
-            // SUCCESS 상태의 결제 건만 환불 처리
             payments.stream()
                     .filter(p -> p.getStatus() == PaymentTypes.PaymentStatus.SUCCESS)
-                    .forEach(payment -> {
-                        Refund refund = Refund.builder()
-                                .paymentId(payment.getId())
-                                .sponsorId(funding.getSponsorId())
-                                .amount(payment.getAmount())
-                                .reason(reason)
-                                .build();
-                        refundRepository.save(refund);
-                    });
+                    .forEach(payment -> refundsToSave.add(
+                            Refund.builder()
+                                    .paymentId(payment.getId())
+                                    .sponsorId(funding.getSponsorId())
+                                    .amount(payment.getAmount())
+                                    .reason(reason)
+                                    .build()
+                    ));
+        }
+
+        if (!refundsToSave.isEmpty()) {
+            refundRepository.saveAll(refundsToSave);
         }
     }
 }
