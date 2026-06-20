@@ -58,9 +58,14 @@ public class RefundService {
      * 분쟁 환불 레코드 생성 (관리자 수동 처리, 단건)
      * sponsorId는 payment → funding 흐름으로 내부 조회 (오입력 방지)
      * 환불 금액은 실제 결제 금액(payment.getAmount())으로 고정 (과다 환불 방지)
+     * 이미 환불된 결제건이면 명확한 비즈니스 예외를 발생시킵니다.
      */
     @Transactional
     public RefundResponse createDisputeRefund(Long paymentId) {
+        if (refundRepository.existsByPaymentId(paymentId)) {
+            throw new CustomException(ErrorCode.REFUND_ALREADY_COMPLETED);
+        }
+
         Payment payment = paymentRepository.findById(paymentId)
                 .orElseThrow(() -> new CustomException(ErrorCode.PAYMENT_NOT_FOUND));
 
@@ -102,9 +107,8 @@ public class RefundService {
 
     /**
      * ideaId 기준으로 모든 후원자의 환불 레코드를 일괄 생성합니다.
-     * Funding → Payment 순으로 조회하여 후원자별 Refund를 생성합니다.
+     * 이미 환불된 결제건은 건너뛰어 중복 저장 시도를 방지합니다.
      * saveAll()로 일괄 저장하여 DB 쓰기 횟수를 최소화합니다.
-     * paymentId unique 제약으로 DB 레벨에서 중복 환불이 방지됩니다.
      *
      * TODO: fundingRepository.findAllByIdeaId(ideaId) 추가 후 변경 필요
      *       현재 Pageable.unpaged() 임시 처리 — 데이터 누락 위험 있음
@@ -120,6 +124,7 @@ public class RefundService {
 
             payments.stream()
                     .filter(p -> p.getStatus() == PaymentTypes.PaymentStatus.SUCCESS)
+                    .filter(p -> !refundRepository.existsByPaymentId(p.getId()))
                     .forEach(payment -> refundsToSave.add(
                             Refund.builder()
                                     .paymentId(payment.getId())

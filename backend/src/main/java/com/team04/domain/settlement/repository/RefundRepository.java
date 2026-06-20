@@ -12,4 +12,6 @@ public interface RefundRepository extends JpaRepository<Refund, Long> {
 
     /** 결제 건별 환불 내역 조회 */
     List<Refund> findByPaymentId(Long paymentId);
+
+    boolean existsByPaymentId(Long paymentId);
 }
