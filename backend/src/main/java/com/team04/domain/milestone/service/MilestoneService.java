@@ -55,7 +55,9 @@ public class MilestoneService {
      */
     @Transactional(readOnly = true)
     public List<CompletionReportResponse> getReports(Long milestoneId) {
-        findMilestone(milestoneId);
+        if (!milestoneRepository.existsById(milestoneId)) {
+            throw new CustomException(ErrorCode.MILESTONE_NOT_FOUND);
+        }
         return completionReportRepository.findByMilestoneIdOrderBySubmittedAtDesc(milestoneId)
                 .stream()
                 .map(CompletionReportResponse::from)
