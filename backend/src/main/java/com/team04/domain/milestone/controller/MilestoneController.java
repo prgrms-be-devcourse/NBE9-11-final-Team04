@@ -2,6 +2,7 @@ package com.team04.domain.milestone.controller;
 
 import com.team04.domain.milestone.dto.request.CompletionReportRequest;
 import com.team04.domain.milestone.dto.response.CompletionReportResponse;
+import com.team04.domain.milestone.dto.response.MilestoneResponse;
 import com.team04.domain.milestone.service.MilestoneService;
 import com.team04.domain.user.entity.Role;
 import com.team04.global.exception.CustomException;
@@ -12,12 +13,32 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/milestones")
 public class MilestoneController {
 
     private final MilestoneService milestoneService;
+
+    /** 프로젝트의 마일스톤 목록을 단계 순으로 조회합니다. */
+    @GetMapping("/ideas/{ideaId}")
+    public ApiResponse<List<MilestoneResponse>> getMilestones(@PathVariable Long ideaId) {
+        return ApiResponse.ofSuccess(milestoneService.getMilestones(ideaId));
+    }
+
+    /** 마일스톤 단건을 조회합니다. */
+    @GetMapping("/{milestoneId}")
+    public ApiResponse<MilestoneResponse> getMilestone(@PathVariable Long milestoneId) {
+        return ApiResponse.ofSuccess(milestoneService.getMilestone(milestoneId));
+    }
+
+    /** 마일스톤의 완료/소명 보고서 목록을 최신순으로 조회합니다. */
+    @GetMapping("/{milestoneId}/reports")
+    public ApiResponse<List<CompletionReportResponse>> getReports(@PathVariable Long milestoneId) {
+        return ApiResponse.ofSuccess(milestoneService.getReports(milestoneId));
+    }
 
     /** 마일스톤 완료 보고서를 제출합니다. 제안자만 가능합니다. */
     @PostMapping("/{milestoneId}/completion-reports")
