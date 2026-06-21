@@ -1,6 +1,7 @@
 package com.team04.infra.batch;
 
 import com.team04.domain.idea.service.IdeaService;
+import com.team04.domain.settlement.service.RefundService;
 import com.team04.domain.settlement.service.SettlementService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -8,9 +9,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.List;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.*;
 
@@ -26,21 +29,34 @@ class SettlementSchedulerTest {
     @Mock
     private SettlementService settlementService;
 
+    @Mock
+    private RefundService refundService;
+
+    @Mock
+    private TransactionTemplate transactionTemplate;
+
     @Test
-    @DisplayName("목표 미달성 프로젝트 환불 장부 생성 성공")
+    @DisplayName("목표 미달성 프로젝트 환불 장부 + 환불 레코드 생성 성공")
     void processFailedFundingRefunds_success() {
         // given
         given(ideaService.getFailedFundingIdeaIds()).willReturn(List.of(1L, 2L));
+        // Consumer<TransactionStatus>를 실제로 실행시켜 내부 로직 검증
+        doAnswer(invocation -> {
+            ((java.util.function.Consumer<org.springframework.transaction.TransactionStatus>)
+                    invocation.getArgument(0)).accept(null);
+            return null;
+        }).when(transactionTemplate).executeWithoutResult(any());
 
         // when
         settlementScheduler.processFailedFundingRefunds();
 
         // then
-        verify(settlementService, times(2)).createRefundSettlement(anyLong());
+        verify(settlementService, times(2)).createGoalNotMetRefundSettlement(anyLong());
+        verify(refundService, times(2)).createGoalNotMetRefunds(anyLong());
     }
 
     @Test
-    @DisplayName("목표 미달성 프로젝트 없으면 환불 장부 생성 안함")
+    @DisplayName("목표 미달성 프로젝트 없으면 환불 처리 안함")
     void processFailedFundingRefunds_noFailedIdeas() {
         // given
         given(ideaService.getFailedFundingIdeaIds()).willReturn(List.of());
@@ -49,20 +65,21 @@ class SettlementSchedulerTest {
         settlementScheduler.processFailedFundingRefunds();
 
         // then
-        verify(settlementService, never()).createRefundSettlement(anyLong());
+        verify(settlementService, never()).createGoalNotMetRefundSettlement(anyLong());
+        verify(refundService, never()).createGoalNotMetRefunds(anyLong());
     }
 
     @Test
-    @DisplayName("환불 장부 생성 실패해도 다음 프로젝트 처리 계속됨")
+    @DisplayName("환불 처리 실패해도 다음 프로젝트 처리 계속됨")
     void processFailedFundingRefunds_continueOnError() {
         // given
         given(ideaService.getFailedFundingIdeaIds()).willReturn(List.of(1L, 2L));
-        doThrow(new RuntimeException("실패")).when(settlementService).createRefundSettlement(1L);
+        doThrow(new RuntimeException("실패")).when(transactionTemplate).executeWithoutResult(any());
 
         // when
         settlementScheduler.processFailedFundingRefunds();
 
         // then
-        verify(settlementService, times(2)).createRefundSettlement(anyLong());
+        verify(transactionTemplate, times(2)).executeWithoutResult(any());
     }
 }

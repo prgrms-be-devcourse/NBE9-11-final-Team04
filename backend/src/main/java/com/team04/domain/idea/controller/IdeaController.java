@@ -4,6 +4,9 @@ import com.team04.domain.idea.dto.request.IdeaDraftRequest;
 import com.team04.domain.idea.dto.response.IdeaDraftResponse;
 import com.team04.domain.idea.dto.response.IdeaSummaryResponse;
 import com.team04.domain.idea.entity.IdeaCategory;
+import com.team04.domain.user.entity.Role;
+import com.team04.global.exception.CustomException;
+import com.team04.global.exception.ErrorCode;
 import com.team04.global.response.ApiResponse;
 import com.team04.domain.idea.dto.request.CreateIdeaRequest;
 import com.team04.domain.idea.dto.request.ReportIdeaRequest;
@@ -19,6 +22,7 @@ import org.springframework.data.domain.Slice;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -44,20 +48,26 @@ public class IdeaController {
     public ApiResponse<Slice<IdeaSummaryResponse>> getProjects(
             @RequestParam(required = false) IdeaCategory category,
             @RequestParam(required = false, defaultValue = "false") Boolean closingSoon,
+            @RequestParam(required = false) String keyword,
             @RequestParam(required = false, defaultValue = "latest") String sort,
             @PageableDefault(size = 20) Pageable pageable
     ) {
-        return ApiResponse.ofSuccess(ideaService.getProjects(category, closingSoon, sort, pageable));
+        return ApiResponse.ofSuccess(ideaService.getProjects(category, closingSoon, keyword, sort, pageable));
     }
 
-    /** 프로젝트명을 기준으로 로그인 사용자에게 프로젝트 검색 결과를 제공합니다. */
-    @GetMapping("/search")
-    public ApiResponse<Slice<IdeaSummaryResponse>> searchProjects(
-            @RequestParam String keyword,
-            @RequestParam(required = false, defaultValue = "latest") String sort,
+    /** 신뢰도와 펀딩 지표 기반 인기 프로젝트 Top5를 제공합니다. */
+    @GetMapping("/top5")
+    public ApiResponse<List<IdeaResponse>> getTop5Ideas() {
+        return ApiResponse.ofSuccess(ideaService.getTop5Ideas());
+    }
+
+    /** 로그인 사용자의 관심 프로젝트 목록을 Slice 페이지네이션으로 제공합니다. */
+    @GetMapping("/bookmarks")
+    public ApiResponse<Slice<IdeaResponse>> getBookmarks(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @PageableDefault(size = 20) Pageable pageable
     ) {
-        return ApiResponse.ofSuccess(ideaService.searchProjects(keyword, sort, pageable));
+        return ApiResponse.ofSuccess(ideaService.getBookmarks(userDetails.getUserId(), pageable));
     }
 
     /** 보관 기간 내 로그인 사용자 본인의 임시저장 목록을 조회합니다. */
@@ -125,6 +135,19 @@ public class IdeaController {
         return ApiResponse.ofSuccess(ideaService.updateIdea(ideaId, userDetails.getUserId(), request));
     }
 
+    /** 로그인 제안자가 본인의 심사 대기 아이디어 대표 이미지를 업로드합니다. */
+    @PostMapping("/{ideaId}/image")
+    public ApiResponse<IdeaResponse> uploadIdeaImage(
+            @PathVariable Long ideaId,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestPart("image") MultipartFile image
+    ) {
+        if (userDetails.getRole() != Role.PROPOSER) {
+            throw new CustomException(ErrorCode.FORBIDDEN);
+        }
+        return ApiResponse.ofSuccess(ideaService.uploadIdeaImage(ideaId, userDetails.getUserId(), image));
+    }
+
     /** 로그인 사용자가 본인의 심사 대기 아이디어를 소프트 삭제합니다. */
     @DeleteMapping("/{ideaId}")
     public ApiResponse<Void> deleteIdea(
@@ -132,6 +155,39 @@ public class IdeaController {
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         ideaService.deleteIdea(ideaId, userDetails.getUserId());
+        return ApiResponse.ofSuccessWithoutBody();
+    }
+
+    /** 로그인 사용자가 본인의 진행 중인 아이디어에 대해 취소를 신청합니다. */
+    @PostMapping("/{ideaId}/cancel")
+    public ApiResponse<Void> requestCancellation(
+            @PathVariable Long ideaId,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        if (userDetails.getRole() != Role.PROPOSER) {
+            throw new CustomException(ErrorCode.FORBIDDEN);
+        }
+        ideaService.requestCancellation(ideaId, userDetails.getUserId());
+        return ApiResponse.ofSuccessWithoutBody();
+    }
+
+    /** 로그인 사용자가 아이디어를 관심 프로젝트로 저장합니다. */
+    @PostMapping("/{ideaId}/bookmark")
+    public ApiResponse<Void> addBookmark(
+            @PathVariable Long ideaId,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        ideaService.addBookmark(ideaId, userDetails.getUserId());
+        return ApiResponse.ofSuccessWithoutBody();
+    }
+
+    /** 로그인 사용자가 저장한 관심 프로젝트를 삭제합니다. */
+    @DeleteMapping("/{ideaId}/bookmark")
+    public ApiResponse<Void> deleteBookmark(
+            @PathVariable Long ideaId,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        ideaService.deleteBookmark(ideaId, userDetails.getUserId());
         return ApiResponse.ofSuccessWithoutBody();
     }
 
