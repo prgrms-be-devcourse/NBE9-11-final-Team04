@@ -40,6 +40,8 @@ public enum ErrorCode {
     IDEA_DRAFT_NOT_FOUND(404, "I007", "존재하지 않는 아이디어 임시저장입니다"),
     IDEA_DRAFT_LIMIT_EXCEEDED(409, "I008", "아이디어 임시저장은 최대 50개까지 가능합니다"),
     SELF_REPORT_NOT_ALLOWED(400, "I009", "본인 아이디어는 신고할 수 없습니다"),
+    IDEA_BOOKMARK_ALREADY_EXISTS(409, "I010", "이미 관심 프로젝트로 저장한 아이디어입니다"),
+    IDEA_BOOKMARK_NOT_FOUND(404, "I011", "존재하지 않는 관심 프로젝트입니다"),
 
     // 검증
     INVALID_VERIFICATION_STATUS_TRANSITION(400, "V001", "유효하지 않은 검증 상태 전이입니다"),
