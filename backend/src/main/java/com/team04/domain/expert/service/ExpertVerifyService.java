@@ -46,7 +46,7 @@ public class ExpertVerifyService {
         }
 
         try {
-            boolean verified = externalVerifyClient.verify(request);
+            boolean verified = externalVerifyClient.verify(request, true);
 
             if (request.qualificationType() == QualificationType.NATIONAL_QUALIFICATION) {
                 // 수동 검토 → 보류 상태로 저장
