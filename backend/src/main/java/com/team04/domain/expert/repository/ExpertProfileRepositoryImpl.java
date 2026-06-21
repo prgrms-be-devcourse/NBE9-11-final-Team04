@@ -21,7 +21,7 @@ public class ExpertProfileRepositoryImpl implements ExpertProfileRepositoryCusto
     private final JPAQueryFactory queryFactory;
 
     @Override
-    public List<ExpertProfile> findActiveBusinessRegistrationProfiles() {
+    public List<ExpertProfile> findActiveBusinessRegistrationProfiles(int offset, int limit) {
         return queryFactory
                 .selectFrom(expertProfile)
                 .join(expertProfile.user).fetchJoin()
@@ -29,11 +29,13 @@ public class ExpertProfileRepositoryImpl implements ExpertProfileRepositoryCusto
                         expertProfile.status.eq(ExpertStatus.ACTIVE),
                         expertProfile.qualificationType.eq(QualificationType.BUSINESS_REGISTRATION)
                 )
+                .offset(offset)
+                .limit(limit)
                 .fetch();
     }
 
     @Override
-    public List<ExpertProfile> findActiveNationalQualificationProfiles() {
+    public List<ExpertProfile> findActiveNationalQualificationProfiles(int offset, int limit) {
         return queryFactory
                 .selectFrom(expertProfile)
                 .join(expertProfile.user).fetchJoin()
@@ -41,6 +43,8 @@ public class ExpertProfileRepositoryImpl implements ExpertProfileRepositoryCusto
                         expertProfile.status.eq(ExpertStatus.ACTIVE),
                         expertProfile.qualificationType.eq(QualificationType.NATIONAL_QUALIFICATION)
                 )
+                .offset(offset)
+                .limit(limit)
                 .fetch();
     }
 
@@ -49,14 +53,13 @@ public class ExpertProfileRepositoryImpl implements ExpertProfileRepositoryCusto
     // appealCount > 0 이지만 관리자 미검토 → 보호 필요
     // 따라서 appeal이 SUBMITTED 상태로 존재하면 제외
     @Override
-    public List<ExpertProfile> findExpiredSuspendedProfiles(LocalDateTime deadline) {
+    public List<ExpertProfile> findExpiredSuspendedProfiles(LocalDateTime deadline, int limit) {
         return queryFactory
                 .selectFrom(expertProfile)
                 .join(expertProfile.user).fetchJoin()
                 .where(
                         expertProfile.status.eq(ExpertStatus.SUSPENDED),
                         expertProfile.suspendedAt.before(deadline),
-                        // 소명 자료가 SUBMITTED 상태로 존재하는 경우 제외
                         queryFactory
                                 .selectOne()
                                 .from(expertAppeal)
@@ -66,6 +69,7 @@ public class ExpertProfileRepositoryImpl implements ExpertProfileRepositoryCusto
                                 )
                                 .notExists()
                 )
+                .limit(limit)
                 .fetch();
     }
 }
