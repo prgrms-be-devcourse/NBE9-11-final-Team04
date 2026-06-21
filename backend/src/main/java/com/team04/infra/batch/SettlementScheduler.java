@@ -1,11 +1,13 @@
 package com.team04.infra.batch;
 
 import com.team04.domain.idea.service.IdeaService;
+import com.team04.domain.settlement.service.RefundService;
 import com.team04.domain.settlement.service.SettlementService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.List;
 
@@ -17,10 +19,15 @@ public class SettlementScheduler {
 
     private final IdeaService ideaService;
     private final SettlementService settlementService;
+    private final RefundService refundService;
+    private final TransactionTemplate transactionTemplate;
 
     /**
      * 매일 자정 실행
-     * 펀딩 마감됐고 목표 금액 미달성인 프로젝트를 감지해 자동으로 환불 장부 생성
+     * 펀딩 마감됐고 목표 금액 미달성인 프로젝트를 감지해
+     * 환불 장부(Settlement) + 후원자별 환불 레코드(Refund)를 자동 생성합니다.
+     * TransactionTemplate으로 프로젝트별 단일 트랜잭션 보장 —
+     * Settlement 생성 후 Refund 생성 실패 시 전체 롤백됩니다.
      */
     @Scheduled(cron = "0 0 0 * * *")
     public void processFailedFundingRefunds() {
@@ -30,10 +37,13 @@ public class SettlementScheduler {
 
         for (Long ideaId : failedIdeaIds) {
             try {
-                settlementService.createRefundSettlement(ideaId);
-                log.info("환불 장부 생성 완료 - ideaId: {}", ideaId);
+                transactionTemplate.executeWithoutResult(status -> {
+                    settlementService.createGoalNotMetRefundSettlement(ideaId);
+                    refundService.createGoalNotMetRefunds(ideaId);
+                });
+                log.info("환불 처리 완료 - ideaId: {}", ideaId);
             } catch (Exception e) {
-                log.error("환불 장부 생성 실패 - ideaId: {}, error: {}", ideaId, e.getMessage());
+                log.error("환불 처리 실패 - ideaId: {}, error: {}", ideaId, e.getMessage());
             }
         }
 
