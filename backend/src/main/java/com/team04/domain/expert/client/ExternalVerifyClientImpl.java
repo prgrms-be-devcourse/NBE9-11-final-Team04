@@ -31,15 +31,15 @@ public class ExternalVerifyClientImpl implements ExternalVerifyClient{
     private static final int MAX_RETRY = 3;
 
     @Override
-    public boolean verify(ExpertVerifyRequest request) {
+    public boolean verify(ExpertVerifyRequest request, boolean retry) {
         if (request.qualificationType() == QualificationType.BUSINESS_REGISTRATION) {
-            return verifyBusinessRegistration(request);
+            return verifyBusinessRegistration(request, retry);
         }
         // NATIONAL_QUALIFICATION은 관리자 수동 검토 → 항상 보류 처리
         return false;
     }
 
-    private boolean verifyBusinessRegistration(ExpertVerifyRequest request) {
+    private boolean verifyBusinessRegistration(ExpertVerifyRequest request, boolean retry) {
         validateBusinessRequest(request);
 
         NtsValidateRequest body = new NtsValidateRequest(
@@ -50,7 +50,9 @@ public class ExternalVerifyClientImpl implements ExternalVerifyClient{
                 ))
         );
 
-        for (int attempt = 1; attempt <= MAX_RETRY; attempt++) {
+        int maxAttempt = retry ? MAX_RETRY : 1;
+
+        for (int attempt = 1; attempt <= maxAttempt; attempt++) {
             try {
                 NtsValidateResponse response = restClient.post()
                         .uri(NTS_BASE_URL + "/validate?serviceKey={key}&returnType=JSON", ntsServiceKey)
@@ -60,7 +62,7 @@ public class ExternalVerifyClientImpl implements ExternalVerifyClient{
                         .body(NtsValidateResponse.class);
 
                 if (response == null) {
-                    throw new IllegalStateException("국세청 API 응답 바디가 비어 있습니다.");
+                    throw new IllegalStateException("국세청 API 응답 바디가 비어 있습니다");
                 }
 
                 return response.isValid();
@@ -68,8 +70,8 @@ public class ExternalVerifyClientImpl implements ExternalVerifyClient{
             } catch (CustomException e) {
                 throw e;
             } catch (Exception e) {
-                log.warn("국세청 API 호출 실패 ({}/{}): {}", attempt, MAX_RETRY, e.getMessage());
-                if (attempt == MAX_RETRY) {
+                log.warn("국세청 API 호출 실패 ({}/{}): {}", attempt, maxAttempt, e.getMessage());
+                if (attempt == maxAttempt) {
                     throw new CustomException(ErrorCode.EXTERNAL_API_FAILURE);
                 }
             }
