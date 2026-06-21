@@ -24,6 +24,9 @@ public enum IdeaStatus {
     /** 펀딩 또는 아이디어 진행이 완료된 상태입니다. */
     COMPLETED,
 
+    /** 펀딩 오픈 이후 제안자가 취소를 신청한 상태입니다. */
+    CANCELLATION_REQUESTED,
+
     /** 아이디어 진행이 취소된 상태입니다. */
     CANCELLED;
 
@@ -44,7 +47,10 @@ public enum IdeaStatus {
             case EXPERT_PENDING -> targetStatus == ADMIN_PENDING || targetStatus == CANCELLED;
             case ADMIN_PENDING -> targetStatus == OPEN || targetStatus == CANCELLED;
             case OPEN -> targetStatus == IN_PROGRESS || targetStatus == CANCELLED;
-            case IN_PROGRESS -> targetStatus == COMPLETED || targetStatus == CANCELLED;
+            case IN_PROGRESS -> targetStatus == COMPLETED
+                    || targetStatus == CANCELLATION_REQUESTED
+                    || targetStatus == CANCELLED;
+            case CANCELLATION_REQUESTED -> targetStatus == CANCELLED;
             case COMPLETED, CANCELLED -> false;
         };
     }

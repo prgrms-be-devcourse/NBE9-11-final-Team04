@@ -2,6 +2,10 @@ package com.team04.domain.idea.repository;
 
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.core.types.dsl.Expressions;
+import com.querydsl.core.types.dsl.NumberExpression;
+import com.querydsl.core.types.dsl.NumberTemplate;
+import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import com.team04.domain.idea.entity.Idea;
 import com.team04.domain.idea.entity.IdeaCategory;
@@ -20,6 +24,9 @@ import java.util.List;
 public class IdeaRepositoryImpl implements IdeaRepositoryCustom {
 
     private static final String SORT_DEADLINE = "deadline";
+    private static final int TOP_IDEA_LIMIT = 5;
+    private static final int MIN_TRUST_SCORE = 80;
+
 
     private final JPAQueryFactory queryFactory;
 
@@ -37,6 +44,7 @@ public class IdeaRepositoryImpl implements IdeaRepositoryCustom {
                 .selectFrom(idea)
                 .where(
                         idea.deletedAt.isNull(),
+                        idea.trustScore.goe(MIN_TRUST_SCORE),
                         categoryEq(idea, category),
                         closingSoon(idea, closingSoonOnly),
                         titleContains(idea, keyword)
@@ -51,6 +59,40 @@ public class IdeaRepositoryImpl implements IdeaRepositoryCustom {
             ideas.remove(pageable.getPageSize());
         }
         return new SliceImpl<>(ideas, pageable, hasNext);
+    }
+
+    /** 신뢰도 80 이상 프로젝트를 가중치 합산 점수 내림차순으로 최대 5개 조회합니다. */
+    @Override
+    public List<Idea> findTop5PopularIdeas() {
+        QIdea idea = QIdea.idea;
+        QIdea subIdea = new QIdea("subIdea");
+        NumberExpression<Double> achievementScore = idea.currentAmount
+                .doubleValue()
+                .divide(idea.goalAmount.doubleValue())
+                .multiply(0.4);
+        NumberTemplate<Double> sponsorScore = Expressions.numberTemplate(
+                Double.class,
+                "coalesce(({0} / nullif({1}, 0)) * 0.3, 0.0)",
+                idea.sponsorCount.doubleValue(),
+                JPAExpressions
+                        .select(subIdea.sponsorCount.max())
+                        .from(subIdea)
+                        .where(subIdea.deletedAt.isNull())
+        );
+        NumberExpression<Double> trustScore = idea.trustScore
+                .doubleValue()
+                .divide(100.0)
+                .multiply(0.3);
+
+        return queryFactory
+                .selectFrom(idea)
+                .where(
+                        idea.deletedAt.isNull(),
+                        idea.trustScore.goe(MIN_TRUST_SCORE)
+                )
+                .orderBy(achievementScore.add(sponsorScore).add(trustScore).desc(), idea.id.desc())
+                .limit(TOP_IDEA_LIMIT)
+                .fetch();
     }
 
     /** 카테고리 값이 있는 경우에만 카테고리 조건을 추가합니다. */

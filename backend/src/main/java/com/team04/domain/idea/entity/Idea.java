@@ -63,10 +63,13 @@ public class Idea extends BaseEntity {
     private Long goalAmount;
 
     @Column(nullable = false)
+    private Long depositAmount;
+
+    @Column(nullable = false)
     private Long currentAmount = 0L;
 
     @Column(nullable = false)
-    private Long supporterCount = 0L;
+    private int sponsorCount = 0;
 
     @Column(nullable = false)
     private LocalDateTime fundingStartAt;
@@ -77,6 +80,9 @@ public class Idea extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 50)
     private RewardType rewardType;
+
+    @Column(length = 2048)
+    private String imageUrl;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 50)
@@ -104,9 +110,11 @@ public class Idea extends BaseEntity {
             String competitor,
             String teamIntro,
             Long goalAmount,
+            Long depositAmount,
             LocalDateTime fundingStartAt,
             LocalDateTime fundingEndAt,
-            RewardType rewardType
+            RewardType rewardType,
+            String imageUrl
     ) {
         this.userId = userId;
         this.title = title;
@@ -119,9 +127,11 @@ public class Idea extends BaseEntity {
         this.competitor = competitor;
         this.teamIntro = teamIntro;
         this.goalAmount = goalAmount;
+        this.depositAmount = depositAmount;
         this.fundingStartAt = fundingStartAt;
         this.fundingEndAt = fundingEndAt;
         this.rewardType = rewardType;
+        this.imageUrl = imageUrl;
     }
 
     /** 요청한 사용자가 아이디어 작성자인지 검증합니다. */
@@ -145,7 +155,8 @@ public class Idea extends BaseEntity {
             Long goalAmount,
             LocalDateTime fundingStartAt,
             LocalDateTime fundingEndAt,
-            RewardType rewardType
+            RewardType rewardType,
+            String imageUrl
     ) {
         validateEditable();
         this.title = title;
@@ -160,13 +171,44 @@ public class Idea extends BaseEntity {
         this.goalAmount = goalAmount;
         this.fundingStartAt = fundingStartAt;
         this.fundingEndAt = fundingEndAt;
-        this.rewardType = rewardType;
+        this.imageUrl = imageUrl;
+    }
+
+    /** 심사 대기 상태에서만 아이디어 대표 이미지를 변경합니다. */
+    public void updateImageUrl(String imageUrl) {
+        validateEditable();
+        this.imageUrl = imageUrl;
     }
 
     /** 심사 대기 상태에서만 아이디어를 소프트 삭제합니다. */
     public void softDelete() {
         validateDeletable();
         this.deletedAt = LocalDateTime.now();
+    }
+
+    /** 결제 완료 이벤트 금액을 현재 모금액에 더합니다. */
+    public void addCurrentAmount(Long amount) {
+        this.currentAmount += amount;
+    }
+
+    /** 첫 후원자 결제 완료 시 인기 점수 계산용 후원자 수를 증가시킵니다. */
+    public void increaseSponsorCount() {
+        this.sponsorCount++;
+    }
+
+    /** 마지막 후원 취소 시 인기 점수 계산용 후원자 수를 0 아래로 내려가지 않게 감소시킵니다. */
+    public void decreaseSponsorCount() {
+        if (this.sponsorCount > 0) {
+            this.sponsorCount--;
+        }
+    }
+
+    /** 진행 중인 펀딩 아이디어에 대해 제안자 취소 신청 상태로 전이합니다. */
+    public void requestCancellation() {
+        if (this.status != IdeaStatus.IN_PROGRESS) {
+            throw new CustomException(ErrorCode.INVALID_IDEA_STATUS_TRANSITION);
+        }
+        this.status = IdeaStatus.CANCELLATION_REQUESTED;
     }
 
     /** 아이디어 상태 전이를 열거형 규칙에 따라 수행합니다. */

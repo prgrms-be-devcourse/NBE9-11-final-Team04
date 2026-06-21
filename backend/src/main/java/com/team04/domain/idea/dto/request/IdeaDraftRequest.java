@@ -20,8 +20,10 @@ public record IdeaDraftRequest(
         @Size(max = 5000) String competitor,
         @Size(max = 5000) String teamIntro,
         @Min(1_000_000) @Max(100_000_000) Long goalAmount,
+        @Min(0) Long depositAmount,
         LocalDateTime fundingStartAt,
         LocalDateTime fundingEndAt,
-        RewardType rewardType
+        RewardType rewardType,
+        @Size(max = 2048) String imageUrl
 ) {
 }

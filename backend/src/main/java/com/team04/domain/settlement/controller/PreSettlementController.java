@@ -23,15 +23,15 @@ public class PreSettlementController {
     private final PreSettlementService preSettlementService;
 
     /** 선정산을 신청합니다. 제안자만 가능하며 본인 프로젝트만 신청 가능합니다. */
-    @PostMapping("/{milestoneId}")
+    @PostMapping("/ideas/{ideaId}")
     public ApiResponse<PreSettlementResponse> requestPreSettlement(
-            @PathVariable Long milestoneId,
+            @PathVariable Long ideaId,
             @Valid @RequestBody PreSettlementRequest request,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         if (userDetails.getRole() != Role.PROPOSER) {
             throw new CustomException(ErrorCode.SETTLEMENT_ACCESS_DENIED);
         }
-        return ApiResponse.ofSuccess(preSettlementService.requestPreSettlement(milestoneId, request, userDetails.getUserId()));
+        return ApiResponse.ofSuccess(preSettlementService.requestPreSettlement(ideaId, request, userDetails.getUserId()));
     }
 
     /**
@@ -62,15 +62,15 @@ public class PreSettlementController {
         return ApiResponse.ofSuccess(preSettlementService.failPreSettlement(preSettlementId));
     }
 
-    /** 마일스톤별 선정산 내역을 조회합니다. 관리자/제안자만 가능하며 제안자는 본인 프로젝트만 조회 가능합니다. */
-    @GetMapping("/{milestoneId}")
+    /** 아이디어별 선정산 내역을 조회합니다. 관리자/제안자만 가능하며 제안자는 본인 프로젝트만 조회 가능합니다. */
+    @GetMapping("/ideas/{ideaId}")
     public ApiResponse<List<PreSettlementResponse>> getPreSettlements(
-            @PathVariable Long milestoneId,
+            @PathVariable Long ideaId,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         Role role = userDetails.getRole();
         if (role != Role.ADMIN && role != Role.PROPOSER) {
             throw new CustomException(ErrorCode.SETTLEMENT_ACCESS_DENIED);
         }
-        return ApiResponse.ofSuccess(preSettlementService.getPreSettlements(milestoneId, userDetails.getUserId(), role));
+        return ApiResponse.ofSuccess(preSettlementService.getPreSettlements(ideaId, userDetails.getUserId(), role));
     }
 }

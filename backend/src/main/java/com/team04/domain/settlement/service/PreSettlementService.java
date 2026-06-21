@@ -41,7 +41,6 @@ public class PreSettlementService {
      * 보증금 2배 한도 내에서 분할 신청 가능 (ideaId 기준 SUM 누적 체크)
      * spring-retry @Retryable로 최대 3회 재시도
      * 장부 생성 후 REQUESTED 상태 유지 — 결제팀이 지급 완료 후 COMPLETED로 변경
-     * TODO: 한도 계산은 idea.getDepositAmount() * 2로 변경 필요 (idea 도메인에 depositAmount 필드 추가 요청)
      */
     @Retryable(
             retryFor = PessimisticLockingFailureException.class,
@@ -49,33 +48,26 @@ public class PreSettlementService {
             backoff = @Backoff(delay = 500)
     )
     @Transactional
-    public PreSettlementResponse requestPreSettlement(Long milestoneId, PreSettlementRequest request, Long userId) {
-        Milestone milestone = milestoneRepository.findByIdWithPessimisticLock(milestoneId)
-                .orElseThrow(() -> new CustomException(ErrorCode.MILESTONE_NOT_FOUND));
+    public PreSettlementResponse requestPreSettlement(Long ideaId, PreSettlementRequest request, Long userId) {
+        Milestone milestone = milestoneRepository.findByIdeaIdAndStatusWithPessimisticLock(ideaId, MilestoneStatus.IN_PROGRESS)
+                .orElseThrow(() -> new CustomException(ErrorCode.PRE_SETTLEMENT_MILESTONE_NOT_IN_PROGRESS));
 
-        if (milestone.getStatus() != MilestoneStatus.IN_PROGRESS) {
-            throw new CustomException(ErrorCode.PRE_SETTLEMENT_MILESTONE_NOT_IN_PROGRESS);
-        }
-
-        IdeaResponse idea = ideaService.getIdea(milestone.getIdeaId());
+        IdeaResponse idea = ideaService.getIdea(ideaId);
         if (!idea.userId().equals(userId)) {
             throw new CustomException(ErrorCode.SETTLEMENT_ACCESS_DENIED);
         }
 
-        // TODO: idea.getDepositAmount() * 2로 변경 필요 (idea 도메인 담당자에게 depositAmount 필드 추가 요청)
-        long limit = Math.round(idea.goalAmount() * 0.3) * 2;
+        long limit = idea.depositAmount() * 2;
 
-        // Milestone 비관락으로 동시성 보장 — FAILED 제외 SUM으로 유효 누적액 계산
         long accumulated = preSettlementRepository.sumAmountByIdeaIdAndStatusNot(
-                milestone.getIdeaId(), PreSettlementStatus.FAILED);
+                ideaId, PreSettlementStatus.FAILED);
 
         if (accumulated + request.amount() > limit) {
             throw new CustomException(ErrorCode.PRE_SETTLEMENT_LIMIT_EXCEEDED);
         }
 
         PreSettlement preSettlement = PreSettlement.builder()
-                .milestoneId(milestoneId)
-                .ideaId(milestone.getIdeaId())
+                .ideaId(ideaId)
                 .amount(request.amount())
                 .build();
 
@@ -89,8 +81,8 @@ public class PreSettlementService {
      * CustomException(비즈니스 예외)은 그대로 throw — 삼키지 않음
      */
     @Recover
-    public PreSettlementResponse requestPreSettlementRecover(PessimisticLockingFailureException e, Long milestoneId, PreSettlementRequest request, Long userId) {
-        log.error("선정산 신청 최종 실패 milestoneId={}, amount={}", milestoneId, request.amount(), e);
+    public PreSettlementResponse requestPreSettlementRecover(PessimisticLockingFailureException e, Long ideaId, PreSettlementRequest request, Long userId) {
+        log.error("선정산 신청 최종 실패 ideaId={}, amount={}", ideaId, request.amount(), e);
         throw new CustomException(ErrorCode.PRE_SETTLEMENT_REQUEST_FAILED);
     }
 
@@ -124,22 +116,19 @@ public class PreSettlementService {
     }
 
     /**
-     * 마일스톤별 선정산 내역 조회
+     * 아이디어별 선정산 내역 조회
      * 관리자는 모두 조회 가능, 제안자는 본인 프로젝트만 조회 가능
      */
     @Transactional(readOnly = true)
-    public List<PreSettlementResponse> getPreSettlements(Long milestoneId, Long userId, Role role) {
-        Milestone milestone = milestoneRepository.findById(milestoneId)
-                .orElseThrow(() -> new CustomException(ErrorCode.MILESTONE_NOT_FOUND));
-
+    public List<PreSettlementResponse> getPreSettlements(Long ideaId, Long userId, Role role) {
         if (role != Role.ADMIN) {
-            IdeaResponse idea = ideaService.getIdea(milestone.getIdeaId());
+            IdeaResponse idea = ideaService.getIdea(ideaId);
             if (!idea.userId().equals(userId)) {
                 throw new CustomException(ErrorCode.SETTLEMENT_ACCESS_DENIED);
             }
         }
 
-        return preSettlementRepository.findByMilestoneId(milestoneId).stream()
+        return preSettlementRepository.findByIdeaId(ideaId).stream()
                 .map(PreSettlementResponse::from)
                 .toList();
     }
