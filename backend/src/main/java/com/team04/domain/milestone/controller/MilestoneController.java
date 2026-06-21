@@ -10,8 +10,10 @@ import com.team04.global.exception.ErrorCode;
 import com.team04.global.response.ApiResponse;
 import com.team04.global.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -40,31 +42,45 @@ public class MilestoneController {
         return ApiResponse.ofSuccess(milestoneService.getReports(milestoneId));
     }
 
-    /** 마일스톤 완료 보고서를 제출합니다. 제안자만 가능합니다. */
-    @PostMapping("/{milestoneId}/completion-reports")
+    /**
+     * 마일스톤 완료 보고서를 제출합니다. 제안자만 가능합니다.
+     * 파일 첨부는 선택 사항입니다.
+     * multipart/form-data 형식으로 요청합니다.
+     * - request: JSON (content 필드)
+     * - file: 첨부 파일 (선택)
+     */
+    @PostMapping(value = "/{milestoneId}/completion-reports", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ApiResponse<CompletionReportResponse> submitCompletionReport(
             @PathVariable Long milestoneId,
-            @RequestBody CompletionReportRequest request,
+            @RequestPart("request") CompletionReportRequest request,
+            @RequestPart(value = "file", required = false) MultipartFile file,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         if (userDetails.getRole() != Role.PROPOSER) {
             throw new CustomException(ErrorCode.FORBIDDEN);
         }
-        return ApiResponse.ofSuccess(milestoneService.submitCompletionReport(milestoneId, request));
+        return ApiResponse.ofSuccess(milestoneService.submitCompletionReport(milestoneId, request, file));
     }
 
-    /** 소명 보고서를 제출합니다. 제안자만 가능합니다. */
-    @PostMapping("/{milestoneId}/appeal-reports")
+    /**
+     * 소명 보고서를 제출합니다. 제안자만 가능합니다.
+     * 파일 첨부는 선택 사항입니다.
+     * multipart/form-data 형식으로 요청합니다.
+     * - request: JSON (content 필드)
+     * - file: 첨부 파일 (선택)
+     */
+    @PostMapping(value = "/{milestoneId}/appeal-reports", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ApiResponse<CompletionReportResponse> submitAppealReport(
             @PathVariable Long milestoneId,
-            @RequestBody CompletionReportRequest request,
+            @RequestPart("request") CompletionReportRequest request,
+            @RequestPart(value = "file", required = false) MultipartFile file,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         if (userDetails.getRole() != Role.PROPOSER) {
             throw new CustomException(ErrorCode.FORBIDDEN);
         }
-        return ApiResponse.ofSuccess(milestoneService.submitAppealReport(milestoneId, request));
+        return ApiResponse.ofSuccess(milestoneService.submitAppealReport(milestoneId, request, file));
     }
 
-    /** 완료 보고서를 승인합니다. 관리자만 가능합니다. 3단계 승인 시 최종 정산, 미만 시 다음 단계 자동 시작됩니다. */
+    /** 완료/소명 보고서를 승인합니다 (정상 진행). 관리자만 가능합니다. */
     @PostMapping("/{milestoneId}/reports/approve")
     public ApiResponse<CompletionReportResponse> approveReport(
             @PathVariable Long milestoneId,
@@ -75,7 +91,7 @@ public class MilestoneController {
         return ApiResponse.ofSuccess(milestoneService.approveReport(milestoneId));
     }
 
-    /** 완료 보고서를 반려합니다. 관리자만 가능합니다. */
+    /** 완료/소명 보고서를 반려합니다. 관리자만 가능합니다. */
     @PostMapping("/{milestoneId}/reports/reject")
     public ApiResponse<CompletionReportResponse> rejectReport(
             @PathVariable Long milestoneId,
@@ -87,8 +103,22 @@ public class MilestoneController {
     }
 
     /**
+     * 소명 중단 인정 + 환불 처리입니다. 관리자만 가능합니다.
+     * "더 이상 진행 못하겠다"는 소명을 관리자가 인정할 때 호출합니다.
+     */
+    @PostMapping("/{milestoneId}/reports/refund")
+    public ApiResponse<Void> refundMilestone(
+            @PathVariable Long milestoneId,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails.getRole() != Role.ADMIN) {
+            throw new CustomException(ErrorCode.FORBIDDEN);
+        }
+        milestoneService.refundMilestone(milestoneId);
+        return ApiResponse.ofSuccess(null);
+    }
+
+    /**
      * 마일스톤 이행 중단 처리입니다. 관리자만 가능합니다.
-     * 현재 진행 중인 마일스톤을 취소하고 환불 장부를 생성합니다.
      */
     @PostMapping("/ideas/{ideaId}/cancel")
     public ApiResponse<Void> cancelMilestone(
