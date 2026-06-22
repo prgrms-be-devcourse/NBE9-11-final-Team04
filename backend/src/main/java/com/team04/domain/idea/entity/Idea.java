@@ -240,4 +240,24 @@ public class Idea extends BaseEntity {
             throw new CustomException(ErrorCode.IDEA_STATUS_NOT_DELETABLE);
         }
     }
+
+    /** AI 검증 완료 후 전문가 심사 대기 상태로 전이합니다. */
+    public void completeAiVerification() {
+        changeStatus(IdeaStatus.EXPERT_PENDING);
+    }
+
+    /** 전문가 검토 완료 후 관리자 심사 대기 상태로 전이합니다. */
+    public void completeExpertReview() {
+        changeStatus(IdeaStatus.ADMIN_PENDING);
+    }
+
+    /** 관리자 승인 후 펀딩 공개 상태로 전이합니다. */
+    public void open() {
+        changeStatus(IdeaStatus.OPEN);
+    }
+
+    /** 관리자 반려 후 반려 상태로 전이합니다. */
+    public void reject() {
+        changeStatus(IdeaStatus.REJECTED);
+    }
 }
