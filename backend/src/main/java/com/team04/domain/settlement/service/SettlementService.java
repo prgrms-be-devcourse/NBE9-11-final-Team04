@@ -79,7 +79,6 @@ public class SettlementService {
         }
 
         Long totalAmount = ideaService.getIdea(ideaId).currentAmount();
-
         long preSettlementTotal = preSettlementRepository
                 .sumAmountByIdeaIdAndStatus(ideaId, PreSettlementStatus.COMPLETED);
 
@@ -102,8 +101,6 @@ public class SettlementService {
     /**
      * 목표 미달성 환불 장부 생성
      * SettlementScheduler에서 호출 — reason 고정 (GOAL_NOT_MET)
-     * 수수료 없이 환불 처리, 선정산 차감 후 실제 환불액 산출
-     * 멱등성 키로 중복 환불 방지
      */
     @Transactional
     public SettlementResponse createGoalNotMetRefundSettlement(Long ideaId) {
@@ -112,9 +109,7 @@ public class SettlementService {
 
     /**
      * 이행 중단 환불 장부 생성
-     * MilestoneService.cancelMilestone()에서 호출 — reason 고정 (CANCELLED)
-     * 수수료 없이 환불 처리, 선정산 차감 후 실제 환불액 산출
-     * 멱등성 키로 중복 환불 방지
+     * MilestoneService.cancelMilestone() / refundMilestone()에서 호출
      */
     @Transactional
     public SettlementResponse createCancelRefundSettlement(Long ideaId) {
@@ -122,17 +117,48 @@ public class SettlementService {
     }
 
     /**
-     * 환불 장부 생성 내부 공통 로직
-     * reason별 멱등성 키를 분리하여 목표미달/이행중단 각각 독립적으로 관리
+     * 보증금 몰수 정산 장부 생성
+     * 먹튀/잠수 판단 시 MilestoneService.forfeitMilestone()에서 호출
+     * 몰수 가능한 보증금 = depositAmount - 이미 선정산으로 지급된 금액
+     * 후원자 비율대로 분배는 RefundService에서 처리
      */
-    private SettlementResponse createRefundSettlementInternal(Long ideaId, String reasonSuffix) {
-        String idempotencyKey = "idea-" + ideaId + "-REFUND-" + reasonSuffix;
-        Long totalAmount = ideaService.getIdea(ideaId).currentAmount();
+    @Transactional
+    public SettlementResponse createForfeitSettlement(Long ideaId) {
+        String idempotencyKey = "idea-" + ideaId + "-FORFEIT";
 
         if (settlementRepository.findByIdempotencyKey(idempotencyKey).isPresent()) {
             throw new CustomException(ErrorCode.SETTLEMENT_DUPLICATE);
         }
 
+        IdeaResponse idea = ideaService.getIdea(ideaId);
+        long depositAmount = idea.depositAmount();
+        long preSettlementTotal = preSettlementRepository
+                .sumAmountByIdeaIdAndStatus(ideaId, PreSettlementStatus.COMPLETED);
+
+        // 이미 선정산으로 지급된 금액만큼 보증금에서 차감
+        long forfeitAmount = Math.max(depositAmount - preSettlementTotal, 0);
+
+        Settlement settlement = Settlement.builder()
+                .ideaId(ideaId)
+                .type(SettlementType.FINAL)
+                .totalAmount(depositAmount)
+                .platformFee(0L)
+                .payoutAmount(forfeitAmount)
+                .idempotencyKey(idempotencyKey)
+                .build();
+
+        settlement.forfeit();
+        return SettlementResponse.from(settlementRepository.save(settlement));
+    }
+
+    private SettlementResponse createRefundSettlementInternal(Long ideaId, String reasonSuffix) {
+        String idempotencyKey = "idea-" + ideaId + "-REFUND-" + reasonSuffix;
+
+        if (settlementRepository.findByIdempotencyKey(idempotencyKey).isPresent()) {
+            throw new CustomException(ErrorCode.SETTLEMENT_DUPLICATE);
+        }
+
+        Long totalAmount = ideaService.getIdea(ideaId).currentAmount();
         long preSettlementTotal = preSettlementRepository
                 .sumAmountByIdeaIdAndStatus(ideaId, PreSettlementStatus.COMPLETED);
 
