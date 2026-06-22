@@ -1,4 +1,4 @@
-﻿package com.team04.domain.idea.repository;
+package com.team04.domain.idea.repository;
 
 import com.team04.domain.idea.entity.Idea;
 import com.team04.domain.idea.entity.IdeaStatus;
