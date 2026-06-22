@@ -12,6 +12,7 @@ public record CompletionReportResponse(
         Long milestoneId,
         CompletionReportType type,
         String content,
+        String fileUrl,
         CompletionReportStatus status,
         LocalDateTime submittedAt
 ) {
@@ -21,6 +22,7 @@ public record CompletionReportResponse(
                 report.getMilestoneId(),
                 report.getType(),
                 report.getContent(),
+                report.getFileUrl(),
                 report.getStatus(),
                 report.getSubmittedAt()
         );

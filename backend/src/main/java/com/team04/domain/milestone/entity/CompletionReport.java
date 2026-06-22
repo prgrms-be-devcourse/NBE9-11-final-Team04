@@ -38,11 +38,16 @@ public class CompletionReport {
     @Column(nullable = false)
     private LocalDateTime submittedAt;
 
+    /** 첨부 파일 URL — null 허용 (파일 첨부는 선택 사항) */
+    @Column
+    private String fileUrl;
+
     @Builder
-    private CompletionReport(Long milestoneId, CompletionReportType type, String content) {
+    private CompletionReport(Long milestoneId, CompletionReportType type, String content, String fileUrl) {
         this.milestoneId = milestoneId;
         this.type = type;
         this.content = content;
+        this.fileUrl = fileUrl;
         this.status = CompletionReportStatus.SUBMITTED;
         this.submittedAt = LocalDateTime.now();
     }
