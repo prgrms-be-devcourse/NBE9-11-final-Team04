@@ -1,6 +1,6 @@
 package com.team04.domain.funding;
 
-import com.team04.domain.funding.dto.request.CreateFundingRequest;
+import com.team04.domain.funding.dto.request.SponsorRequest;
 import com.team04.domain.funding.dto.response.CreateFundingResponse;
 import com.team04.domain.funding.entity.FundingTypes.FundingStatus;
 import com.team04.domain.funding.repository.FundingRepository;
@@ -24,6 +24,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
@@ -31,6 +32,7 @@ import java.time.LocalDateTime;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
+@ActiveProfiles("test")
 @Transactional
 class FundingPaymentE2ETest {
 
@@ -104,10 +106,10 @@ class FundingPaymentE2ETest {
     @Test
     @DisplayName("카드: 후원 생성 -> confirm -> Funding PAID")
     void cardFundingE2E() {
-        CreateFundingResponse created = fundingService.createFunding(
+        CreateFundingResponse created = fundingService.applySponsorship(
                 ideaId,
                 sponsorId,
-                new CreateFundingRequest(10_000L, PaymentMethod.CARD)
+                new SponsorRequest(10_000L, PaymentMethod.CARD)
         );
 
         assertThat(created.fundingStatus()).isEqualTo(FundingStatus.PENDING_PAYMENT.name());
@@ -129,10 +131,10 @@ class FundingPaymentE2ETest {
     @Test
     @DisplayName("가상계좌: 후원 생성 -> 웹훅 -> Funding PAID")
     void virtualAccountFundingE2E() {
-        CreateFundingResponse created = fundingService.createFunding(
+        CreateFundingResponse created = fundingService.applySponsorship(
                 ideaId,
                 sponsorId,
-                new CreateFundingRequest(50_000L, PaymentMethod.VIRTUAL_ACCOUNT)
+                new SponsorRequest(50_000L, PaymentMethod.VIRTUAL_ACCOUNT)
         );
 
         assertThat(created.payment().method()).isEqualTo(PaymentMethod.VIRTUAL_ACCOUNT);
