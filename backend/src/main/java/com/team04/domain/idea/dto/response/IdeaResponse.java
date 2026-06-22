@@ -1,6 +1,7 @@
 package com.team04.domain.idea.dto.response;
 
 import com.team04.domain.idea.entity.Idea;
+import com.team04.domain.milestone.dto.response.MilestoneResponse;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -31,11 +32,11 @@ public record IdeaResponse(
         String badge,
         LocalDateTime createdAt,
         LocalDateTime updatedAt,
-        List<IdeaMilestoneResponse> milestones
+        List<MilestoneResponse> milestones
 ) {
 
     /** 아이디어 엔티티와 마일스톤 응답 목록을 조합해 응답 DTO를 생성합니다. */
-    public static IdeaResponse of(Idea idea, List<IdeaMilestoneResponse> milestones) {
+    public static IdeaResponse of(Idea idea, List<MilestoneResponse> milestones) {
         return new IdeaResponse(
                 idea.getId(),
                 idea.getUserId(),
