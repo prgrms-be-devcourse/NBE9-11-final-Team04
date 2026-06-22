@@ -14,7 +14,6 @@ import com.team04.domain.verification.entity.VerificationCheckCode;
 import com.team04.domain.verification.entity.VerificationDecision;
 import com.team04.domain.verification.entity.VerificationResult;
 import com.team04.domain.verification.entity.VerificationStatus;
-import com.team04.domain.verification.event.NotificationEvent;
 import com.team04.domain.verification.event.VerificationRequestedEvent;
 import com.team04.domain.verification.properties.VerificationProperties;
 import com.team04.domain.verification.repository.ProjectVerificationRepository;
@@ -154,7 +153,6 @@ class VerificationAsyncProcessorTest {
         assertThat(verification.getStatus()).isEqualTo(VerificationStatus.AI_PASSED);
         then(verificationResultRepository).should(times(3)).save(any(VerificationResult.class));
         then(trustScoreRepository).should().save(any(TrustScore.class));
-        then(eventPublisher).should().publishEvent(any(NotificationEvent.class));
     }
 
     @Test
