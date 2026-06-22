@@ -17,12 +17,14 @@ import com.team04.global.event.NotificationEvent;
 import com.team04.global.event.ReportNotificationEvent;
 import com.team04.global.exception.CustomException;
 import com.team04.global.exception.ErrorCode;
+import com.team04.global.storage.StorageClient;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -35,8 +37,10 @@ public class DisputeService {
     private final UserRepository userRepository;
     private final DisputeParticipantValidator participantValidator;
     private final ApplicationEventPublisher eventPublisher;
+    private final StorageClient storageClient;
 
     private static final List<DisputeStatus> ACTIVE_STATUSES = List.of(DisputeStatus.RECEIVED, DisputeStatus.PENDING);
+    private static final String APPEAL_STORAGE_DIR = "dispute/appeal";
 
     @Transactional
     public DisputeResponse createDispute(Long reporterId, CreateDisputeRequest request) {
@@ -88,7 +92,7 @@ public class DisputeService {
     }
 
     @Transactional
-    public void createAppeal(Long disputeId, Long userId, CreateAppealRequest request) {
+    public void createAppeal(Long disputeId, Long userId, CreateAppealRequest request, MultipartFile file) {
         Dispute dispute = disputeRepository.findByIdWithDetails(disputeId)
                 .orElseThrow(() -> new CustomException(ErrorCode.DISPUTE_NOT_FOUND));
         if (!userId.equals(dispute.getReported().getId())) {
@@ -97,10 +101,17 @@ public class DisputeService {
         if (!dispute.isAppealable()) {
             throw new CustomException(ErrorCode.DISPUTE_APPEAL_NOT_ALLOWED);
         }
+
+        String fileUrl = null;
+        if (file != null && !file.isEmpty()) {
+            fileUrl = storageClient.upload(file, APPEAL_STORAGE_DIR);
+        }
+
+        final String resolvedFileUrl = fileUrl;
         disputeAppealRepository.findByDisputeId(disputeId)
                 .ifPresentOrElse(
-                        appeal -> appeal.update(request.content(), request.fileUrl()),
-                        () -> disputeAppealRepository.save(new DisputeAppeal(dispute, request.content(), request.fileUrl()))
+                        appeal -> appeal.update(request.content(), resolvedFileUrl),
+                        () -> disputeAppealRepository.save(new DisputeAppeal(dispute, request.content(), resolvedFileUrl))
                 );
     }
 
