@@ -12,6 +12,7 @@ import com.team04.domain.notification.entity.NotificationType;
 import com.team04.domain.user.entity.Role;
 import com.team04.domain.user.entity.User;
 import com.team04.domain.user.repository.UserRepository;
+import com.team04.domain.notification.entity.NotificationPriority;
 import com.team04.global.event.NotificationEvent;
 import com.team04.global.event.ReportNotificationEvent;
 import com.team04.global.exception.CustomException;
@@ -138,10 +139,10 @@ public class DisputeService {
         String message = newStatus == DisputeStatus.RESOLVED ? "신고가 처리되었습니다" : "신고가 기각되었습니다";
 
         eventPublisher.publishEvent(new NotificationEvent(
-                reporterId, type, "[분쟁 처리 결과] " + title, message, dispute.getId()
+                reporterId, type, "[분쟁 처리 결과] " + title, message, dispute.getId(), NotificationPriority.CRITICAL
         ));
         eventPublisher.publishEvent(new NotificationEvent(
-                reportedId, type, "[분쟁 처리 결과] " + title, message, dispute.getId()
+                reportedId, type, "[분쟁 처리 결과] " + title, message, dispute.getId(), NotificationPriority.CRITICAL
         ));
     }
 }

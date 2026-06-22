@@ -1,9 +1,10 @@
 package com.team04.domain.notification.service;
 
+import com.team04.domain.notification.entity.NotificationOutbox;
+import com.team04.domain.notification.repository.NotificationOutboxRepository;
 import com.team04.global.event.NotificationEvent;
 import com.team04.global.event.ReportNotificationEvent;
 import lombok.RequiredArgsConstructor;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
@@ -12,26 +13,23 @@ import org.springframework.transaction.event.TransactionalEventListener;
 @RequiredArgsConstructor
 public class NotificationEventListener {
 
-    private final NotificationService notificationService;
+    private final NotificationOutboxRepository outboxRepository;
 
-    @Async
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
     public void handleNotificationEvent(NotificationEvent event) {
-        notificationService.createNotification(
+        outboxRepository.save(NotificationOutbox.forUser(
                 event.userId(), event.notificationType(),
-                event.title(), event.message(), event.targetId()
-        );
+                event.title(), event.message(), event.targetId(),
+                event.priority()
+        ));
     }
 
-    @Async
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
     public void handleReportEvent(ReportNotificationEvent event) {
-        notificationService.createAnnouncementToRole(
-                event.notifyRole(),
-                event.notificationType(),
-                event.title(),
-                event.message(),
-                event.referenceId()
-        );
+        outboxRepository.save(NotificationOutbox.forRole(
+                event.notifyRole(), event.notificationType(),
+                event.title(), event.message(), event.referenceId(),
+                event.priority()
+        ));
     }
 }

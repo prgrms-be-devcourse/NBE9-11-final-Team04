@@ -1,5 +1,6 @@
 package com.team04.global.event;
 
+import com.team04.domain.notification.entity.NotificationPriority;
 import com.team04.domain.notification.entity.NotificationType;
 
 public record NotificationEvent(
@@ -7,8 +8,14 @@ public record NotificationEvent(
         NotificationType notificationType,
         String title,
         String message,
-        Long targetId
+        Long targetId,
+        NotificationPriority priority
 ) {
+    public NotificationEvent(Long userId, NotificationType notificationType,
+                              String title, String message, Long targetId) {
+        this(userId, notificationType, title, message, targetId, NotificationPriority.NORMAL);
+    }
+
     public NotificationEvent {
         java.util.Objects.requireNonNull(userId, "userId must not be null");
         java.util.Objects.requireNonNull(notificationType, "notificationType must not be null");
