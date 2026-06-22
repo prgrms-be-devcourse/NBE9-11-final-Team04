@@ -28,7 +28,12 @@ public class PaymentWebhookController {
             @Valid @RequestBody TossWebhookRequest request
     ) {
         if ("DONE".equalsIgnoreCase(request.status())) {
-            paymentService.processDepositWebhook(request.orderId(), request.amount(), webhookSecret);
+            paymentService.processDepositWebhook(
+                    request.orderId(),
+                    request.amount(),
+                    webhookSecret,
+                    request.eventId()
+            );
         }
         return ApiResponse.ofSuccessWithoutBody();
     }

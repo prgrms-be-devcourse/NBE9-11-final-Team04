@@ -1,5 +1,9 @@
 package com.team04.domain.payment.service;
 
+import com.team04.domain.funding.entity.Funding;
+import com.team04.domain.funding.entity.FundingTypes.FundingStatus;
+import com.team04.domain.funding.event.FundingPaidEvent;
+import com.team04.domain.funding.repository.FundingRepository;
 import com.team04.domain.payment.client.PaymentGateway;
 import com.team04.domain.payment.dto.request.ConfirmPaymentRequest;
 import com.team04.domain.payment.dto.request.CreatePaymentRequest;
@@ -13,12 +17,15 @@ import com.team04.domain.payment.dto.response.VirtualAccountIssueResult;
 import com.team04.domain.payment.entity.Payment;
 import com.team04.domain.payment.entity.PaymentTypes.PaymentMethod;
 import com.team04.domain.payment.entity.PaymentTypes.PaymentStatus;
+import com.team04.domain.payment.entity.PaymentWebhookLog;
 import com.team04.domain.payment.repository.PaymentRepository;
+import com.team04.domain.payment.repository.PaymentWebhookLogRepository;
 import com.team04.domain.payment.repository.VbankDepositRepository;
 import com.team04.global.exception.CustomException;
 import com.team04.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,8 +35,12 @@ public class PaymentService {
 
     private final PaymentRepository paymentRepository;
     private final VbankDepositRepository vbankDepositRepository;
+    private final PaymentWebhookLogRepository paymentWebhookLogRepository;
+    private final FundingRepository fundingRepository;
     private final PaymentGateway paymentGateway;
     private final PaymentTxService paymentTxService;
+    private final VirtualAccountService virtualAccountService;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Value("${payment.webhook.secret:dev-webhook-secret}")
     private String webhookSecret;
@@ -46,7 +57,7 @@ public class PaymentService {
 
             PaymentResponse.VbankInfo vbankInfo = null;
             if (created.method() == PaymentMethod.VIRTUAL_ACCOUNT) {
-                VirtualAccountIssueResult virtualAccount = paymentGateway.issueVirtualAccount(
+                VirtualAccountIssueResult virtualAccount = virtualAccountService.issueAndSave(
                         created.orderId(),
                         created.amount()
                 );
@@ -84,12 +95,18 @@ public class PaymentService {
                 result.paymentKey(),
                 request.amount()
         );
+        publishFundingPaidEvent(payment.getFundingId());
         return toResponse(payment, null, null, null);
     }
 
     /** 가상계좌 입금 웹훅 — PG 검증 후 DB 반영 (멱등) */
-    public void processDepositWebhook(String orderId, Long amount, String providedSecret) {
+    public void processDepositWebhook(String orderId, Long amount, String providedSecret, String eventId) {
         verifyWebhookSecret(providedSecret);
+
+        String resolvedEventId = resolveEventId(eventId, orderId, amount);
+        if (paymentWebhookLogRepository.existsByEventId(resolvedEventId)) {
+            return;
+        }
 
         PaymentVerifyResult verifyResult = paymentGateway.verifyVirtualAccountDeposit(orderId, amount);
         if (!verifyResult.verified()) {
@@ -97,6 +114,18 @@ public class PaymentService {
         }
 
         paymentTxService.completeDepositWebhook(orderId, amount);
+
+        paymentWebhookLogRepository.save(PaymentWebhookLog.create(
+                resolvedEventId,
+                orderId,
+                "DONE",
+                amount,
+                "toss"
+        ));
+
+        Payment payment = paymentRepository.findByOrderId(orderId)
+                .orElseThrow(() -> new CustomException(ErrorCode.PAYMENT_NOT_FOUND));
+        publishFundingPaidEvent(payment.getFundingId());
     }
 
     @Transactional(readOnly = true)
@@ -113,6 +142,29 @@ public class PaymentService {
                 .orElse(null);
 
         return toResponse(payment, null, null, vbankInfo);
+    }
+
+    private void publishFundingPaidEvent(Long fundingId) {
+        Funding funding = fundingRepository.findById(fundingId)
+                .orElseThrow(() -> new CustomException(ErrorCode.FUNDING_NOT_FOUND));
+
+        if (funding.getStatus() != FundingStatus.PAID) {
+            return;
+        }
+
+        eventPublisher.publishEvent(new FundingPaidEvent(
+                funding.getId(),
+                funding.getIdeaId(),
+                funding.getSponsorId(),
+                funding.getAmount()
+        ));
+    }
+
+    private String resolveEventId(String eventId, String orderId, Long amount) {
+        if (eventId != null && !eventId.isBlank()) {
+            return eventId;
+        }
+        return "auto-" + orderId + "-" + amount;
     }
 
     private void verifyWebhookSecret(String providedSecret) {
