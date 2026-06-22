@@ -72,7 +72,7 @@ public class SettlementService {
      */
     @Transactional
     public SettlementResponse createFinalSettlement(Long ideaId) {
-        String idempotencyKey = generateIdempotencyKey(ideaId, SettlementType.FINAL, null);
+        String idempotencyKey = "idea-" + ideaId + "-FINAL";
 
         if (settlementRepository.findByIdempotencyKey(idempotencyKey).isPresent()) {
             throw new CustomException(ErrorCode.SETTLEMENT_DUPLICATE);
@@ -81,14 +81,13 @@ public class SettlementService {
         Long totalAmount = ideaService.getIdea(ideaId).currentAmount();
 
         long preSettlementTotal = preSettlementRepository
-                .sumAmountByIdeaIdAndStatusNot(ideaId, PreSettlementStatus.FAILED);
+                .sumAmountByIdeaIdAndStatus(ideaId, PreSettlementStatus.COMPLETED);
 
         long platformFee = Math.round(totalAmount * PLATFORM_FEE_RATE);
         long payoutAmount = totalAmount - platformFee - preSettlementTotal;
 
         Settlement settlement = Settlement.builder()
                 .ideaId(ideaId)
-                .milestoneId(null)
                 .type(SettlementType.FINAL)
                 .totalAmount(totalAmount)
                 .platformFee(platformFee)
@@ -102,13 +101,32 @@ public class SettlementService {
 
     /**
      * 목표 미달성 환불 장부 생성
-     * 수수료 없이 환불 처리
-     * 선정산으로 이미 지급된 금액 차감 후 실제 환불액 산출
+     * SettlementScheduler에서 호출 — reason 고정 (GOAL_NOT_MET)
+     * 수수료 없이 환불 처리, 선정산 차감 후 실제 환불액 산출
      * 멱등성 키로 중복 환불 방지
      */
     @Transactional
-    public SettlementResponse createRefundSettlement(Long ideaId) {
-        String idempotencyKey = generateIdempotencyKey(ideaId, SettlementType.FINAL, null) + "-REFUND";
+    public SettlementResponse createGoalNotMetRefundSettlement(Long ideaId) {
+        return createRefundSettlementInternal(ideaId, "GOAL-NOT-MET");
+    }
+
+    /**
+     * 이행 중단 환불 장부 생성
+     * MilestoneService.cancelMilestone()에서 호출 — reason 고정 (CANCELLED)
+     * 수수료 없이 환불 처리, 선정산 차감 후 실제 환불액 산출
+     * 멱등성 키로 중복 환불 방지
+     */
+    @Transactional
+    public SettlementResponse createCancelRefundSettlement(Long ideaId) {
+        return createRefundSettlementInternal(ideaId, "CANCELLED");
+    }
+
+    /**
+     * 환불 장부 생성 내부 공통 로직
+     * reason별 멱등성 키를 분리하여 목표미달/이행중단 각각 독립적으로 관리
+     */
+    private SettlementResponse createRefundSettlementInternal(Long ideaId, String reasonSuffix) {
+        String idempotencyKey = "idea-" + ideaId + "-REFUND-" + reasonSuffix;
         Long totalAmount = ideaService.getIdea(ideaId).currentAmount();
 
         if (settlementRepository.findByIdempotencyKey(idempotencyKey).isPresent()) {
@@ -116,13 +134,12 @@ public class SettlementService {
         }
 
         long preSettlementTotal = preSettlementRepository
-                .sumAmountByIdeaIdAndStatusNot(ideaId, PreSettlementStatus.FAILED);
+                .sumAmountByIdeaIdAndStatus(ideaId, PreSettlementStatus.COMPLETED);
 
         long refundAmount = totalAmount - preSettlementTotal;
 
         Settlement settlement = Settlement.builder()
                 .ideaId(ideaId)
-                .milestoneId(null)
                 .type(SettlementType.FINAL)
                 .totalAmount(totalAmount)
                 .platformFee(0L)
@@ -132,17 +149,5 @@ public class SettlementService {
 
         settlement.refund();
         return SettlementResponse.from(settlementRepository.save(settlement));
-    }
-
-    /**
-     * 멱등성 키 생성
-     * 최종 정산: idea-{ideaId}-FINAL
-     * 중간 정산: idea-{ideaId}-INTERIM-{milestoneId}
-     */
-    private String generateIdempotencyKey(Long ideaId, SettlementType type, Long milestoneId) {
-        if (type == SettlementType.FINAL) {
-            return "idea-" + ideaId + "-FINAL";
-        }
-        return "idea-" + ideaId + "-INTERIM-" + milestoneId;
     }
 }

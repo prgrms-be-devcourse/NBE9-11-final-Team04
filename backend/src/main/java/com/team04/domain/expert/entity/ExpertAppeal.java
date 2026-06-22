@@ -33,4 +33,12 @@ public class ExpertAppeal {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private AppealStatus status = AppealStatus.SUBMITTED;
+
+    public static ExpertAppeal create(ExpertProfile expertProfile, String fileUrl, String content) {
+        ExpertAppeal appeal = new ExpertAppeal();
+        appeal.expertProfile = expertProfile;
+        appeal.fileUrl = fileUrl;
+        appeal.content = content;
+        return appeal;
+    }
 }

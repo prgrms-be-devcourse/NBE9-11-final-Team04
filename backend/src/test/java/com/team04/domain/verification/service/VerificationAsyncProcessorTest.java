@@ -105,9 +105,11 @@ class VerificationAsyncProcessorTest {
                 "경쟁사",
                 "팀 소개",
                 100000L,
+                0L,
                 LocalDateTime.now().plusDays(1),
                 LocalDateTime.now().plusMonths(1),
-                RewardType.REWARD_POINT
+                RewardType.REWARD_POINT,
+                null
         );
     }
 

@@ -64,4 +64,6 @@ public class User extends BaseEntity {
     public void withdraw() {
         this.status = UserStatus.WITHDRAWN;
     }
+
+    public void changeRole(Role role) {this.role = role; }
 }

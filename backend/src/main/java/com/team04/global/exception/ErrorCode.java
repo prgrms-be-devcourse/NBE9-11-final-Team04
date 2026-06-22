@@ -40,6 +40,8 @@ public enum ErrorCode {
     IDEA_DRAFT_NOT_FOUND(404, "I007", "존재하지 않는 아이디어 임시저장입니다"),
     IDEA_DRAFT_LIMIT_EXCEEDED(409, "I008", "아이디어 임시저장은 최대 50개까지 가능합니다"),
     SELF_REPORT_NOT_ALLOWED(400, "I009", "본인 아이디어는 신고할 수 없습니다"),
+    IDEA_BOOKMARK_ALREADY_EXISTS(409, "I010", "이미 관심 프로젝트로 저장한 아이디어입니다"),
+    IDEA_BOOKMARK_NOT_FOUND(404, "I011", "존재하지 않는 관심 프로젝트입니다"),
 
     // 검증
     INVALID_VERIFICATION_STATUS_TRANSITION(400, "V001", "유효하지 않은 검증 상태 전이입니다"),
@@ -90,6 +92,8 @@ public enum ErrorCode {
     // 분쟁
     DISPUTE_NOT_FOUND(404, "D001", "존재하지 않는 분쟁입니다"),
     DISPUTE_ALREADY_RESOLVED(400, "D002", "이미 처리된 분쟁입니다"),
+    DISPUTE_APPEAL_ALREADY_EXISTS(409, "D003", "이미 이의제기를 제출했습니다."),
+    DISPUTE_CANNOT_REPORT_YOURSELF(400, "D004", "자기 자신을 신고할 수 없습니다."),
 
     //정산
     SETTLEMENT_NOT_FOUND(404, "S001", "존재하지 않는 정산입니다"),
@@ -120,7 +124,19 @@ public enum ErrorCode {
     FUND_USAGE_INVALID_AMOUNT(400, "FU002", "자금 사용 금액은 0보다 커야 합니다"),
     FUND_USAGE_NO_IN_PROGRESS_MILESTONE(400, "FU003", "진행 중인 마일스톤이 없어 자금 사용 내역을 입력할 수 없습니다"),
     FUND_USAGE_EXCEEDS_RECEIVED(400, "FU004", "실제 지급받은 금액을 초과하는 지출은 등록할 수 없습니다"),
-    FUND_USAGE_INVALID_DATE(400, "FU005", "자금 사용일은 펀딩 시작일 이후여야 합니다");
+    FUND_USAGE_INVALID_DATE(400, "FU005", "자금 사용일은 펀딩 시작일 이후여야 합니다"),
+
+    // 환불
+    REFUND_NOT_FOUND(404, "RF001", "존재하지 않는 환불 내역입니다"),
+    REFUND_ALREADY_COMPLETED(409, "RF002", "이미 완료된 환불입니다"),
+
+    // 파일 업로드
+    FILE_UPLOAD_FAILED(500, "FL001", "파일 업로드에 실패했습니다"),
+
+    // 소명
+    APPEAL_LIMIT_EXCEEDED(400, "AP001", "소명 자료 제출 횟수를 초과했습니다 (최대 3회)"),
+    APPEAL_PERIOD_EXPIRED(400, "AP002", "소명 자료 제출 기한이 만료되었습니다 (7일 이내)"),
+    EXPERT_NOT_SUSPENDED(400, "AP003", "격리된 계정이 아닙니다");
 
     private final int status;
     private final String code;

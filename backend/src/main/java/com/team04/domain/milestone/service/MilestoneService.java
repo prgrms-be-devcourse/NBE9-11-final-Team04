@@ -2,6 +2,7 @@ package com.team04.domain.milestone.service;
 
 import com.team04.domain.milestone.dto.request.CompletionReportRequest;
 import com.team04.domain.milestone.dto.response.CompletionReportResponse;
+import com.team04.domain.milestone.dto.response.MilestoneResponse;
 import com.team04.domain.milestone.entity.CompletionReport;
 import com.team04.domain.milestone.entity.CompletionReportStatus;
 import com.team04.domain.milestone.entity.CompletionReportType;
@@ -9,12 +10,15 @@ import com.team04.domain.milestone.entity.Milestone;
 import com.team04.domain.milestone.entity.MilestoneStatus;
 import com.team04.domain.milestone.repository.CompletionReportRepository;
 import com.team04.domain.milestone.repository.MilestoneRepository;
+import com.team04.domain.settlement.service.RefundService;
 import com.team04.domain.settlement.service.SettlementService;
 import com.team04.global.exception.CustomException;
 import com.team04.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -23,6 +27,42 @@ public class MilestoneService {
     private final MilestoneRepository milestoneRepository;
     private final CompletionReportRepository completionReportRepository;
     private final SettlementService settlementService;
+    private final RefundService refundService;
+
+    /**
+     * 마일스톤 목록 조회
+     * ideaId 기준으로 해당 프로젝트의 마일스톤 전체를 단계 순으로 반환
+     */
+    @Transactional(readOnly = true)
+    public List<MilestoneResponse> getMilestones(Long ideaId) {
+        return milestoneRepository.findByIdeaIdOrderByStep(ideaId)
+                .stream()
+                .map(MilestoneResponse::from)
+                .toList();
+    }
+
+    /**
+     * 마일스톤 단건 조회
+     */
+    @Transactional(readOnly = true)
+    public MilestoneResponse getMilestone(Long milestoneId) {
+        return MilestoneResponse.from(findMilestone(milestoneId));
+    }
+
+    /**
+     * 완료/소명 보고서 목록 조회
+     * milestoneId 기준으로 해당 마일스톤의 보고서 전체를 최신순으로 반환
+     */
+    @Transactional(readOnly = true)
+    public List<CompletionReportResponse> getReports(Long milestoneId) {
+        if (!milestoneRepository.existsById(milestoneId)) {
+            throw new CustomException(ErrorCode.MILESTONE_NOT_FOUND);
+        }
+        return completionReportRepository.findByMilestoneIdOrderBySubmittedAtDesc(milestoneId)
+                .stream()
+                .map(CompletionReportResponse::from)
+                .toList();
+    }
 
     /**
      * 완료 보고서 제출
@@ -81,11 +121,13 @@ public class MilestoneService {
     /**
      * 완료 보고서 승인
      * 관리자만 가능
-     * 마일스톤 3단계 완료 승인 시 최종 정산 생성
+     * 3단계 완료 승인 시 최종 정산 생성
+     * 3단계 미만 완료 승인 시 다음 마일스톤 자동 시작 (단일 트랜잭션)
      */
     @Transactional
     public CompletionReportResponse approveReport(Long milestoneId) {
-        Milestone milestone = findMilestone(milestoneId);
+        Milestone milestone = milestoneRepository.findByIdWithPessimisticLock(milestoneId)
+                .orElseThrow(() -> new CustomException(ErrorCode.MILESTONE_NOT_FOUND));
 
         CompletionReport report = findLatestReport(milestoneId);
         report.approve();
@@ -93,6 +135,8 @@ public class MilestoneService {
 
         if (milestone.getStep() == 3) {
             settlementService.createFinalSettlement(milestone.getIdeaId());
+        } else {
+            startNextMilestone(milestone.getIdeaId(), milestone.getStep() + 1);
         }
 
         return CompletionReportResponse.from(report);
@@ -110,6 +154,35 @@ public class MilestoneService {
         report.reject();
 
         return CompletionReportResponse.from(report);
+    }
+
+    /**
+     * 펀딩 목표 달성 시 1단계 마일스톤 자동 시작
+     * TODO: 펀딩 도메인 담당자에게 FundingSuccessEvent 발행 요청 필요
+     */
+    @Transactional
+    public void startFirstMilestone(Long ideaId) {
+        startNextMilestone(ideaId, 1);
+    }
+
+    /**
+     * 이행 중단 처리
+     * 관리자만 가능
+     * 현재 IN_PROGRESS 마일스톤 CANCELLED 전환 후 환불 장부 + 후원자별 환불 레코드 생성
+     */
+    @Transactional
+    public void cancelMilestone(Long ideaId) {
+        Milestone milestone = milestoneRepository.findByIdeaIdAndStatusWithPessimisticLock(ideaId, MilestoneStatus.IN_PROGRESS)
+                .orElseThrow(() -> new CustomException(ErrorCode.MILESTONE_NOT_FOUND));
+        milestone.cancel();
+        settlementService.createCancelRefundSettlement(ideaId);
+        refundService.createCancelRefunds(ideaId);
+    }
+
+    private void startNextMilestone(Long ideaId, int step) {
+        Milestone nextMilestone = milestoneRepository.findByIdeaIdAndStep(ideaId, step)
+                .orElseThrow(() -> new CustomException(ErrorCode.MILESTONE_NOT_FOUND));
+        nextMilestone.start();
     }
 
     private Milestone findMilestone(Long milestoneId) {

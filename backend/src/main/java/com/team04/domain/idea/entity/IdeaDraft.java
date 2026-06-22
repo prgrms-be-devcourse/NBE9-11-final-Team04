@@ -61,6 +61,8 @@ public class IdeaDraft extends BaseEntity {
 
     private Long goalAmount;
 
+    private Long depositAmount;
+
     private LocalDateTime fundingStartAt;
 
     private LocalDateTime fundingEndAt;
@@ -68,6 +70,9 @@ public class IdeaDraft extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(length = 50)
     private RewardType rewardType;
+
+    @Column(length = 2048)
+    private String imageUrl;
 
     /** 신규 임시저장을 작성자 식별자와 요청 내용으로 생성합니다. */
     public IdeaDraft(Long userId) {
@@ -93,9 +98,11 @@ public class IdeaDraft extends BaseEntity {
             String competitor,
             String teamIntro,
             Long goalAmount,
+            Long depositAmount,
             LocalDateTime fundingStartAt,
             LocalDateTime fundingEndAt,
-            RewardType rewardType
+            RewardType rewardType,
+            String imageUrl
     ) {
         this.title = title;
         this.category = category;
@@ -107,8 +114,10 @@ public class IdeaDraft extends BaseEntity {
         this.competitor = competitor;
         this.teamIntro = teamIntro;
         this.goalAmount = goalAmount;
+        this.depositAmount = depositAmount;
         this.fundingStartAt = fundingStartAt;
         this.fundingEndAt = fundingEndAt;
         this.rewardType = rewardType;
+        this.imageUrl = imageUrl;
     }
 }

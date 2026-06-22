@@ -22,9 +22,6 @@ public class PreSettlement {
     private Long id;
 
     @Column(nullable = false)
-    private Long milestoneId;
-
-    @Column(nullable = false)
     private Long ideaId;
 
     @Column(nullable = false)
@@ -38,8 +35,7 @@ public class PreSettlement {
     private LocalDateTime requestedAt;
 
     @Builder
-    private PreSettlement(Long milestoneId, Long ideaId, Long amount) {
-        this.milestoneId = milestoneId;
+    private PreSettlement(Long ideaId, Long amount) {
         this.ideaId = ideaId;
         this.amount = amount;
         this.status = PreSettlementStatus.REQUESTED;

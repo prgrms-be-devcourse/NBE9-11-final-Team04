@@ -18,9 +18,11 @@ public record IdeaDraftResponse(
         String competitor,
         String teamIntro,
         Long goalAmount,
+        Long depositAmount,
         LocalDateTime fundingStartAt,
         LocalDateTime fundingEndAt,
         String rewardType,
+        String imageUrl,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {
@@ -40,9 +42,11 @@ public record IdeaDraftResponse(
                 draft.getCompetitor(),
                 draft.getTeamIntro(),
                 draft.getGoalAmount(),
+                draft.getDepositAmount(),
                 draft.getFundingStartAt(),
                 draft.getFundingEndAt(),
                 draft.getRewardType() == null ? null : draft.getRewardType().name(),
+                draft.getImageUrl(),
                 draft.getCreatedAt(),
                 draft.getUpdatedAt()
         );

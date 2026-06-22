@@ -9,7 +9,6 @@ import java.time.LocalDateTime;
 public record SettlementResponse(
         Long settlementId,
         Long ideaId,
-        Long milestoneId,
         SettlementType type,
         Long totalAmount,
         Long platformFee,
@@ -21,7 +20,6 @@ public record SettlementResponse(
         return new SettlementResponse(
                 settlement.getId(),
                 settlement.getIdeaId(),
-                settlement.getMilestoneId(),
                 settlement.getType(),
                 settlement.getTotalAmount(),
                 settlement.getPlatformFee(),

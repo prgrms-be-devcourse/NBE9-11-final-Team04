@@ -10,12 +10,11 @@ import java.util.List;
 
 public interface PreSettlementRepository extends JpaRepository<PreSettlement, Long> {
 
-    List<PreSettlement> findByMilestoneId(Long milestoneId);
+    List<PreSettlement> findByIdeaId(Long ideaId);
 
     /**
      * 프로젝트의 유효 누적 선정산 금액 조회 (FAILED 제외)
      * Milestone 비관락으로 동시성 보장
-     * 선정산 내역이 없으면 0 반환
      */
     @Query("SELECT COALESCE(SUM(p.amount), 0) FROM PreSettlement p " +
             "WHERE p.ideaId = :ideaId AND p.status != :failedStatus")

@@ -15,5 +15,11 @@ public enum NotificationType {
     MILESTONE_APPROVED,                 // 마일스톤 승인 → 제안자
     MILESTONE_REJECTED,                 // 마일스톤 반려 → 제안자
 
-    REPORT_RECEIVED                    // 신고 접수됨 → 관리자
+    REPORT_RECEIVED,                   // 신고 접수됨 → 관리자
+
+    ANNOUNCEMENT,                       // 관리자 공지 → 역할별/전체 사용자
+
+    EXPERT_SUSPENDED,               // 전문가 계정 격리 → 전문가
+    EXPERT_REVERIFICATION_REQUIRED  // 국가자격증 서류 재제출 요청 → 전문가
+
 }
