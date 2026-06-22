@@ -160,11 +160,11 @@ class DisputeServiceTest {
     @Test
     @DisplayName("RECEIVED 상태에서 소명 최초 제출 성공")
     void createAppeal_RECEIVED상태_성공() {
-        CreateAppealRequest request = new CreateAppealRequest("소명 내용입니다", null);
+        CreateAppealRequest request = new CreateAppealRequest("소명 내용입니다");
         given(disputeRepository.findByIdWithDetails(1L)).willReturn(Optional.of(dispute));
         given(disputeAppealRepository.findByDisputeId(1L)).willReturn(Optional.empty());
 
-        disputeService.createAppeal(1L, 2L, request);
+        disputeService.createAppeal(1L, 2L, request, null);
 
         verify(disputeAppealRepository).save(any(DisputeAppeal.class));
     }
@@ -172,13 +172,13 @@ class DisputeServiceTest {
     @Test
     @DisplayName("RECEIVED 상태에서 소명 재제출 시 기존 내용 수정")
     void createAppeal_기존소명_수정() {
-        CreateAppealRequest request = new CreateAppealRequest("수정된 소명", null);
+        CreateAppealRequest request = new CreateAppealRequest("수정된 소명");
         DisputeAppeal existingAppeal = new DisputeAppeal(dispute, "기존 소명", null);
 
         given(disputeRepository.findByIdWithDetails(1L)).willReturn(Optional.of(dispute));
         given(disputeAppealRepository.findByDisputeId(1L)).willReturn(Optional.of(existingAppeal));
 
-        disputeService.createAppeal(1L, 2L, request);
+        disputeService.createAppeal(1L, 2L, request, null);
 
         assertThat(existingAppeal.getContent()).isEqualTo("수정된 소명");
         verify(disputeAppealRepository, never()).save(any());
@@ -188,11 +188,11 @@ class DisputeServiceTest {
     @DisplayName("PENDING 상태에서 소명 제출 불가")
     void createAppeal_PENDING상태_예외() {
         dispute.updateStatus(DisputeStatus.PENDING);
-        CreateAppealRequest request = new CreateAppealRequest("소명 내용", null);
+        CreateAppealRequest request = new CreateAppealRequest("소명 내용");
 
         given(disputeRepository.findByIdWithDetails(1L)).willReturn(Optional.of(dispute));
 
-        assertThatThrownBy(() -> disputeService.createAppeal(1L, 2L, request))
+        assertThatThrownBy(() -> disputeService.createAppeal(1L, 2L, request, null))
                 .isInstanceOf(CustomException.class)
                 .extracting("errorCode")
                 .isEqualTo(ErrorCode.DISPUTE_APPEAL_NOT_ALLOWED);
@@ -201,10 +201,10 @@ class DisputeServiceTest {
     @Test
     @DisplayName("피신고자가 아닌 사용자는 소명 제출 불가")
     void createAppeal_피신고자아님_예외() {
-        CreateAppealRequest request = new CreateAppealRequest("소명 내용", null);
+        CreateAppealRequest request = new CreateAppealRequest("소명 내용");
         given(disputeRepository.findByIdWithDetails(1L)).willReturn(Optional.of(dispute));
 
-        assertThatThrownBy(() -> disputeService.createAppeal(1L, 99L, request))
+        assertThatThrownBy(() -> disputeService.createAppeal(1L, 99L, request, null))
                 .isInstanceOf(CustomException.class)
                 .extracting("errorCode")
                 .isEqualTo(ErrorCode.FORBIDDEN);
