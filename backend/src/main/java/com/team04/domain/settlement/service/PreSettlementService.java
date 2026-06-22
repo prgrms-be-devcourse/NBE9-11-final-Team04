@@ -5,6 +5,7 @@ import com.team04.domain.idea.service.IdeaService;
 import com.team04.domain.milestone.entity.Milestone;
 import com.team04.domain.milestone.entity.MilestoneStatus;
 import com.team04.domain.milestone.repository.MilestoneRepository;
+import com.team04.domain.payment.client.PaymentGateway;
 import com.team04.domain.settlement.dto.request.PreSettlementRequest;
 import com.team04.domain.settlement.dto.response.PreSettlementResponse;
 import com.team04.domain.settlement.entity.PreSettlement;
@@ -32,6 +33,7 @@ public class PreSettlementService {
     private final PreSettlementRepository preSettlementRepository;
     private final MilestoneRepository milestoneRepository;
     private final IdeaService ideaService;
+    private final PaymentGateway paymentGateway;
 
     /**
      * 선정산 신청
@@ -40,7 +42,7 @@ public class PreSettlementService {
      * Milestone 비관락으로 동시 요청 제어
      * 보증금 2배 한도 내에서 분할 신청 가능 (ideaId 기준 SUM 누적 체크)
      * spring-retry @Retryable로 최대 3회 재시도
-     * 장부 생성 후 REQUESTED 상태 유지 — 결제팀이 지급 완료 후 COMPLETED로 변경
+     * 장부 생성 후 결제팀에 payout 요청 — 결제팀이 지급 완료 후 COMPLETED로 변경
      */
     @Retryable(
             retryFor = PessimisticLockingFailureException.class,
@@ -49,7 +51,7 @@ public class PreSettlementService {
     )
     @Transactional
     public PreSettlementResponse requestPreSettlement(Long ideaId, PreSettlementRequest request, Long userId) {
-        Milestone milestone = milestoneRepository.findByIdeaIdAndStatusWithPessimisticLock(ideaId, MilestoneStatus.IN_PROGRESS)
+        milestoneRepository.findByIdeaIdAndStatusWithPessimisticLock(ideaId, MilestoneStatus.IN_PROGRESS)
                 .orElseThrow(() -> new CustomException(ErrorCode.PRE_SETTLEMENT_MILESTONE_NOT_IN_PROGRESS));
 
         IdeaResponse idea = ideaService.getIdea(ideaId);
@@ -58,7 +60,6 @@ public class PreSettlementService {
         }
 
         long limit = idea.depositAmount() * 2;
-
         long accumulated = preSettlementRepository.sumAmountByIdeaIdAndStatusNot(
                 ideaId, PreSettlementStatus.FAILED);
 
@@ -71,9 +72,12 @@ public class PreSettlementService {
                 .amount(request.amount())
                 .build();
 
-        // TODO: 결제팀에 지급 요청 (PaymentService.payout()) 호출 후 REQUESTED 유지
-        // 결제팀이 지급 완료 후 PATCH /pre-settlements/{preSettlementId}/complete 호출
-        return PreSettlementResponse.from(preSettlementRepository.save(preSettlement));
+        PreSettlement saved = preSettlementRepository.save(preSettlement);
+
+        // 결제팀에 지급 요청 — 지급 완료 후 PATCH /pre-settlements/{id}/complete 콜백
+        paymentGateway.payout(saved.getId(), saved.getAmount());
+
+        return PreSettlementResponse.from(saved);
     }
 
     /**
@@ -88,8 +92,7 @@ public class PreSettlementService {
 
     /**
      * 선정산 지급 완료 처리
-     * 결제팀이 실제 지급 완료 후 호출
-     * TODO: 결제팀과 호출 방식 협의 후 인증 처리 변경 필요 (현재 ADMIN으로 임시 처리)
+     * 결제팀이 실제 지급 완료 후 콜백으로 호출
      */
     @Transactional
     public PreSettlementResponse completePreSettlement(Long preSettlementId) {
@@ -102,9 +105,8 @@ public class PreSettlementService {
 
     /**
      * 선정산 지급 실패 처리
-     * 결제팀이 지급 실패 시 호출
+     * 결제팀이 지급 실패 시 콜백으로 호출
      * REQUESTED 상태를 FAILED로 전환하여 한도 차감 해제
-     * TODO: 결제팀과 호출 방식 협의 후 인증 처리 변경 필요 (현재 ADMIN으로 임시 처리)
      */
     @Transactional
     public PreSettlementResponse failPreSettlement(Long preSettlementId) {
