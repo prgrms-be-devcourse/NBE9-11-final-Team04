@@ -146,6 +146,8 @@ class VerificationAsyncProcessorTest {
         given(openAiVerificationService.verify(any())).willReturn(result);
         given(trustScoreRepository.findByIdeaId(1L)).willReturn(Optional.empty());
         given(trustScoreRepository.save(any(TrustScore.class))).willAnswer(invocation -> invocation.getArgument(0));
+        given(ideaRepository.findByIdAndDeletedAtIsNull(1L)).willReturn(Optional.of(idea()));
+        given(ideaRepository.save(any(Idea.class))).willAnswer(invocation -> invocation.getArgument(0));
 
         processor.processAiVerification(new VerificationRequestedEvent(null, request("정상 제목", "정상 설명")));
 
@@ -163,6 +165,8 @@ class VerificationAsyncProcessorTest {
         given(projectVerificationRepository.findById(null)).willReturn(Optional.of(verification));
         given(trustScoreRepository.findByIdeaId(1L)).willReturn(Optional.empty());
         given(trustScoreRepository.save(any(TrustScore.class))).willAnswer(invocation -> invocation.getArgument(0));
+        given(ideaRepository.findByIdAndDeletedAtIsNull(1L)).willReturn(Optional.of(idea()));
+        given(ideaRepository.save(any(Idea.class))).willAnswer(invocation -> invocation.getArgument(0));
 
         processor.processAiVerification(new VerificationRequestedEvent(null, request("무조건 성공 서비스", "정상 설명")));
 
@@ -190,6 +194,8 @@ class VerificationAsyncProcessorTest {
         given(openAiVerificationService.verify(any())).willReturn(result);
         given(trustScoreRepository.findByIdeaId(1L)).willReturn(Optional.empty());
         given(trustScoreRepository.save(any(TrustScore.class))).willAnswer(invocation -> invocation.getArgument(0));
+        given(ideaRepository.findByIdAndDeletedAtIsNull(1L)).willReturn(Optional.of(idea()));
+        given(ideaRepository.save(any(Idea.class))).willAnswer(invocation -> invocation.getArgument(0));
 
         processor.processAiVerification(new VerificationRequestedEvent(null, request("정상 제목", "정상 설명")));
 
@@ -221,6 +227,7 @@ class VerificationAsyncProcessorTest {
         given(trustScoreRepository.findByIdeaId(1L)).willReturn(Optional.of(trustScore));
         given(trustScoreRepository.save(any(TrustScore.class))).willReturn(savedHighTrustScore);
         given(ideaRepository.findByIdAndDeletedAtIsNull(1L)).willReturn(Optional.of(idea));
+        given(ideaRepository.save(any(Idea.class))).willAnswer(invocation -> invocation.getArgument(0));
 
         processor.processAiVerification(new VerificationRequestedEvent(null, request("정상 제목", "정상 설명")));
 
