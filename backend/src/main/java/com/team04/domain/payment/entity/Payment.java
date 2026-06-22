@@ -1,6 +1,8 @@
 package com.team04.domain.payment.entity;
 
 import com.team04.global.entity.BaseEntity;
+import com.team04.global.exception.CustomException;
+import com.team04.global.exception.ErrorCode;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -47,6 +49,8 @@ public class Payment extends BaseEntity {
 
     private LocalDateTime approvedAt;
 
+    private LocalDateTime refundedAt;
+
     public static Payment createPending(
             Long fundingId,
             String orderId,
@@ -70,5 +74,13 @@ public class Payment extends BaseEntity {
 
     public void fail() {
         this.status = PaymentTypes.PaymentStatus.FAILED;
+    }
+
+    public void markAsRefunded() {
+        if (this.status != PaymentTypes.PaymentStatus.SUCCESS) {
+            throw new CustomException(ErrorCode.PAYMENT_NOT_READY);
+        }
+        this.status = PaymentTypes.PaymentStatus.REFUNDED;
+        this.refundedAt = LocalDateTime.now();
     }
 }

@@ -6,8 +6,11 @@ public record FundingResponse(
         Long fundingId,
         Long ideaId,
         Long sponsorId,
+        Integer milestoneStep,
         Long amount,
+        String rewardType,
         String status,
-        LocalDateTime createdAt
+        LocalDateTime createdAt,
+        LocalDateTime refundedAt
 ) {
 }
