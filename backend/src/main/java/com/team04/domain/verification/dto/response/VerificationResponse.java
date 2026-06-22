@@ -4,6 +4,7 @@ import com.team04.domain.verification.entity.ProjectVerification;
 import com.team04.domain.verification.entity.VerificationStatus;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 /** 프로젝트 검증 요청 접수와 재제출 API의 응답 본문입니다. */
 public record VerificationResponse(
@@ -13,6 +14,7 @@ public record VerificationResponse(
         Integer resubmissionCount,
         LocalDateTime revisionDueAt,
         LocalDateTime waitingUntil,
+        List<VerificationResultResponse> results,
         String message
 ) {
 
@@ -25,6 +27,20 @@ public record VerificationResponse(
                 verification.getResubmissionCount(),
                 verification.getRevisionDueAt(),
                 verification.getWaitingUntil(),
+                List.of(),
+                message
+        );
+    }
+
+    public static VerificationResponse of(ProjectVerification verification, List<VerificationResultResponse> results, String message) {
+        return new VerificationResponse(
+                verification.getId(),
+                verification.getIdeaId(),
+                verification.getStatus(),
+                verification.getResubmissionCount(),
+                verification.getRevisionDueAt(),
+                verification.getWaitingUntil(),
+                results,
                 message
         );
     }

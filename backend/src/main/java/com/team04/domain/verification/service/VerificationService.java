@@ -1,13 +1,18 @@
 package com.team04.domain.verification.service;
 
+import com.team04.domain.idea.entity.Idea;
+import com.team04.domain.idea.repository.IdeaRepository;
+import com.team04.domain.user.entity.Role;
 import com.team04.domain.verification.dto.request.VerificationRequest;
 import com.team04.domain.verification.dto.response.VerificationResponse;
+import com.team04.domain.verification.dto.response.VerificationResultResponse;
 import com.team04.domain.verification.entity.ProjectVerification;
 import com.team04.domain.verification.entity.VerificationAuditLog;
 import com.team04.domain.verification.entity.VerificationStatus;
 import com.team04.domain.verification.event.VerificationRequestedEvent;
 import com.team04.domain.verification.repository.ProjectVerificationRepository;
 import com.team04.domain.verification.repository.VerificationAuditLogRepository;
+import com.team04.domain.verification.repository.VerificationResultRepository;
 import com.team04.global.exception.CustomException;
 import com.team04.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 /** 검증 접수, 재제출, 비동기 AI 검증, 보완 기한 관리를 담당하는 서비스입니다. */
 @Service
@@ -28,6 +34,8 @@ public class VerificationService {
 
     private final ProjectVerificationRepository projectVerificationRepository;
     private final VerificationAuditLogRepository auditLogRepository;
+    private final VerificationResultRepository verificationResultRepository;
+    private final IdeaRepository ideaRepository;
     private final ApplicationEventPublisher eventPublisher;
 
     /** 검증 요청을 접수하고 Controller 트랜잭션 종료 후 백그라운드 검증을 시작합니다. */
@@ -49,6 +57,25 @@ public class VerificationService {
         audit(saved, VerificationStatus.DRAFT, VerificationStatus.AI_VERIFYING, "검증 요청 접수");
         eventPublisher.publishEvent(new VerificationRequestedEvent(saved.getId(), request));
         return VerificationResponse.of(saved, "검증 중입니다.");
+    }
+
+    /** 아이디어 ID로 검증 결과를 조회합니다. */
+    @Transactional(readOnly = true)
+    public VerificationResponse getVerificationByIdeaId(Long ideaId, Long userId, Role role) {
+        if (role == Role.PROPOSER) {
+            Idea idea = ideaRepository.findByIdAndDeletedAtIsNull(ideaId)
+                    .orElseThrow(() -> new CustomException(ErrorCode.IDEA_NOT_FOUND));
+            if (!idea.getUserId().equals(userId)) {
+                throw new CustomException(ErrorCode.FORBIDDEN);
+            }
+        }
+        ProjectVerification verification = projectVerificationRepository.findByIdeaId(ideaId)
+                .orElseThrow(() -> new CustomException(ErrorCode.VERIFICATION_NOT_FOUND));
+        List<VerificationResultResponse> results = verificationResultRepository.findAllByIdeaId(ideaId)
+                .stream()
+                .map(VerificationResultResponse::of)
+                .toList();
+        return VerificationResponse.of(verification, results, null);
     }
 
     /** 보완 대상 검증 건을 재제출하고 재제출 제한과 대기 기간을 적용합니다. */

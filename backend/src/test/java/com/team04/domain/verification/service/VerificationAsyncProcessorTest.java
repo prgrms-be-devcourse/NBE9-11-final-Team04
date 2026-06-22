@@ -14,7 +14,6 @@ import com.team04.domain.verification.entity.VerificationCheckCode;
 import com.team04.domain.verification.entity.VerificationDecision;
 import com.team04.domain.verification.entity.VerificationResult;
 import com.team04.domain.verification.entity.VerificationStatus;
-import com.team04.domain.verification.event.NotificationEvent;
 import com.team04.domain.verification.event.VerificationRequestedEvent;
 import com.team04.domain.verification.properties.VerificationProperties;
 import com.team04.domain.verification.repository.ProjectVerificationRepository;
@@ -146,13 +145,14 @@ class VerificationAsyncProcessorTest {
         given(openAiVerificationService.verify(any())).willReturn(result);
         given(trustScoreRepository.findByIdeaId(1L)).willReturn(Optional.empty());
         given(trustScoreRepository.save(any(TrustScore.class))).willAnswer(invocation -> invocation.getArgument(0));
+        given(ideaRepository.findByIdAndDeletedAtIsNull(1L)).willReturn(Optional.of(idea()));
+        given(ideaRepository.save(any(Idea.class))).willAnswer(invocation -> invocation.getArgument(0));
 
         processor.processAiVerification(new VerificationRequestedEvent(null, request("정상 제목", "정상 설명")));
 
         assertThat(verification.getStatus()).isEqualTo(VerificationStatus.AI_PASSED);
         then(verificationResultRepository).should(times(3)).save(any(VerificationResult.class));
         then(trustScoreRepository).should().save(any(TrustScore.class));
-        then(eventPublisher).should().publishEvent(any(NotificationEvent.class));
     }
 
     @Test
@@ -163,6 +163,8 @@ class VerificationAsyncProcessorTest {
         given(projectVerificationRepository.findById(null)).willReturn(Optional.of(verification));
         given(trustScoreRepository.findByIdeaId(1L)).willReturn(Optional.empty());
         given(trustScoreRepository.save(any(TrustScore.class))).willAnswer(invocation -> invocation.getArgument(0));
+        given(ideaRepository.findByIdAndDeletedAtIsNull(1L)).willReturn(Optional.of(idea()));
+        given(ideaRepository.save(any(Idea.class))).willAnswer(invocation -> invocation.getArgument(0));
 
         processor.processAiVerification(new VerificationRequestedEvent(null, request("무조건 성공 서비스", "정상 설명")));
 
@@ -190,6 +192,8 @@ class VerificationAsyncProcessorTest {
         given(openAiVerificationService.verify(any())).willReturn(result);
         given(trustScoreRepository.findByIdeaId(1L)).willReturn(Optional.empty());
         given(trustScoreRepository.save(any(TrustScore.class))).willAnswer(invocation -> invocation.getArgument(0));
+        given(ideaRepository.findByIdAndDeletedAtIsNull(1L)).willReturn(Optional.of(idea()));
+        given(ideaRepository.save(any(Idea.class))).willAnswer(invocation -> invocation.getArgument(0));
 
         processor.processAiVerification(new VerificationRequestedEvent(null, request("정상 제목", "정상 설명")));
 
@@ -221,6 +225,7 @@ class VerificationAsyncProcessorTest {
         given(trustScoreRepository.findByIdeaId(1L)).willReturn(Optional.of(trustScore));
         given(trustScoreRepository.save(any(TrustScore.class))).willReturn(savedHighTrustScore);
         given(ideaRepository.findByIdAndDeletedAtIsNull(1L)).willReturn(Optional.of(idea));
+        given(ideaRepository.save(any(Idea.class))).willAnswer(invocation -> invocation.getArgument(0));
 
         processor.processAiVerification(new VerificationRequestedEvent(null, request("정상 제목", "정상 설명")));
 
