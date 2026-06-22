@@ -1,31 +1,51 @@
 package com.team04.domain.dispute.dto.response;
 
 import com.team04.domain.dispute.entity.Dispute;
+import com.team04.domain.dispute.entity.DisputeAppeal;
+import com.team04.domain.dispute.entity.DisputeCategory;
 import com.team04.domain.dispute.entity.DisputeStatus;
+import com.team04.domain.dispute.entity.TargetType;
 
 import java.time.LocalDateTime;
 
 public record DisputeResponse(
         Long id,
-        Long ideaId,
+        TargetType targetType,
+        Long targetId,
         Long reporterId,
-        Long proposerId,
+        Long reportedId,
+        DisputeCategory category,
+        String title,
         DisputeStatus status,
         String reason,
         String evidenceUrl,
-        LocalDateTime createdAt
+        LocalDateTime createdAt,
+        AppealInfo appeal
 ) {
+    public record AppealInfo(
+            String content,
+            String fileUrl,
+            LocalDateTime createdAt
+    ) {
+        public static AppealInfo of(DisputeAppeal appeal) {
+            return new AppealInfo(appeal.getContent(), appeal.getFileUrl(), appeal.getCreatedAt());
+        }
+    }
+
     public static DisputeResponse of(Dispute dispute) {
         return new DisputeResponse(
                 dispute.getId(),
-                dispute.getIdea().getId(),
+                dispute.getTargetType(),
+                dispute.getTargetId(),
                 dispute.getReporter().getId(),
-                dispute.getProposer().getId(),
+                dispute.getReported().getId(),
+                dispute.getCategory(),
+                dispute.getTitle(),
                 dispute.getStatus(),
                 dispute.getReason(),
                 dispute.getEvidenceUrl(),
-                dispute.getCreatedAt()
+                dispute.getCreatedAt(),
+                dispute.getAppeal() != null ? AppealInfo.of(dispute.getAppeal()) : null
         );
     }
 }
-
