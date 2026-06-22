@@ -88,9 +88,11 @@ class FundingPaymentE2ETest {
                 "경쟁사",
                 "팀 소개",
                 1_000_000L,
+                0L,
                 LocalDateTime.now().minusDays(1),
                 LocalDateTime.now().plusDays(30),
-                RewardType.REWARD_POINT
+                RewardType.REWARD_POINT,
+                null
         );
         idea.changeStatus(IdeaStatus.EXPERT_PENDING);
         idea.changeStatus(IdeaStatus.ADMIN_PENDING);
