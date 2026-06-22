@@ -46,6 +46,9 @@ public class SecurityConfig {
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers("/actuator/health").permitAll() // 헬스체크
                         .requestMatchers("/payments/webhooks/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/fundings").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/fundings/{fundingId}").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/fundings/{fundingId}/sse").permitAll()
                         .requestMatchers(HttpMethod.GET, "/ideas").permitAll()
                         .requestMatchers(HttpMethod.GET, "/experts/{expertId}").authenticated()
                         .requestMatchers(HttpMethod.POST, "/matches/experts/{expertProfileId}").hasRole("PROPOSER")

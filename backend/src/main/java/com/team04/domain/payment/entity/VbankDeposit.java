@@ -28,7 +28,7 @@ public class VbankDeposit extends BaseEntity {
     @Column(nullable = false, unique = true)
     private Long paymentId;
 
-    /** workspace.virtual_account FK — 엔티티는 워크스페이스에서 관리 */
+    /** workspace.virtual_account FK */
     @Column(nullable = false)
     private Long virtualAccountId;
 
@@ -67,5 +67,19 @@ public class VbankDeposit extends BaseEntity {
     public void markDeposited() {
         this.depositStatus = PaymentTypes.VbankDepositStatus.DONE;
         this.depositedAt = LocalDateTime.now();
+    }
+
+    public void markExpired() {
+        if (this.depositStatus != PaymentTypes.VbankDepositStatus.WAITING) {
+            return;
+        }
+        this.depositStatus = PaymentTypes.VbankDepositStatus.EXPIRED;
+    }
+
+    public void markCanceled() {
+        if (this.depositStatus != PaymentTypes.VbankDepositStatus.WAITING) {
+            return;
+        }
+        this.depositStatus = PaymentTypes.VbankDepositStatus.CANCELED;
     }
 }

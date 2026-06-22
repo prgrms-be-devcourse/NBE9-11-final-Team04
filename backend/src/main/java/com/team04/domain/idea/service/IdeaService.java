@@ -4,11 +4,10 @@ import com.team04.domain.dispute.dto.request.CreateDisputeRequest;
 import com.team04.domain.dispute.service.DisputeService;
 import com.team04.domain.idea.dto.request.IdeaDraftRequest;
 import com.team04.domain.idea.dto.response.*;
-import com.team04.domain.idea.entity.IdeaBookmark;
-import com.team04.domain.idea.entity.IdeaCategory;
-import com.team04.domain.idea.entity.IdeaDraft;
+import com.team04.domain.idea.entity.*;
 import com.team04.domain.idea.repository.IdeaBookmarkRepository;
 import com.team04.domain.idea.repository.IdeaDraftRepository;
+import com.team04.domain.milestone.dto.response.MilestoneResponse;
 import com.team04.domain.milestone.entity.Milestone;
 import com.team04.domain.milestone.repository.MilestoneRepository;
 import com.team04.global.exception.CustomException;
@@ -16,7 +15,6 @@ import com.team04.global.exception.ErrorCode;
 import com.team04.domain.idea.dto.request.CreateIdeaRequest;
 import com.team04.domain.idea.dto.request.ReportIdeaRequest;
 import com.team04.domain.idea.dto.request.UpdateIdeaRequest;
-import com.team04.domain.idea.entity.Idea;
 import com.team04.domain.idea.repository.IdeaRepository;
 import com.team04.global.storage.StorageClient;
 import lombok.RequiredArgsConstructor;
@@ -221,9 +219,9 @@ public class IdeaService {
     @Transactional(readOnly = true)
     public IdeaResponse getIdea(Long ideaId) {
         Idea idea = findActiveIdea(ideaId);
-        List<IdeaMilestoneResponse> milestones = milestoneRepository.findByIdeaIdOrderByStep(ideaId)
+        List<MilestoneResponse> milestones = milestoneRepository.findByIdeaIdOrderByStep(ideaId)
                 .stream()
-                .map(IdeaMilestoneResponse::of)
+                .map(MilestoneResponse::from)
                 .toList();
         return IdeaResponse.of(idea, milestones);
     }

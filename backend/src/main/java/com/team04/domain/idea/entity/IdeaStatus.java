@@ -15,6 +15,9 @@ public enum IdeaStatus {
     /** 관리자 심사 대기 상태입니다. */
     ADMIN_PENDING,
 
+    /** 심사 또는 검증에서 반려된 상태입니다. */
+    REJECTED,
+
     /** 펀딩 공개 전환이 완료된 상태입니다. */
     OPEN,
 
@@ -43,15 +46,34 @@ public enum IdeaStatus {
     /** 현재 상태에서 목표 상태로 전이할 수 있는지 확인합니다. */
     public boolean canTransitionTo(IdeaStatus targetStatus) {
         return switch (this) {
-            case AI_PENDING -> targetStatus == EXPERT_PENDING || targetStatus == CANCELLED;
-            case EXPERT_PENDING -> targetStatus == ADMIN_PENDING || targetStatus == CANCELLED;
-            case ADMIN_PENDING -> targetStatus == OPEN || targetStatus == CANCELLED;
-            case OPEN -> targetStatus == IN_PROGRESS || targetStatus == CANCELLED;
-            case IN_PROGRESS -> targetStatus == COMPLETED
-                    || targetStatus == CANCELLATION_REQUESTED
-                    || targetStatus == CANCELLED;
-            case CANCELLATION_REQUESTED -> targetStatus == CANCELLED;
-            case COMPLETED, CANCELLED -> false;
+            case AI_PENDING ->
+                    targetStatus == EXPERT_PENDING
+                            || targetStatus == CANCELLED;
+
+            case EXPERT_PENDING ->
+                    targetStatus == ADMIN_PENDING
+                            || targetStatus == CANCELLED;
+
+            case ADMIN_PENDING ->
+                    targetStatus == OPEN
+                            || targetStatus == REJECTED
+                            || targetStatus == CANCELLED;
+
+            case OPEN ->
+                    targetStatus == IN_PROGRESS
+                            || targetStatus == CANCELLED;
+
+            case IN_PROGRESS ->
+                    targetStatus == COMPLETED
+                            || targetStatus == CANCELLATION_REQUESTED
+                            || targetStatus == CANCELLED;
+
+            case CANCELLATION_REQUESTED ->
+                    targetStatus == CANCELLED
+                            || targetStatus == IN_PROGRESS;
+
+            case COMPLETED, CANCELLED, REJECTED ->
+                    false;
         };
     }
 

@@ -2,11 +2,16 @@ package com.team04.domain.idea.repository;
 
 import com.team04.domain.idea.entity.Idea;
 import com.team04.domain.idea.entity.IdeaStatus;
+import jakarta.persistence.LockModeType;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -16,6 +21,10 @@ public interface IdeaRepository extends JpaRepository<Idea, Long>, IdeaRepositor
     /** 소프트 삭제되지 않은 아이디어를 식별자로 조회합니다. */
     Optional<Idea> findByIdAndDeletedAtIsNull(Long id);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT i FROM Idea i WHERE i.id = :id AND i.deletedAt IS NULL")
+    Optional<Idea> findByIdForUpdate(@Param("id") Long id);
+
     /** 특정 사용자가 등록한 소프트 삭제되지 않은 아이디어 목록을 최신순으로 조회합니다. */
     List<Idea> findByUserIdAndDeletedAtIsNullOrderByCreatedAtDesc(Long userId);
 
@@ -24,4 +33,6 @@ public interface IdeaRepository extends JpaRepository<Idea, Long>, IdeaRepositor
     List<Idea> findClosingIdeas(@Param("status") IdeaStatus status,
                                 @Param("from") LocalDateTime from,
                                 @Param("to") LocalDateTime to);
+
+    Page<Idea> findByStatusInAndDeletedAtIsNull(Collection<IdeaStatus> statuses, Pageable pageable);
 }
