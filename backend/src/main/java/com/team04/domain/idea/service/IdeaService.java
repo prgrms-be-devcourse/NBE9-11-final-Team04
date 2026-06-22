@@ -1,6 +1,8 @@
 package com.team04.domain.idea.service;
 
 import com.team04.domain.dispute.dto.request.CreateDisputeRequest;
+import com.team04.domain.dispute.entity.DisputeCategory;
+import com.team04.domain.dispute.entity.TargetType;
 import com.team04.domain.dispute.service.DisputeService;
 import com.team04.domain.idea.dto.request.IdeaDraftRequest;
 import com.team04.domain.idea.dto.response.*;
@@ -215,6 +217,15 @@ public class IdeaService {
         return response;
     }
 
+    /** 로그인 사용자가 등록한 아이디어 목록을 조회합니다. */
+    @Transactional(readOnly = true)
+    public List<IdeaSummaryResponse> getMyIdeas(Long userId) {
+        return ideaRepository.findByUserIdAndDeletedAtIsNullOrderByCreatedAtDesc(userId)
+                .stream()
+                .map(IdeaSummaryResponse::of)
+                .toList();
+    }
+
     /** 삭제되지 않은 아이디어 상세 정보를 조회합니다. */
     @Transactional(readOnly = true)
     public IdeaResponse getIdea(Long ideaId) {
@@ -279,7 +290,15 @@ public class IdeaService {
             throw new CustomException(ErrorCode.SELF_REPORT_NOT_ALLOWED);
         }
         disputeService.createDispute(reporterUserId,
-                new CreateDisputeRequest(ideaId, request.reason(), null));
+                new CreateDisputeRequest(
+                        TargetType.IDEA,
+                        ideaId,
+                        idea.getUserId(),
+                        DisputeCategory.IDEA_THEFT,
+                        "아이디어 도용 신고",
+                        request.reason(),
+                        null
+                ));
         return new ReportIdeaResponse(idea.getId(), reporterUserId, "아이디어 도용 신고가 접수되었습니다.");
     }
 
