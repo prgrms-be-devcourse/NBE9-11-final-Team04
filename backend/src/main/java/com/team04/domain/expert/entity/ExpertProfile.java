@@ -122,4 +122,10 @@ public class ExpertProfile {
     public void increaseAppealCount() {
         this.appealCount++;
     }
+
+    // 강등된 전문가 상태 변경
+    public void demote() {
+        this.status = ExpertStatus.DEMOTED;
+    }
+
 }
