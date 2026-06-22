@@ -74,6 +74,7 @@ public class MilestoneService {
      * 제안자만 가능, 마일스톤이 IN_PROGRESS 상태여야 함
      * 완료 보고서가 이미 존재하면 중복 제출 불가
      * 파일 첨부는 선택 사항
+     * 완료 보고서 제출 시 overdueAt 초기화 — 기한 초과 후 제출해도 몰수 대상에서 제외
      */
     @Transactional
     public CompletionReportResponse submitCompletionReport(
@@ -89,6 +90,7 @@ public class MilestoneService {
         }
 
         String fileUrl = uploadFileIfPresent(file);
+        milestone.clearOverdue();
 
         CompletionReport report = CompletionReport.builder()
                 .milestoneId(milestoneId)
@@ -124,10 +126,8 @@ public class MilestoneService {
             throw new CustomException(ErrorCode.INVALID_MILESTONE_STATUS_TRANSITION);
         }
 
-        // 소명 보고서 제출 시 overdueAt 초기화 — 3일 카운트 리셋
-        milestone.clearOverdue();
-
         String fileUrl = uploadFileIfPresent(file);
+        milestone.clearOverdue();
 
         CompletionReport appealReport = CompletionReport.builder()
                 .milestoneId(milestoneId)
@@ -179,6 +179,7 @@ public class MilestoneService {
      * 소명 중단 인정 + 환불 처리
      * 관리자만 가능
      * "더 이상 진행 못하겠다"는 소명을 관리자가 인정할 때 호출
+     * 최신 보고서가 APPEAL 타입이어야 함 — COMPLETION 타입이면 예외 발생
      * 마일스톤 CANCELLED 전환 후 환불 장부 + 후원자별 환불 레코드 생성
      */
     @Transactional
@@ -187,6 +188,11 @@ public class MilestoneService {
                 .orElseThrow(() -> new CustomException(ErrorCode.MILESTONE_NOT_FOUND));
 
         CompletionReport report = findLatestReport(milestoneId);
+
+        if (report.getType() != CompletionReportType.APPEAL) {
+            throw new CustomException(ErrorCode.INVALID_MILESTONE_STATUS_TRANSITION);
+        }
+
         report.approve();
         milestone.cancel();
 
@@ -197,12 +203,17 @@ public class MilestoneService {
     /**
      * 보증금 몰수 처리 (먹튀/잠수)
      * MilestoneScheduler에서 3일 유예기간 경과 후 호출
-     * 마일스톤 CANCELLED 전환 후 보증금 몰수 정산 + 후원자 비율 분배
+     * 비관락 획득 후 SUBMITTED 보고서 존재 여부 재검증 — 소명 보고서 제출 시 처리 중단
+     * 마일스톤 CANCELLED 전환 후 보증금 몰수 정산 + 환불 처리
      */
     @Transactional
     public void forfeitMilestone(Long ideaId) {
         Milestone milestone = milestoneRepository.findByIdeaIdAndStatusWithPessimisticLock(ideaId, MilestoneStatus.IN_PROGRESS)
                 .orElseThrow(() -> new CustomException(ErrorCode.MILESTONE_NOT_FOUND));
+
+        if (completionReportRepository.existsByMilestoneIdAndStatus(milestone.getId(), CompletionReportStatus.SUBMITTED)) {
+            return;
+        }
 
         milestone.cancel();
         settlementService.createForfeitSettlement(ideaId);
@@ -231,10 +242,6 @@ public class MilestoneService {
         startNextMilestone(ideaId, 1);
     }
 
-    /**
-     * 파일이 존재하면 업로드하고 URL을 반환합니다.
-     * 파일이 없거나 비어있으면 null을 반환합니다.
-     */
     private String uploadFileIfPresent(MultipartFile file) {
         if (file == null || file.isEmpty()) {
             return null;

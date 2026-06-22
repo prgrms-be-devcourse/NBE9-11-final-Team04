@@ -11,6 +11,7 @@ import com.team04.global.response.ApiResponse;
 import com.team04.global.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -24,20 +25,23 @@ public class MilestoneController {
 
     private final MilestoneService milestoneService;
 
-    /** 프로젝트의 마일스톤 목록을 단계 순으로 조회합니다. */
+    /** 프로젝트의 마일스톤 목록을 단계 순으로 조회합니다. 로그인한 사용자만 접근 가능합니다. */
     @GetMapping("/ideas/{ideaId}")
+    @PreAuthorize("isAuthenticated()")
     public ApiResponse<List<MilestoneResponse>> getMilestones(@PathVariable Long ideaId) {
         return ApiResponse.ofSuccess(milestoneService.getMilestones(ideaId));
     }
 
-    /** 마일스톤 단건을 조회합니다. */
+    /** 마일스톤 단건을 조회합니다. 로그인한 사용자만 접근 가능합니다. */
     @GetMapping("/{milestoneId}")
+    @PreAuthorize("isAuthenticated()")
     public ApiResponse<MilestoneResponse> getMilestone(@PathVariable Long milestoneId) {
         return ApiResponse.ofSuccess(milestoneService.getMilestone(milestoneId));
     }
 
-    /** 마일스톤의 완료/소명 보고서 목록을 최신순으로 조회합니다. */
+    /** 마일스톤의 완료/소명 보고서 목록을 최신순으로 조회합니다. 로그인한 사용자만 접근 가능합니다. */
     @GetMapping("/{milestoneId}/reports")
+    @PreAuthorize("isAuthenticated()")
     public ApiResponse<List<CompletionReportResponse>> getReports(@PathVariable Long milestoneId) {
         return ApiResponse.ofSuccess(milestoneService.getReports(milestoneId));
     }
