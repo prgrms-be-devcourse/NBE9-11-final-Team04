@@ -1,6 +1,9 @@
 package com.team04.domain.funding.entity;
 
 import com.team04.global.entity.BaseEntity;
+import com.team04.global.exception.CustomException;
+import com.team04.global.exception.ErrorCode;
+import com.team04.domain.idea.entity.RewardType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -12,6 +15,8 @@ import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "fundings")
@@ -37,9 +42,38 @@ public class Funding extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
+    private RewardType rewardType;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private FundingTypes.FundingStatus status;
 
+    private LocalDateTime refundedAt;
+
+    public static Funding createPending(Long ideaId, Long sponsorId, Integer milestoneStep,
+                                        Long amount, RewardType rewardType) {
+        Funding funding = new Funding();
+        funding.ideaId = ideaId;
+        funding.sponsorId = sponsorId;
+        funding.milestoneStep = milestoneStep;
+        funding.amount = amount;
+        funding.rewardType = rewardType;
+        funding.status = FundingTypes.FundingStatus.PENDING_PAYMENT;
+        return funding;
+    }
+
     public void markAsPaid() {
+        if (this.status != FundingTypes.FundingStatus.PENDING_PAYMENT) {
+            throw new CustomException(ErrorCode.PAYMENT_NOT_READY);
+        }
         this.status = FundingTypes.FundingStatus.PAID;
+    }
+
+    public void markAsRefunded() {
+        if (this.status != FundingTypes.FundingStatus.PAID) {
+            throw new CustomException(ErrorCode.PAYMENT_NOT_READY);
+        }
+        this.status = FundingTypes.FundingStatus.REFUNDED;
+        this.refundedAt = LocalDateTime.now();
     }
 }

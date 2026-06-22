@@ -1,11 +1,12 @@
 package com.team04.domain.expert.repository;
 
+import com.querydsl.core.BooleanBuilder;
 import com.querydsl.jpa.impl.JPAQueryFactory;
-import com.team04.domain.expert.entity.AppealStatus;
-import com.team04.domain.expert.entity.ExpertProfile;
-import com.team04.domain.expert.entity.ExpertStatus;
-import com.team04.domain.expert.entity.QualificationType;
+import com.team04.domain.expert.entity.*;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
@@ -71,5 +72,34 @@ public class ExpertProfileRepositoryImpl implements ExpertProfileRepositoryCusto
                 )
                 .limit(limit)
                 .fetch();
+    }
+
+    @Override
+    public Page<ExpertProfile> findActiveProfiles(TechStack techStack, Pageable pageable) {
+
+        BooleanBuilder where = new BooleanBuilder();
+        where.and(expertProfile.status.eq(ExpertStatus.ACTIVE));
+
+        // techStack 필터 (null이면 전체 조회)
+        if (techStack != null) {
+            where.and(expertProfile.techStack.eq(techStack));
+        }
+
+        List<ExpertProfile> content = queryFactory
+                .selectFrom(expertProfile)
+                .join(expertProfile.user).fetchJoin()
+                .where(where)
+                .orderBy(expertProfile.id.desc()) // 최신 등록순
+                .offset(pageable.getOffset())
+                .limit(pageable.getPageSize())
+                .fetch();
+
+        Long total = queryFactory
+                .select(expertProfile.count())
+                .from(expertProfile)
+                .where(where)
+                .fetchOne();
+
+        return new PageImpl<>(content, pageable, total == null ? 0 : total);
     }
 }
