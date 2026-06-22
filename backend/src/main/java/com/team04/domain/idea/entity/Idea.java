@@ -230,7 +230,7 @@ public class Idea extends BaseEntity {
     /** 후원 결제 완료 시 누적 후원금과 후원자 수를 갱신합니다. */
     public void addFundingAmount(Long amount) {
         this.currentAmount += amount;
-        this.supporterCount += 1;
+        this.supporterCount++;
     }
 
     /** 현재 아이디어가 수정 가능한 상태인지 검증합니다. */
