@@ -233,6 +233,12 @@ public class Idea extends BaseEntity {
         this.sponsorCount++;
     }
 
+    /** 후원 환불 시 누적 후원금과 후원자 수를 갱신합니다. */
+    public void subtractFundingAmount(Long amount) {
+        this.currentAmount = Math.max(0L, this.currentAmount - amount);
+        decreaseSponsorCount();
+    }
+
     /** 현재 아이디어가 수정 가능한 상태인지 검증합니다. */
     private void validateEditable() {
         if (!this.status.isEditable()) {
