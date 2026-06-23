@@ -2,6 +2,8 @@ package com.team04.domain.user.entity;
 
 import com.team04.domain.user.status.UserStatus;
 import com.team04.global.entity.BaseEntity;
+import com.team04.global.exception.CustomException;
+import com.team04.global.exception.ErrorCode;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -66,4 +68,18 @@ public class User extends BaseEntity {
     }
 
     public void changeRole(Role role) {this.role = role; }
+
+    public void suspend() {
+        if (this.status != UserStatus.ACTIVE) {
+            throw new CustomException(ErrorCode.INVALID_USER_STATUS_TRANSITION);
+        }
+        this.status = UserStatus.SUSPENDED;
+    }
+
+    public void restore() {
+        if (this.status != UserStatus.SUSPENDED) {
+            throw new CustomException(ErrorCode.INVALID_USER_STATUS_TRANSITION);
+        }
+        this.status = UserStatus.ACTIVE;
+    }
 }

@@ -28,7 +28,7 @@ public class PreSettlementController {
             @PathVariable Long ideaId,
             @Valid @RequestBody PreSettlementRequest request,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
-        if (userDetails.getRole() != Role.PROPOSER) {
+        if (userDetails.getRole() != Role.USER) {
             throw new CustomException(ErrorCode.SETTLEMENT_ACCESS_DENIED);
         }
         return ApiResponse.ofSuccess(preSettlementService.requestPreSettlement(ideaId, request, userDetails.getUserId()));
@@ -36,7 +36,7 @@ public class PreSettlementController {
 
     /**
      * 선정산 지급 완료 처리입니다.
-     * TODO: 결제팀과 호출 방식 협의 후 인증 처리 변경 필요 (현재 ADMIN으로 임시 처리)
+     * 결제팀이 실제 지급 완료 후 콜백으로 호출합니다. (ADMIN 인증)
      */
     @PatchMapping("/{preSettlementId}/complete")
     public ApiResponse<PreSettlementResponse> completePreSettlement(
@@ -50,7 +50,7 @@ public class PreSettlementController {
 
     /**
      * 선정산 지급 실패 처리입니다.
-     * TODO: 결제팀과 호출 방식 협의 후 인증 처리 변경 필요 (현재 ADMIN으로 임시 처리)
+     * 결제팀이 지급 실패 시 콜백으로 호출합니다. (ADMIN 인증)
      */
     @PatchMapping("/{preSettlementId}/fail")
     public ApiResponse<PreSettlementResponse> failPreSettlement(
@@ -68,7 +68,7 @@ public class PreSettlementController {
             @PathVariable Long ideaId,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         Role role = userDetails.getRole();
-        if (role != Role.ADMIN && role != Role.PROPOSER) {
+        if (role == Role.EXPERT) {
             throw new CustomException(ErrorCode.SETTLEMENT_ACCESS_DENIED);
         }
         return ApiResponse.ofSuccess(preSettlementService.getPreSettlements(ideaId, userDetails.getUserId(), role));

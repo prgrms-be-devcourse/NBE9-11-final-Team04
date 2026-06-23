@@ -62,7 +62,7 @@ public class VerificationService {
     /** 아이디어 ID로 검증 결과를 조회합니다. */
     @Transactional(readOnly = true)
     public VerificationResponse getVerificationByIdeaId(Long ideaId, Long userId, Role role) {
-        if (role == Role.PROPOSER) {
+        if (role == Role.USER) {
             Idea idea = ideaRepository.findByIdAndDeletedAtIsNull(ideaId)
                     .orElseThrow(() -> new CustomException(ErrorCode.IDEA_NOT_FOUND));
             if (!idea.getUserId().equals(userId)) {

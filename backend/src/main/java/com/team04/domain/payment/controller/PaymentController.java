@@ -77,7 +77,7 @@ public class PaymentController {
             @PathVariable Long paymentId,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        if (userDetails.getRole() != Role.SPONSOR) {
+        if (userDetails.getRole() != Role.USER) {
             throw new CustomException(ErrorCode.FORBIDDEN);
         }
         paymentService.refundPayment(paymentId, userDetails.getUserId());

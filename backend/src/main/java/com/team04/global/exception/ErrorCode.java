@@ -19,6 +19,8 @@ public enum ErrorCode {
     DUPLICATE_NICKNAME(409, "U003", "이미 사용 중인 닉네임입니다"),
     INVALID_PASSWORD(400, "U004", "비밀번호가 올바르지 않습니다"),
     ACCOUNT_SUSPENDED(403, "U005", "정지된 계정입니다"),
+    ACCOUNT_WITHDRAWN(403, "U006", "탈퇴한 계정입니다"),
+    INVALID_USER_STATUS_TRANSITION(400, "U007", "유효하지 않은 상태 전이입니다"),
 
     // 인증
     INVALID_REFRESH_TOKEN(401, "A001", "유효하지 않은 리프레시 토큰입니다"),
@@ -26,8 +28,7 @@ public enum ErrorCode {
     OTP_EXPIRED(400, "A003", "인증 코드가 만료되었습니다"),
     OAUTH_AUTHENTICATION_FAILED(400, "A004", "소셜 로그인에 실패했습니다"),
     INVALID_OAUTH_TOKEN(400, "A005", "유효하지 않거나 만료된 소셜 인증 토큰입니다"),
-    ACCOUNT_WITHDRAWN(403, "U006", "탈퇴한 계정입니다"),
-    UNDERAGE(403, "U007", "만 19세 미만은 가입할 수 없습니다"),
+    UNDERAGE(403, "A006", "만 19세 미만은 가입할 수 없습니다"),
 
     // 사업자검증
     BUSINESS_VERIFICATION_UNAVAILABLE(503, "B001", "사업자 인증 서비스가 일시적으로 불안정합니다. 잠시 후 다시 시도해주세요"),

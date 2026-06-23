@@ -3,7 +3,6 @@ package com.team04.domain.settlement.service;
 import com.team04.domain.funding.entity.Funding;
 import com.team04.domain.funding.repository.FundingRepository;
 import com.team04.domain.payment.entity.Payment;
-import com.team04.domain.payment.entity.PaymentTypes;
 import com.team04.domain.payment.repository.PaymentRepository;
 import com.team04.domain.settlement.dto.response.RefundResponse;
 import com.team04.domain.settlement.entity.Refund;
@@ -15,7 +14,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -29,11 +27,6 @@ public class RefundService {
     /**
      * 목표 미달성 환불 레코드 일괄 생성
      * SettlementScheduler에서 호출 — reason 고정 (GOAL_NOT_MET)
-     *
-     * TODO: FundingRepository에 findAllByIdeaId(Long ideaId) 추가 요청 필요
-     *       현재 Pageable.unpaged() 임시 처리 — 데이터 누락 위험 있음
-     * TODO: Payment를 Funding별로 개별 조회하는 N+1 문제 존재
-     *       findAllByIdeaId() 추가 시 조인 쿼리로 개선 필요
      */
     @Transactional
     public void createGoalNotMetRefunds(Long ideaId) {
@@ -43,11 +36,6 @@ public class RefundService {
     /**
      * 이행 중단 환불 레코드 일괄 생성
      * MilestoneService.cancelMilestone()에서 호출 — reason 고정 (CANCELLED)
-     *
-     * TODO: FundingRepository에 findAllByIdeaId(Long ideaId) 추가 요청 필요
-     *       현재 Pageable.unpaged() 임시 처리 — 데이터 누락 위험 있음
-     * TODO: Payment를 Funding별로 개별 조회하는 N+1 문제 존재
-     *       findAllByIdeaId() 추가 시 조인 쿼리로 개선 필요
      */
     @Transactional
     public void createCancelRefunds(Long ideaId) {
@@ -57,8 +45,8 @@ public class RefundService {
     /**
      * 분쟁 환불 레코드 생성 (관리자 수동 처리, 단건)
      * sponsorId는 payment → funding 흐름으로 내부 조회 (오입력 방지)
-     * 환불 금액은 실제 결제 금액(payment.getAmount())으로 고정 (과다 환불 방지)
-     * 이미 환불된 결제건이면 명확한 비즈니스 예외를 발생시킵니다.
+     * 환불 금액은 실제 결제 금액으로 고정 (과다 환불 방지)
+     * 이미 환불된 결제건이면 비즈니스 예외 발생
      */
     @Transactional
     public RefundResponse createDisputeRefund(Long paymentId) {
@@ -107,33 +95,24 @@ public class RefundService {
 
     /**
      * ideaId 기준으로 모든 후원자의 환불 레코드를 일괄 생성합니다.
-     * 이미 환불된 결제건은 건너뛰어 중복 저장 시도를 방지합니다.
-     * saveAll()로 일괄 저장하여 DB 쓰기 횟수를 최소화합니다.
-     *
-     * TODO: fundingRepository.findAllByIdeaId(ideaId) 추가 후 변경 필요
-     *       현재 Pageable.unpaged() 임시 처리 — 데이터 누락 위험 있음
+     * 조인 쿼리로 Payment + sponsorId를 한 번에 조회하여 N+1 해결
+     * paymentId unique 제약으로 DB 레벨 중복 방지
      */
     private void createRefundsForIdea(Long ideaId, RefundReason reason) {
-        List<Funding> fundings = fundingRepository
-                .findByIdeaIdOrderByCreatedAtDesc(ideaId, org.springframework.data.domain.Pageable.unpaged())
-                .getContent();
+        List<Object[]> results = paymentRepository.findPaymentsAndSponsorIdsToRefund(ideaId);
 
-        List<Refund> refundsToSave = new ArrayList<>();
-        for (Funding funding : fundings) {
-            List<Payment> payments = paymentRepository.findByFundingIdOrderByCreatedAtDesc(funding.getId());
-
-            payments.stream()
-                    .filter(p -> p.getStatus() == PaymentTypes.PaymentStatus.SUCCESS)
-                    .filter(p -> !refundRepository.existsByPaymentId(p.getId()))
-                    .forEach(payment -> refundsToSave.add(
-                            Refund.builder()
-                                    .paymentId(payment.getId())
-                                    .sponsorId(funding.getSponsorId())
-                                    .amount(payment.getAmount())
-                                    .reason(reason)
-                                    .build()
-                    ));
-        }
+        List<Refund> refundsToSave = results.stream()
+                .map(row -> {
+                    Payment payment = (Payment) row[0];
+                    Long sponsorId = (Long) row[1];
+                    return Refund.builder()
+                            .paymentId(payment.getId())
+                            .sponsorId(sponsorId)
+                            .amount(payment.getAmount())
+                            .reason(reason)
+                            .build();
+                })
+                .toList();
 
         if (!refundsToSave.isEmpty()) {
             refundRepository.saveAll(refundsToSave);

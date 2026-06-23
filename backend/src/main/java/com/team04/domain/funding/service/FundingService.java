@@ -307,4 +307,17 @@ public class FundingService {
 
         return idea;
     }
+    /**
+     * 펀딩 목표 달성 여부 확인
+     * currentAmount >= goalAmount 이면 목표 달성
+     * FundingAchievementListener에서 마일스톤 자동 시작 트리거에 사용
+     */
+    public boolean isFundingGoalAchieved(Long ideaId) {
+        Idea idea = ideaRepository.findByIdAndDeletedAtIsNull(ideaId)
+                .orElse(null);
+        if (idea == null) {
+            return false;
+        }
+        return idea.getCurrentAmount() >= idea.getGoalAmount();
+    }
 }

@@ -66,7 +66,7 @@ class FundingPaymentE2ETest {
                 "창작자",
                 "창작자닉",
                 30,
-                Role.PROPOSER
+                Role.USER
         ));
 
         User sponsor = userRepository.save(User.create(
@@ -75,7 +75,7 @@ class FundingPaymentE2ETest {
                 "후원자",
                 "후원자닉",
                 28,
-                Role.SPONSOR
+                Role.USER
         ));
         sponsorId = sponsor.getId();
 

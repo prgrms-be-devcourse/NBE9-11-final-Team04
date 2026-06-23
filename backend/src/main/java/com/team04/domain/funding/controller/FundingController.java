@@ -47,7 +47,7 @@ public class FundingController {
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @Valid @RequestBody PayDepositRequest request
     ) {
-        requireRole(userDetails, Role.PROPOSER);
+        requireRole(userDetails, Role.USER);
         return ApiResponse.ofSuccess(fundingService.payDeposit(ideaId, userDetails.getUserId(), request));
     }
 
@@ -57,7 +57,7 @@ public class FundingController {
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @Valid @RequestBody OpenFundingRequest request
     ) {
-        requireRole(userDetails, Role.PROPOSER);
+        requireRole(userDetails, Role.USER);
         return ApiResponse.ofSuccess(fundingService.openFunding(request, userDetails.getUserId()));
     }
 
@@ -82,7 +82,7 @@ public class FundingController {
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @Valid @RequestBody SponsorRequest request
     ) {
-        requireRole(userDetails, Role.SPONSOR);
+        requireRole(userDetails, Role.USER);
         return ApiResponse.ofSuccess(
                 fundingService.applySponsorship(fundingId, userDetails.getUserId(), request)
         );
@@ -94,7 +94,7 @@ public class FundingController {
             @PathVariable Long fundingId,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        requireRole(userDetails, Role.SPONSOR);
+        requireRole(userDetails, Role.USER);
         fundingService.cancelMySponsorship(fundingId, userDetails.getUserId());
         return ApiResponse.ofSuccessWithoutBody();
     }

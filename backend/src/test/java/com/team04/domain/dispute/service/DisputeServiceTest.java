@@ -53,10 +53,10 @@ class DisputeServiceTest {
 
     @BeforeEach
     void setUp() {
-        reporter = User.create("reporter@test.com", "pw", "신고자", "reporter", 30, Role.PROPOSER);
+        reporter = User.create("reporter@test.com", "pw", "신고자", "reporter", 30, Role.USER);
         ReflectionTestUtils.setField(reporter, "id", 1L);
 
-        reported = User.create("reported@test.com", "pw", "피신고자", "reported", 30, Role.PROPOSER);
+        reported = User.create("reported@test.com", "pw", "피신고자", "reported", 30, Role.USER);
         ReflectionTestUtils.setField(reported, "id", 2L);
 
         dispute = new Dispute(reporter, reported, TargetType.IDEA, 10L,
@@ -137,7 +137,7 @@ class DisputeServiceTest {
     void getDispute_신고자_성공() {
         given(disputeRepository.findByIdWithDetails(1L)).willReturn(Optional.of(dispute));
 
-        DisputeResponse response = disputeService.getDispute(1L, 1L, Role.PROPOSER);
+        DisputeResponse response = disputeService.getDispute(1L, 1L, Role.USER);
 
         assertThat(response.reporterId()).isEqualTo(1L);
     }
@@ -147,7 +147,7 @@ class DisputeServiceTest {
     void getDispute_제3자_예외() {
         given(disputeRepository.findByIdWithDetails(1L)).willReturn(Optional.of(dispute));
 
-        assertThatThrownBy(() -> disputeService.getDispute(99L, 1L, Role.PROPOSER))
+        assertThatThrownBy(() -> disputeService.getDispute(99L, 1L, Role.USER))
                 .isInstanceOf(CustomException.class)
                 .extracting("errorCode")
                 .isEqualTo(ErrorCode.FORBIDDEN);
