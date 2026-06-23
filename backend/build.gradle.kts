@@ -19,6 +19,7 @@ repositories {
 }
 
 dependencies {
+    implementation(platform("software.amazon.awssdk:bom:2.46.14"))
     implementation("org.springframework.boot:spring-boot-h2console")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-validation")
@@ -31,6 +32,7 @@ dependencies {
     implementation("io.jsonwebtoken:jjwt-api:0.12.6")
     implementation("io.github.openfeign.querydsl:querydsl-jpa:5.6.1:jakarta")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
+    implementation("software.amazon.awssdk:s3")
 
     implementation("io.github.resilience4j:resilience4j-spring-boot3:2.1.0")
 
