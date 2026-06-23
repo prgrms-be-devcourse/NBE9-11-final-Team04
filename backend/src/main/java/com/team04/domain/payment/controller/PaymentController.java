@@ -26,8 +26,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 결제 API 컨트롤러 — 결제 생성·승인·환불·조회, PG 웹훅을 제공합니다.
- * 후원 결제 API는 SPONSOR 본인만 접근할 수 있습니다.
+ * 결제 API — 결제 생성·승인·환불·조회, PG 웹훅.
+ * 후원 결제 생성·환불은 USER 본인만 호출할 수 있습니다.
  */
 @RestController
 @RequiredArgsConstructor
@@ -38,7 +38,6 @@ public class PaymentController {
 
     private final PaymentService paymentService;
 
-    // 내 결제 내역 조회 (페이징)
     @GetMapping("/me")
     public ApiResponse<Page<PaymentResponse>> getMyPayments(
             @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -47,19 +46,17 @@ public class PaymentController {
         return ApiResponse.ofSuccess(paymentService.getMyPayments(userDetails.getUserId(), pageable));
     }
 
-    // 후원(funding)에 대한 결제 세션 생성 — SPONSOR 본인만
     @PostMapping
     public ApiResponse<PaymentResponse> createPayment(
             @Valid @RequestBody CreatePaymentRequest request,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        if (userDetails.getRole() != Role.SPONSOR) {
+        if (userDetails.getRole() != Role.USER) {
             throw new CustomException(ErrorCode.FORBIDDEN);
         }
         return ApiResponse.ofSuccess(paymentService.createPayment(request, userDetails.getUserId()));
     }
 
-    // 카드 결제 PG 승인(confirm) 처리 — 후원자 본인만
     @PostMapping("/{paymentId}/confirm")
     public ApiResponse<PaymentResponse> confirmPayment(
             @PathVariable Long paymentId,
@@ -71,7 +68,6 @@ public class PaymentController {
         );
     }
 
-    // 환불 요청 (스폰서 본인)
     @PostMapping("/{paymentId}/refund")
     public ApiResponse<Void> refundPayment(
             @PathVariable Long paymentId,
@@ -84,7 +80,6 @@ public class PaymentController {
         return ApiResponse.ofSuccessWithoutBody();
     }
 
-    // 결제 단건 조회 — 후원자 본인 또는 ADMIN
     @GetMapping("/{paymentId}")
     public ApiResponse<PaymentResponse> getPayment(
             @PathVariable Long paymentId,
@@ -95,7 +90,6 @@ public class PaymentController {
         );
     }
 
-    // 토스 가상계좌 입금 완료 웹훅 (status=DONE, X-Webhook-Secret 헤더 필요)
     @PostMapping("/webhooks/toss")
     public ApiResponse<Void> handleTossWebhook(
             @RequestHeader(WEBHOOK_SECRET_HEADER) String webhookSecret,
