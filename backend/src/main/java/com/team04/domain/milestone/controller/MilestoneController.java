@@ -59,7 +59,7 @@ public class MilestoneController {
             @RequestPart("request") CompletionReportRequest request,
             @RequestPart(value = "file", required = false) MultipartFile file,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
-        if (userDetails.getRole() != Role.PROPOSER) {
+        if (userDetails.getRole() != Role.USER) {
             throw new CustomException(ErrorCode.FORBIDDEN);
         }
         return ApiResponse.ofSuccess(milestoneService.submitCompletionReport(milestoneId, request, file));
@@ -78,7 +78,7 @@ public class MilestoneController {
             @RequestPart("request") CompletionReportRequest request,
             @RequestPart(value = "file", required = false) MultipartFile file,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
-        if (userDetails.getRole() != Role.PROPOSER) {
+        if (userDetails.getRole() != Role.USER) {
             throw new CustomException(ErrorCode.FORBIDDEN);
         }
         return ApiResponse.ofSuccess(milestoneService.submitAppealReport(milestoneId, request, file));

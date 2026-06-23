@@ -45,7 +45,7 @@ public class ExpertVerificationService {
         ExpertProfile profile = expertProfileRepository.findById(expertProfileId)
                 .orElseThrow(() -> new CustomException(ErrorCode.EXPERT_NOT_FOUND));
 
-        profile.getUser().changeRole(Role.SPONSOR);
+        profile.getUser().changeRole(Role.USER);
         profile.demote(); // DEMOTED 상태로 변경
 
         log.info("[ExpertVerificationService] SPONSOR 변경 완료: expertProfileId={}, userId={}",

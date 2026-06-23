@@ -1,6 +1,5 @@
 package com.team04.domain.auth.dto.request;
 
-import com.team04.domain.user.entity.Role;
 import jakarta.validation.constraints.*;
 
 public record SignupRequest(
@@ -11,7 +10,6 @@ public record SignupRequest(
         String password,
         @NotBlank String name,
         @NotBlank String nickname,
-        @Min(19) @Max(150) int age,
-        @NotNull Role role
+        @Min(19) @Max(150) int age
 ) {
 }

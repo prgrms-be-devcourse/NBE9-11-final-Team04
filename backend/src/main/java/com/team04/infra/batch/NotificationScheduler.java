@@ -58,7 +58,7 @@ public class NotificationScheduler {
 
     private void notifyAllSponsors(Idea idea) {
         notificationService.createAnnouncementToRole(
-                Role.SPONSOR,
+                Role.USER,
                 NotificationType.IDEA_FUNDING_CLOSING_SOON,
                 "마감 임박 프로젝트 안내",
                 "'" + idea.getTitle() + "' 프로젝트가 7일 후 마감됩니다. 지금 후원해보세요!",

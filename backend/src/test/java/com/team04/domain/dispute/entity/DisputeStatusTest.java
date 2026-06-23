@@ -8,7 +8,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -74,8 +73,8 @@ class DisputeStatusTest {
     // ─────────────────────────────────────────────
 
     private Dispute createDispute() {
-        User reporter = User.create("a@test.com", "pw", "신고자", "reporter", 30, Role.PROPOSER);
-        User reported = User.create("b@test.com", "pw", "피신고자", "reported", 30, Role.PROPOSER);
+        User reporter = User.create("a@test.com", "pw", "신고자", "reporter", 30, Role.USER);
+        User reported = User.create("b@test.com", "pw", "피신고자", "reported", 30, Role.USER);
         return new Dispute(reporter, reported, TargetType.IDEA, 1L,
                 DisputeCategory.IDEA_THEFT, "제목", "이유", null);
     }
