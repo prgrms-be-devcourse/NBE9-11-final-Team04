@@ -43,4 +43,6 @@ public interface DisputeRepository extends JpaRepository<Dispute, Long> {
             @Param("targetType") TargetType targetType,
             Pageable pageable
     );
+
+    long countByStatus(DisputeStatus status);
 }

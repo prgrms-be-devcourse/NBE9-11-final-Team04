@@ -126,12 +126,11 @@ public class UserService {
     @Transactional(readOnly = true)
     public UserStatsResponse getUserStats() {
         long total = userRepository.count();
-        long proposer = userRepository.countByRoleAndActive(Role.PROPOSER);
+        long user = userRepository.countByRoleAndActive(Role.USER);
         long expert = userRepository.countByRoleAndActive(Role.EXPERT);
-        long sponsor = userRepository.countByRoleAndActive(Role.SPONSOR);
         long suspended = userRepository.countByStatus(UserStatus.SUSPENDED);
         long withdrawn = userRepository.countByStatus(UserStatus.WITHDRAWN);
 
-        return new UserStatsResponse(total, proposer, expert, sponsor, suspended, withdrawn);
+        return new UserStatsResponse(total, user, expert, suspended, withdrawn);
     }
 }

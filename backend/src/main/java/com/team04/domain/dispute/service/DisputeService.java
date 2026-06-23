@@ -5,6 +5,7 @@ import com.team04.domain.dispute.dto.request.CreateAppealRequest;
 import com.team04.domain.dispute.dto.request.CreateDisputeRequest;
 import com.team04.domain.dispute.dto.response.AdminDisputeResponse;
 import com.team04.domain.dispute.dto.response.DisputeResponse;
+import com.team04.domain.dispute.dto.response.DisputeStatsResponse;
 import com.team04.domain.dispute.entity.*;
 import com.team04.domain.dispute.repository.DisputeAppealRepository;
 import com.team04.domain.dispute.repository.DisputeRepository;
@@ -113,6 +114,8 @@ public class DisputeService {
                         appeal -> appeal.update(request.content(), resolvedFileUrl),
                         () -> disputeAppealRepository.save(new DisputeAppeal(dispute, request.content(), resolvedFileUrl))
                 );
+
+        dispute.updateStatus(DisputeStatus.PENDING);
     }
 
     @Transactional(readOnly = true)
@@ -120,6 +123,17 @@ public class DisputeService {
             DisputeStatus status, DisputeCategory category, TargetType targetType, Pageable pageable) {
         return disputeRepository.findAllByFilters(status, category, targetType, pageable)
                 .map(AdminDisputeResponse::of);
+    }
+
+    @Transactional(readOnly = true)
+    public DisputeStatsResponse getDisputeStats() {
+        return new DisputeStatsResponse(
+                disputeRepository.count(),
+                disputeRepository.countByStatus(DisputeStatus.RECEIVED),
+                disputeRepository.countByStatus(DisputeStatus.PENDING),
+                disputeRepository.countByStatus(DisputeStatus.RESOLVED),
+                disputeRepository.countByStatus(DisputeStatus.REJECTED)
+        );
     }
 
     @Transactional
