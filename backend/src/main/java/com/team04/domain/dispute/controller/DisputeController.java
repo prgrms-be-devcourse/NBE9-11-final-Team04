@@ -8,8 +8,10 @@ import com.team04.global.response.ApiResponse;
 import com.team04.global.security.CustomUserDetails;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/disputes")
@@ -32,13 +34,14 @@ public class DisputeController {
         return ApiResponse.ofSuccess(disputeService.getDispute(userDetails.getUserId(), disputeId, userDetails.getRole()));
     }
 
-    @PostMapping("/{disputeId}/appeal")
+    @PostMapping(value = "/{disputeId}/appeal", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ApiResponse<Void> createDisputeAppeal(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long disputeId,
-            @RequestBody @Valid CreateAppealRequest request){
+            @RequestPart("data") @Valid CreateAppealRequest request,
+            @RequestPart(value = "file", required = false) MultipartFile file) {
 
-        disputeService.createAppeal(disputeId, userDetails.getUserId(), request);
+        disputeService.createAppeal(disputeId, userDetails.getUserId(), request, file);
 
         return ApiResponse.ofSuccessWithoutBody();
     }

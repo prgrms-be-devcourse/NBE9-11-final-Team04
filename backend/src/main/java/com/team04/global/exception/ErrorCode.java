@@ -16,15 +16,18 @@ public enum ErrorCode {
     // 회원
     USER_NOT_FOUND(404, "U001", "존재하지 않는 사용자입니다"),
     DUPLICATE_EMAIL(409, "U002", "이미 사용 중인 이메일입니다"),
-    INVALID_PASSWORD(400, "U003", "비밀번호가 올바르지 않습니다"),
-    ACCOUNT_SUSPENDED(403, "U004", "정지된 계정입니다"),
+    DUPLICATE_NICKNAME(409, "U003", "이미 사용 중인 닉네임입니다"),
+    INVALID_PASSWORD(400, "U004", "비밀번호가 올바르지 않습니다"),
+    ACCOUNT_SUSPENDED(403, "U005", "정지된 계정입니다"),
 
     // 인증
     INVALID_REFRESH_TOKEN(401, "A001", "유효하지 않은 리프레시 토큰입니다"),
     INVALID_OTP(400, "A002", "인증 코드가 올바르지 않습니다"),
     OTP_EXPIRED(400, "A003", "인증 코드가 만료되었습니다"),
-    ACCOUNT_WITHDRAWN(403, "U005", "탈퇴한 계정입니다"),
-    UNDERAGE(403, "U006", "만 19세 미만은 가입할 수 없습니다"),
+    OAUTH_AUTHENTICATION_FAILED(400, "A004", "소셜 로그인에 실패했습니다"),
+    INVALID_OAUTH_TOKEN(400, "A005", "유효하지 않거나 만료된 소셜 인증 토큰입니다"),
+    ACCOUNT_WITHDRAWN(403, "U006", "탈퇴한 계정입니다"),
+    UNDERAGE(403, "U007", "만 19세 미만은 가입할 수 없습니다"),
 
     // 사업자검증
     BUSINESS_VERIFICATION_UNAVAILABLE(503, "B001", "사업자 인증 서비스가 일시적으로 불안정합니다. 잠시 후 다시 시도해주세요"),
@@ -94,6 +97,10 @@ public enum ErrorCode {
     DISPUTE_ALREADY_RESOLVED(400, "D002", "이미 처리된 분쟁입니다"),
     DISPUTE_APPEAL_ALREADY_EXISTS(409, "D003", "이미 이의제기를 제출했습니다."),
     DISPUTE_CANNOT_REPORT_YOURSELF(400, "D004", "자기 자신을 신고할 수 없습니다."),
+    DISPUTE_REPORTED_NOT_PARTICIPANT(400, "D005", "신고 대상이 해당 도메인의 관계자가 아닙니다"),
+    DISPUTE_INVALID_STATUS_TRANSITION(400, "D006", "유효하지 않은 분쟁 상태 전이입니다"),
+    DISPUTE_ALREADY_PENDING(409, "D007", "이미 처리 중인 신고가 존재합니다"),
+    DISPUTE_APPEAL_NOT_ALLOWED(400, "D008", "소명을 제출할 수 없는 상태입니다"),
 
     //정산
     SETTLEMENT_NOT_FOUND(404, "S001", "존재하지 않는 정산입니다"),
