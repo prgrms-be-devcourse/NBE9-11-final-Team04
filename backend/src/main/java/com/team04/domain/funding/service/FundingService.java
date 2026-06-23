@@ -27,6 +27,7 @@ import com.team04.domain.payment.entity.Payment;
 import com.team04.domain.payment.entity.PaymentTypes.PaymentStatus;
 import com.team04.domain.payment.repository.PaymentRepository;
 import com.team04.domain.payment.service.PaymentService;
+import com.team04.domain.settlement.service.RefundService;
 import com.team04.global.exception.CustomException;
 import com.team04.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -61,6 +62,7 @@ public class FundingService {
     private final MilestoneRepository milestoneRepository;
     private final PaymentRepository paymentRepository;
     private final PaymentService paymentService;
+    private final RefundService refundService;
 
     /** fundingId(ideaId)별 SSE 구독자 목록 */
     private final Map<Long, Set<SseEmitter>> sseEmitters = new ConcurrentHashMap<>();
@@ -88,6 +90,12 @@ public class FundingService {
 
         if (request.amount() == null || request.amount() < 1) {
             throw new CustomException(ErrorCode.INVALID_FUNDING_AMOUNT);
+        }
+
+        if (idea.getDepositAmount() != null
+                && idea.getDepositAmount() > 0
+                && !idea.getDepositAmount().equals(request.amount())) {
+            throw new CustomException(ErrorCode.DEPOSIT_AMOUNT_MISMATCH);
         }
 
         Deposit deposit = depositRepository.save(
@@ -174,12 +182,12 @@ public class FundingService {
                 funding.getId(),
                 request.amount(),
                 request.paymentMethod()
-        ));
+        ), sponsorId);
 
         return CreateFundingResponse.from(funding, payment);
     }
 
-    // 내 후원 취소 — PAID면 환불, PENDING_PAYMENT면 결제 실패 처리
+    // 내 후원 취소 — PAID면 5단계 환불, PENDING_PAYMENT면 결제 실패 처리
     @Transactional
     public void cancelMySponsorship(Long fundingId, Long sponsorId) {
         Funding funding = fundingRepository
@@ -194,7 +202,7 @@ public class FundingService {
             Payment payment = paymentRepository
                     .findFirstByFundingIdAndStatusOrderByCreatedAtDesc(funding.getId(), PaymentStatus.SUCCESS)
                     .orElseThrow(() -> new CustomException(ErrorCode.PAYMENT_NOT_FOUND));
-            paymentService.refundPayment(payment.getId(), sponsorId);
+            refundService.requestSponsorRefund(payment.getId(), sponsorId);
             return;
         }
 
@@ -202,6 +210,7 @@ public class FundingService {
                 .findFirstByFundingIdAndStatusOrderByCreatedAtDesc(funding.getId(), PaymentStatus.PENDING)
                 .orElseThrow(() -> new CustomException(ErrorCode.PAYMENT_NOT_FOUND));
         payment.fail();
+        funding.markAsCancelled();
     }
 
     // ── SSE (달성률 실시간 스트리밍) ───────────────────────────────────────
