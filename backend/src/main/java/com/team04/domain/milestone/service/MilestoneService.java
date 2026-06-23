@@ -17,6 +17,7 @@ import com.team04.global.exception.ErrorCode;
 import com.team04.global.storage.StorageClient;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -237,10 +238,11 @@ public class MilestoneService {
      * 펀딩 목표 달성 시 1단계 마일스톤 자동 시작
      * TODO: 펀딩 도메인 담당자에게 FundingSuccessEvent 발행 요청 필요
      */
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void startFirstMilestone(Long ideaId) {
         startNextMilestone(ideaId, 1);
     }
+
 
     private String uploadFileIfPresent(MultipartFile file) {
         if (file == null || file.isEmpty()) {

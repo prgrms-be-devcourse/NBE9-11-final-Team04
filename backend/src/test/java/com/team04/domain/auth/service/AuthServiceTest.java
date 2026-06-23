@@ -49,7 +49,7 @@ class AuthServiceTest {
     private AuthService authService;
 
     private User activeUser() {
-        return User.create("test@test.com", "encodedPassword", "홍길동", "길동이", 25, Role.PROPOSER);
+        return User.create("test@test.com", "encodedPassword", "홍길동", "길동이", 25, Role.USER);
     }
 
     // ==================== signup ====================
@@ -57,7 +57,7 @@ class AuthServiceTest {
     @Test
     @DisplayName("회원가입 성공")
     void signup_성공() {
-        SignupRequest request = new SignupRequest("test@test.com", "password1!", "홍길동", "길동이", 25, Role.PROPOSER);
+        SignupRequest request = new SignupRequest("test@test.com", "password1!", "홍길동", "길동이", 25);
 
         given(jwtUtil.generateAccessToken(any(), any())).willReturn("accessToken");
         given(jwtUtil.generateRefreshToken(any())).willReturn("refreshToken");
@@ -71,7 +71,7 @@ class AuthServiceTest {
     @Test
     @DisplayName("회원가입 실패 - 이메일 중복")
     void signup_이메일중복() {
-        SignupRequest request = new SignupRequest("test@test.com", "password1!", "홍길동", "길동이", 25, Role.PROPOSER);
+        SignupRequest request = new SignupRequest("test@test.com", "password1!", "홍길동", "길동이", 25);
 
         given(userRepository.existsByEmail("test@test.com")).willReturn(true);
 

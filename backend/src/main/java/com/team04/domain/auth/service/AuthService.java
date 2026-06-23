@@ -38,9 +38,6 @@ public class AuthService {
 
     @Transactional
     public TokenResponse signup(SignupRequest request){
-        if (request.role() == Role.ADMIN) {
-            throw new CustomException(ErrorCode.INVALID_INPUT);
-        }
         if (request.age() < 19) {
             throw new CustomException(ErrorCode.UNDERAGE);
         }
@@ -53,7 +50,7 @@ public class AuthService {
                 request.name(),
                 request.nickname(),
                 request.age(),
-                request.role()
+                Role.USER
         );
         userRepository.save(user);
 

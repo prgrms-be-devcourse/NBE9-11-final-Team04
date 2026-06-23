@@ -62,7 +62,7 @@ public class MatchController {
 
     /* 제안자 -> 전문가 매칭 요청 API */
     @PostMapping("/experts/{expertProfileId}")
-    @PreAuthorize("hasRole('PROPOSER')")
+    @PreAuthorize("hasRole('USER')")
     public ResponseEntity<ApiResponse<ExpertMatchResponse>> requestMatch(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long expertProfileId,

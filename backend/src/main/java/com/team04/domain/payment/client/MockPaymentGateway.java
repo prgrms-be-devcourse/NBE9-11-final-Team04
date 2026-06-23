@@ -63,4 +63,13 @@ public class MockPaymentGateway implements PaymentGateway {
         }
         return PaymentVerifyResult.success();
     }
+
+    /**
+     * Mock 환경: 선정산 지급 요청 대체.
+     * 실제 연동 시 토스페이먼츠 출금 API로 교체합니다.
+     */
+    @Override
+    public void payout(Long preSettlementId, long amount) {
+        log.info("[MockPG] 선정산 지급 요청 preSettlementId={}, amount={}", preSettlementId, amount);
+    }
 }

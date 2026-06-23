@@ -45,7 +45,7 @@ public class VerificationController {
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         Role role = userDetails.getRole();
-        if (role != Role.ADMIN && role != Role.PROPOSER) {
+        if (role == Role.EXPERT) {
             throw new CustomException(ErrorCode.FORBIDDEN);
         }
         return ApiResponse.ofSuccess(verificationService.getVerificationByIdeaId(ideaId, userDetails.getUserId(), role));
