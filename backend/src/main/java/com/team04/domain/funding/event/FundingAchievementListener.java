@@ -9,18 +9,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
-/**
- * 후원 결제 완료({@link FundingPaidEvent}) 후처리 리스너입니다.
- *
- * <p>실행 순서: {@link com.team04.domain.idea.event.IdeaFundingPaidListener} {@code @Order(1)}
- * → 본 리스너 {@code @Order(2)}
- *
- * <p>담당 업무:
- * <ul>
- *   <li>펀딩 달성률 SSE push</li>
- *   <li>목표 달성 시 1단계 마일스톤 자동 시작</li>
- * </ul>
- */
 @Slf4j
 @Component
 @Order(2)
