@@ -27,6 +27,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -57,8 +58,10 @@ class FundingPaymentE2ETest {
 
     @BeforeEach
     void setUp() {
+        String suffix = UUID.randomUUID().toString().substring(0, 8);
+
         User proposer = userRepository.save(User.create(
-                "proposer@test.com",
+                "proposer-" + suffix + "@test.com",
                 passwordEncoder.encode("password1!"),
                 "창작자",
                 "창작자닉",
@@ -67,7 +70,7 @@ class FundingPaymentE2ETest {
         ));
 
         User sponsor = userRepository.save(User.create(
-                "sponsor@test.com",
+                "sponsor-" + suffix + "@test.com",
                 passwordEncoder.encode("password1!"),
                 "후원자",
                 "후원자닉",
@@ -149,7 +152,7 @@ class FundingPaymentE2ETest {
                 created.payment().orderId(),
                 50_000L,
                 "dev-webhook-secret",
-                "webhook-event-1"
+                "webhook-event-" + UUID.randomUUID()
         );
 
         var funding = fundingRepository.findById(created.fundingId()).orElseThrow();

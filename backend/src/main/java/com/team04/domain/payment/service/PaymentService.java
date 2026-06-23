@@ -141,7 +141,6 @@ public class PaymentService {
                 result.paymentKey(),
                 request.amount()
         );
-        publishFundingPaidEvent(payment.getFundingId());
         return toResponse(payment, null, null, null);
     }
 
@@ -194,6 +193,7 @@ public class PaymentService {
 
         payment.complete(paymentKey);
         funding.markAsPaid();
+        publishFundingPaidEvent(payment.getFundingId());
         return payment;
     }
 
@@ -257,8 +257,8 @@ public class PaymentService {
         }
 
         boolean completed = selfProvider.getObject().completeDepositWebhook(orderId, verifyAmount);
-        if (completed) {
-            publishFundingPaidEvent(payment.getFundingId());
+        if (!completed) {
+            return;
         }
     }
 
@@ -295,6 +295,7 @@ public class PaymentService {
 
         payment.completeIfPending();
         funding.markAsPaid();
+        publishFundingPaidEvent(payment.getFundingId());
         return true;
     }
 
