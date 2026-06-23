@@ -39,10 +39,11 @@ public interface FundingRepository extends JpaRepository<Funding, Long> {
     /**
      * 후원자 접근 권한 체크용
      * 환불된 후원자는 후원자로 인정하지 않음 — REFUNDED 상태 제외
+     * Hibernate 6 타입 검증 오류 방지를 위해 fully qualified enum path 사용
      */
     @Query("SELECT COUNT(f) > 0 FROM Funding f " +
             "JOIN Payment p ON p.fundingId = f.id " +
             "WHERE f.ideaId = :ideaId AND f.sponsorId = :sponsorId " +
-            "AND p.status != 'REFUNDED'")
+            "AND p.status != com.team04.domain.payment.entity.PaymentTypes.PaymentStatus.REFUNDED")
     boolean existsByIdeaIdAndSponsorId(@Param("ideaId") Long ideaId, @Param("sponsorId") Long sponsorId);
 }
