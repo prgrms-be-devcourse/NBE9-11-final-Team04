@@ -120,7 +120,7 @@ class FundingPaymentE2ETest {
 
         var confirmed = paymentService.confirmPayment(
                 created.payment().paymentId(),
-                new ConfirmPaymentRequest("mock-key-success", 10_000L),
+                new ConfirmPaymentRequest("mock-key-success-" + UUID.randomUUID(), 10_000L),
                 sponsorId
         );
 
@@ -174,7 +174,7 @@ class FundingPaymentE2ETest {
 
         paymentService.confirmPayment(
                 created.payment().paymentId(),
-                new ConfirmPaymentRequest("mock-key-success", 10_000L),
+                new ConfirmPaymentRequest("mock-key-success-" + UUID.randomUUID(), 10_000L),
                 sponsorId
         );
 
