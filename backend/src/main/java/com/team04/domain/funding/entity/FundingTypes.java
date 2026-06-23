@@ -8,6 +8,7 @@ public final class FundingTypes {
     public enum FundingStatus {
         PENDING_PAYMENT,  // 결제대기 — 후원 생성 후 결제 전
         PAID,             // 완료 — 결제 승인 완료
+        CANCELLED,        // 취소 — 결제 실패·만료·후원자 철회
         REFUNDED          // 환불 — 환불 처리 완료
     }
 

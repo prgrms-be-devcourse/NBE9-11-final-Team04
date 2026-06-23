@@ -27,6 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * 결제 API 컨트롤러 — 결제 생성·승인·환불·조회, PG 웹훅을 제공합니다.
+ * 후원 결제 API는 SPONSOR 본인만 접근할 수 있습니다.
  */
 @RestController
 @RequiredArgsConstructor
@@ -46,19 +47,28 @@ public class PaymentController {
         return ApiResponse.ofSuccess(paymentService.getMyPayments(userDetails.getUserId(), pageable));
     }
 
-    // 후원(funding)에 대한 결제 세션 생성
+    // 후원(funding)에 대한 결제 세션 생성 — SPONSOR 본인만
     @PostMapping
-    public ApiResponse<PaymentResponse> createPayment(@Valid @RequestBody CreatePaymentRequest request) {
-        return ApiResponse.ofSuccess(paymentService.createPayment(request));
+    public ApiResponse<PaymentResponse> createPayment(
+            @Valid @RequestBody CreatePaymentRequest request,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        if (userDetails.getRole() != Role.SPONSOR) {
+            throw new CustomException(ErrorCode.FORBIDDEN);
+        }
+        return ApiResponse.ofSuccess(paymentService.createPayment(request, userDetails.getUserId()));
     }
 
-    // 카드 결제 PG 승인(confirm) 처리
+    // 카드 결제 PG 승인(confirm) 처리 — 후원자 본인만
     @PostMapping("/{paymentId}/confirm")
     public ApiResponse<PaymentResponse> confirmPayment(
             @PathVariable Long paymentId,
-            @Valid @RequestBody ConfirmPaymentRequest request
+            @Valid @RequestBody ConfirmPaymentRequest request,
+            @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        return ApiResponse.ofSuccess(paymentService.confirmPayment(paymentId, request));
+        return ApiResponse.ofSuccess(
+                paymentService.confirmPayment(paymentId, request, userDetails.getUserId())
+        );
     }
 
     // 환불 요청 (스폰서 본인)
@@ -74,10 +84,15 @@ public class PaymentController {
         return ApiResponse.ofSuccessWithoutBody();
     }
 
-    // 결제 단건 조회
+    // 결제 단건 조회 — 후원자 본인 또는 ADMIN
     @GetMapping("/{paymentId}")
-    public ApiResponse<PaymentResponse> getPayment(@PathVariable Long paymentId) {
-        return ApiResponse.ofSuccess(paymentService.getPayment(paymentId));
+    public ApiResponse<PaymentResponse> getPayment(
+            @PathVariable Long paymentId,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        return ApiResponse.ofSuccess(
+                paymentService.getPayment(paymentId, userDetails.getUserId(), userDetails.getRole())
+        );
     }
 
     // 토스 가상계좌 입금 완료 웹훅 (status=DONE, X-Webhook-Secret 헤더 필요)

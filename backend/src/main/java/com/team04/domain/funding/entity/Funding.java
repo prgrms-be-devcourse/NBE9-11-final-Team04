@@ -50,6 +50,10 @@ public class Funding extends BaseEntity {
 
     private LocalDateTime refundedAt;
 
+    /** Idea.currentAmount 반영 여부 — FundingPaidEvent 중복 수신 멱등용 */
+    @Column(nullable = false)
+    private boolean amountAppliedToIdea = false;
+
     public static Funding createPending(Long ideaId, Long sponsorId, Integer milestoneStep,
                                         Long amount, RewardType rewardType) {
         Funding funding = new Funding();
@@ -75,5 +79,21 @@ public class Funding extends BaseEntity {
         }
         this.status = FundingTypes.FundingStatus.REFUNDED;
         this.refundedAt = LocalDateTime.now();
+    }
+
+    /** 결제 실패·만료·후원 철회 시 PENDING_PAYMENT → CANCELLED */
+    public void markAsCancelled() {
+        if (this.status != FundingTypes.FundingStatus.PENDING_PAYMENT) {
+            throw new CustomException(ErrorCode.PAYMENT_NOT_READY);
+        }
+        this.status = FundingTypes.FundingStatus.CANCELLED;
+    }
+
+    /**
+     * 후원 금액이 아이디어 누적 후원금에 반영되었음을 표시합니다.
+     * {@link com.team04.domain.idea.event.IdeaFundingPaidListener}에서 1회만 호출됩니다.
+     */
+    public void markAmountAppliedToIdea() {
+        this.amountAppliedToIdea = true;
     }
 }

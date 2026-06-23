@@ -21,7 +21,7 @@ import java.util.UUID;
  */
 @Slf4j
 @Component
-@Profile("local")
+@Profile({"local", "test"})
 public class LocalStorageClient implements StorageClient {
 
     // application.yml에서 경로를 읽어옴 (지정되지 않은 경우 프로젝트 루트의 ./uploads 사용)

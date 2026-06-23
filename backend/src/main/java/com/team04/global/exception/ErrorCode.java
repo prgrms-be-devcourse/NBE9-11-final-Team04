@@ -74,6 +74,7 @@ public enum ErrorCode {
     IDEA_NOT_OPEN(400, "F005", "후원 가능한 상태의 프로젝트가 아닙니다"),
     IDEA_SELF_FUNDING_NOT_ALLOWED(400, "F006", "본인 프로젝트는 후원할 수 없습니다"),
     INVALID_FUNDING_AMOUNT(400, "F007", "후원 금액이 올바르지 않습니다"),
+    DEPOSIT_AMOUNT_MISMATCH(400, "F010", "보증금 금액이 아이디어에 등록된 금액과 일치하지 않습니다"),
     PROJECT_FEE_NOT_FOUND(404, "F008", "존재하지 않는 프로젝트 수수료입니다"),
     PROJECT_FEE_ALREADY_PAID(409, "F009", "이미 수수료가 결제된 프로젝트입니다"),
 
