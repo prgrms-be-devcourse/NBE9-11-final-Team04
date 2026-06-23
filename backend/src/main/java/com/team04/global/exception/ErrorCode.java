@@ -29,6 +29,8 @@ public enum ErrorCode {
     OAUTH_AUTHENTICATION_FAILED(400, "A004", "소셜 로그인에 실패했습니다"),
     INVALID_OAUTH_TOKEN(400, "A005", "유효하지 않거나 만료된 소셜 인증 토큰입니다"),
     UNDERAGE(403, "A006", "만 19세 미만은 가입할 수 없습니다"),
+    INVALID_OAUTH_STATE(400, "A007", "유효하지 않은 OAuth state 값입니다"),
+    EMAIL_NOT_VERIFIED(400, "A008", "이메일 인증이 완료되지 않았습니다"),
 
     // 사업자검증
     BUSINESS_VERIFICATION_UNAVAILABLE(503, "B001", "사업자 인증 서비스가 일시적으로 불안정합니다. 잠시 후 다시 시도해주세요"),

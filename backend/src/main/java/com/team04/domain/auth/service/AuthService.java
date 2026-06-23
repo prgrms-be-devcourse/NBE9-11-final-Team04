@@ -38,6 +38,9 @@ public class AuthService {
 
     @Transactional
     public TokenResponse signup(SignupRequest request){
+        if (!otpRepository.isVerified(request.email())) {
+            throw new CustomException(ErrorCode.EMAIL_NOT_VERIFIED);
+        }
         if (request.age() < 19) {
             throw new CustomException(ErrorCode.UNDERAGE);
         }
@@ -53,6 +56,7 @@ public class AuthService {
                 Role.USER
         );
         userRepository.save(user);
+        otpRepository.deleteVerified(request.email());
 
         String accessToken = jwtUtil.generateAccessToken(user.getId(), user.getRole());
         String refreshToken = jwtUtil.generateRefreshToken(user.getId());
@@ -128,6 +132,7 @@ public class AuthService {
         }
 
         otpRepository.delete(request.email());
+        otpRepository.saveVerified(request.email());
     }
 
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
