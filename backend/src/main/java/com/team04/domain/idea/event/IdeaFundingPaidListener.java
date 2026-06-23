@@ -11,6 +11,7 @@ import com.team04.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
@@ -34,7 +35,7 @@ public class IdeaFundingPaidListener {
     private final IdeaRepository ideaRepository;
     private final FundingRepository fundingRepository;
 
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onFundingPaid(FundingPaidEvent event) {
         Funding funding = fundingRepository.findByIdForUpdate(event.fundingId())
