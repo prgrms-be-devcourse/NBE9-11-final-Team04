@@ -17,4 +17,11 @@ public interface PaymentGateway {
 
     /** 웹훅 수신 후 PG API로 입금·금액 재검증 (Read-through Verification) */
     PaymentVerifyResult verifyVirtualAccountDeposit(String orderId, long amount);
+
+    /**
+     * 선정산 지급 요청
+     * 제안자 계좌로 실제 송금을 PG사에 요청합니다.
+     * 실제 연동 시 토스페이먼츠 출금 API로 교체합니다.
+     */
+    void payout(Long preSettlementId, long amount);
 }
