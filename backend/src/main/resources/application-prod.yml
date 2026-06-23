@@ -55,3 +55,9 @@ expert:
     reverify-cron: "0 0 0 * * MON"   # 운영: 매주 월요일 자정 00:00:00 가동
     national-cron: "0 0 0 1 1,7 *"   # 운영: 매년 1월 1일, 7월 1일 자정 00:00:00 가동
     demote-cron: "0 0 0 * * *"       # 운영: 매일 자정 00:00:00 가동
+
+cloud:
+  aws:
+    s3:
+      bucket: ${AWS_S3_BUCKET}
+      region: ${AWS_S3_REGION:ap-northeast-2}
