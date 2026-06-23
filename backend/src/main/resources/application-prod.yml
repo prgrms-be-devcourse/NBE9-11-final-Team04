@@ -52,3 +52,7 @@ management:
   health:
     mail:
       enabled: false
+
+server:
+  servlet:
+    context-path: /api
