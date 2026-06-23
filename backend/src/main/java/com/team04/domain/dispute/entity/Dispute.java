@@ -80,6 +80,7 @@ public class Dispute extends BaseEntity {
 
     public boolean isAppealable() {
         return this.status == DisputeStatus.RECEIVED
+                && getCreatedAt() != null
                 && getCreatedAt().plusDays(APPEAL_DEADLINE_DAYS).isAfter(LocalDateTime.now());
     }
 

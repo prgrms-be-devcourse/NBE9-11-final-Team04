@@ -28,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -127,13 +128,16 @@ public class DisputeService {
 
     @Transactional(readOnly = true)
     public DisputeStatsResponse getDisputeStats() {
-        return new DisputeStatsResponse(
-                disputeRepository.count(),
-                disputeRepository.countByStatus(DisputeStatus.RECEIVED),
-                disputeRepository.countByStatus(DisputeStatus.PENDING),
-                disputeRepository.countByStatus(DisputeStatus.RESOLVED),
-                disputeRepository.countByStatus(DisputeStatus.REJECTED)
-        );
+        Map<DisputeStatus, Long> countMap = disputeRepository.countGroupByStatus().stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        row -> (DisputeStatus) row[0],
+                        row -> (Long) row[1]
+                ));
+        long received = countMap.getOrDefault(DisputeStatus.RECEIVED, 0L);
+        long pending  = countMap.getOrDefault(DisputeStatus.PENDING, 0L);
+        long resolved = countMap.getOrDefault(DisputeStatus.RESOLVED, 0L);
+        long rejected = countMap.getOrDefault(DisputeStatus.REJECTED, 0L);
+        return new DisputeStatsResponse(received + pending + resolved + rejected, received, pending, resolved, rejected);
     }
 
     @Transactional
@@ -154,6 +158,14 @@ public class DisputeService {
             eventPublisher.publishEvent(new NotificationEvent(
                     reportedId, NotificationType.DISPUTE_UNDER_REVIEW,
                     "[신고 검토 시작] " + title, "관리자가 신고 내용을 검토하고 있습니다", dispute.getId()
+            ));
+            return;
+        }
+
+        if (newStatus == DisputeStatus.RECEIVED) {
+            eventPublisher.publishEvent(new NotificationEvent(
+                    reportedId, NotificationType.DISPUTE_UNDER_REVIEW,
+                    "[소명 재제출 요청] " + title, "관리자가 소명 자료 보완을 요청했습니다", dispute.getId()
             ));
             return;
         }

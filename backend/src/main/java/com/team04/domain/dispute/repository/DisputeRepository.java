@@ -44,5 +44,6 @@ public interface DisputeRepository extends JpaRepository<Dispute, Long> {
             Pageable pageable
     );
 
-    long countByStatus(DisputeStatus status);
+    @Query("SELECT d.status, COUNT(d) FROM Dispute d GROUP BY d.status")
+    List<Object[]> countGroupByStatus();
 }
