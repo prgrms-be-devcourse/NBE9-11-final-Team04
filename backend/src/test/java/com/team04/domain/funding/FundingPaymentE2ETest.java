@@ -119,7 +119,8 @@ class FundingPaymentE2ETest {
 
         var confirmed = paymentService.confirmPayment(
                 created.payment().paymentId(),
-                new ConfirmPaymentRequest("mock-key-success", 10_000L)
+                new ConfirmPaymentRequest("mock-key-success", 10_000L),
+                sponsorId
         );
 
         assertThat(confirmed.status()).isEqualTo(PaymentStatus.SUCCESS);
@@ -127,6 +128,10 @@ class FundingPaymentE2ETest {
         var funding = fundingRepository.findById(created.fundingId()).orElseThrow();
         assertThat(funding.getStatus()).isEqualTo(FundingStatus.PAID);
         assertThat(funding.getRewardType()).isEqualTo(RewardType.REWARD_POINT);
+
+        var idea = ideaRepository.findById(ideaId).orElseThrow();
+        assertThat(idea.getCurrentAmount()).isEqualTo(10_000L);
+        assertThat(idea.getSponsorCount()).isEqualTo(1);
     }
 
     @Test
@@ -151,5 +156,36 @@ class FundingPaymentE2ETest {
 
         var funding = fundingRepository.findById(created.fundingId()).orElseThrow();
         assertThat(funding.getStatus()).isEqualTo(FundingStatus.PAID);
+
+        var idea = ideaRepository.findById(ideaId).orElseThrow();
+        assertThat(idea.getCurrentAmount()).isEqualTo(50_000L);
+        assertThat(idea.getSponsorCount()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("카드: 후원 -> confirm -> 환불 완료")
+    void cardFundingRefundE2E() {
+        CreateFundingResponse created = fundingService.applySponsorship(
+                ideaId,
+                sponsorId,
+                new SponsorRequest(10_000L, PaymentMethod.CARD)
+        );
+
+        paymentService.confirmPayment(
+                created.payment().paymentId(),
+                new ConfirmPaymentRequest("mock-key-success", 10_000L),
+                sponsorId
+        );
+
+        paymentService.refundPayment(created.payment().paymentId(), sponsorId);
+
+        var payment = paymentService.getPayment(created.payment().paymentId(), sponsorId, Role.SPONSOR);
+        assertThat(payment.status()).isEqualTo(PaymentStatus.REFUNDED);
+
+        var funding = fundingRepository.findById(created.fundingId()).orElseThrow();
+        assertThat(funding.getStatus()).isEqualTo(FundingStatus.REFUNDED);
+
+        var idea = ideaRepository.findById(ideaId).orElseThrow();
+        assertThat(idea.getCurrentAmount()).isZero();
     }
 }

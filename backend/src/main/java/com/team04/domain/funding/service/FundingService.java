@@ -90,6 +90,12 @@ public class FundingService {
             throw new CustomException(ErrorCode.INVALID_FUNDING_AMOUNT);
         }
 
+        if (idea.getDepositAmount() != null
+                && idea.getDepositAmount() > 0
+                && !idea.getDepositAmount().equals(request.amount())) {
+            throw new CustomException(ErrorCode.DEPOSIT_AMOUNT_MISMATCH);
+        }
+
         Deposit deposit = depositRepository.save(
                 Deposit.createHeld(ideaId, userId, request.amount())
         );
@@ -174,12 +180,12 @@ public class FundingService {
                 funding.getId(),
                 request.amount(),
                 request.paymentMethod()
-        ));
+        ), sponsorId);
 
         return CreateFundingResponse.from(funding, payment);
     }
 
-    // 내 후원 취소 — PAID면 환불, PENDING_PAYMENT면 결제 실패 처리
+    // 내 후원 취소 — PAID면 5단계 환불, PENDING_PAYMENT면 결제 실패 처리
     @Transactional
     public void cancelMySponsorship(Long fundingId, Long sponsorId) {
         Funding funding = fundingRepository
@@ -202,6 +208,7 @@ public class FundingService {
                 .findFirstByFundingIdAndStatusOrderByCreatedAtDesc(funding.getId(), PaymentStatus.PENDING)
                 .orElseThrow(() -> new CustomException(ErrorCode.PAYMENT_NOT_FOUND));
         payment.fail();
+        funding.markAsCancelled();
     }
 
     // ── SSE (달성률 실시간 스트리밍) ───────────────────────────────────────
