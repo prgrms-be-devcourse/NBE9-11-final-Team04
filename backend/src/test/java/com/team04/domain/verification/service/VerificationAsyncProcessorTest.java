@@ -108,6 +108,7 @@ class VerificationAsyncProcessorTest {
                 LocalDateTime.now().plusDays(1),
                 LocalDateTime.now().plusMonths(1),
                 RewardType.REWARD_POINT,
+                null,
                 null
         );
     }

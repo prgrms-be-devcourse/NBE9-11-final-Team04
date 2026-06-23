@@ -94,6 +94,7 @@ class FundingPaymentE2ETest {
                 LocalDateTime.now().minusDays(1),
                 LocalDateTime.now().plusDays(30),
                 RewardType.REWARD_POINT,
+                null,
                 null
         );
         idea.changeStatus(IdeaStatus.EXPERT_PENDING);

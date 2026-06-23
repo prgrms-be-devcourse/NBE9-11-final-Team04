@@ -74,6 +74,9 @@ public class IdeaDraft extends BaseEntity {
     @Column(length = 2048)
     private String imageUrl;
 
+    @Column(columnDefinition = "TEXT")
+    private String imageUrls;
+
     /** 신규 임시저장을 작성자 식별자와 요청 내용으로 생성합니다. */
     public IdeaDraft(Long userId) {
         this.userId = userId;
@@ -119,5 +122,10 @@ public class IdeaDraft extends BaseEntity {
         this.fundingEndAt = fundingEndAt;
         this.rewardType = rewardType;
         this.imageUrl = imageUrl;
+    }
+
+    /** 임시저장 본문 이미지 URL 목록 문자열을 변경합니다. */
+    public void updateImageUrls(String imageUrls) {
+        this.imageUrls = imageUrls;
     }
 }

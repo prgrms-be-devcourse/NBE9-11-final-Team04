@@ -7,6 +7,7 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Size;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 /** 아이디어 임시저장을 생성하거나 수정하기 위한 요청 DTO입니다. */
 public record IdeaDraftRequest(
@@ -24,6 +25,7 @@ public record IdeaDraftRequest(
         LocalDateTime fundingStartAt,
         LocalDateTime fundingEndAt,
         RewardType rewardType,
-        @Size(max = 2048) String imageUrl
+        @Size(max = 2048) String imageUrl,
+        List<@Size(max = 2048) String> imageUrls
 ) {
 }
