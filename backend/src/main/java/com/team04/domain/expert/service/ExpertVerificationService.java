@@ -48,7 +48,7 @@ public class ExpertVerificationService {
         profile.getUser().changeRole(Role.USER);
         profile.demote(); // DEMOTED 상태로 변경
 
-        log.info("[ExpertVerificationService] SPONSOR 변경 완료: expertProfileId={}, userId={}",
+        log.info("[ExpertVerificationService] USER 변경 완료: expertProfileId={}, userId={}",
                 expertProfileId, profile.getUser().getId());
     }
 
