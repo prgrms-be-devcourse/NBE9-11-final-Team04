@@ -20,7 +20,7 @@ import java.util.UUID;
 /** 운영 환경에서 이미지 파일을 AWS S3 버킷에 저장하고 공개 URL을 반환하는 저장소 클라이언트입니다. */
 @Slf4j
 @Component
-@Profile("!local")
+@Profile("!local & !test")
 @RequiredArgsConstructor
 public class S3StorageClient implements StorageClient {
     private static final long MAX_FILE_SIZE = 5 * 1024 * 1024;

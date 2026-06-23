@@ -51,6 +51,10 @@ public class Payment extends BaseEntity {
 
     private LocalDateTime refundedAt;
 
+    /** 가상계좌 confirm 응답 secret — DEPOSIT_CALLBACK 웹훅 검증용 */
+    @Column(length = 128)
+    private String tossWebhookSecret;
+
     public static Payment createPending(
             Long fundingId,
             String orderId,
@@ -66,8 +70,30 @@ public class Payment extends BaseEntity {
         return payment;
     }
 
+    public void registerVirtualAccountPending(String paymentKey, String tossWebhookSecret) {
+        if (this.method != PaymentTypes.PaymentMethod.VIRTUAL_ACCOUNT) {
+            throw new CustomException(ErrorCode.PAYMENT_NOT_READY);
+        }
+        if (this.status != PaymentTypes.PaymentStatus.PENDING) {
+            throw new CustomException(ErrorCode.PAYMENT_NOT_READY);
+        }
+        this.paymentKey = paymentKey;
+        this.tossWebhookSecret = tossWebhookSecret;
+    }
+
     public void complete(String paymentKey) {
         this.paymentKey = paymentKey;
+        this.status = PaymentTypes.PaymentStatus.SUCCESS;
+        this.approvedAt = LocalDateTime.now();
+    }
+
+    public void completeIfPending() {
+        if (this.status == PaymentTypes.PaymentStatus.SUCCESS) {
+            return;
+        }
+        if (this.status != PaymentTypes.PaymentStatus.PENDING) {
+            throw new CustomException(ErrorCode.PAYMENT_NOT_READY);
+        }
         this.status = PaymentTypes.PaymentStatus.SUCCESS;
         this.approvedAt = LocalDateTime.now();
     }

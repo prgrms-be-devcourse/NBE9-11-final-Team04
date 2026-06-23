@@ -25,15 +25,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
 @ActiveProfiles("test")
-@Transactional
 class FundingPaymentE2ETest {
 
     @Autowired
@@ -59,8 +58,10 @@ class FundingPaymentE2ETest {
 
     @BeforeEach
     void setUp() {
+        String suffix = UUID.randomUUID().toString().substring(0, 8);
+
         User proposer = userRepository.save(User.create(
-                "proposer@test.com",
+                "proposer-" + suffix + "@test.com",
                 passwordEncoder.encode("password1!"),
                 "창작자",
                 "창작자닉",
@@ -69,7 +70,7 @@ class FundingPaymentE2ETest {
         ));
 
         User sponsor = userRepository.save(User.create(
-                "sponsor@test.com",
+                "sponsor-" + suffix + "@test.com",
                 passwordEncoder.encode("password1!"),
                 "후원자",
                 "후원자닉",
@@ -119,7 +120,8 @@ class FundingPaymentE2ETest {
 
         var confirmed = paymentService.confirmPayment(
                 created.payment().paymentId(),
-                new ConfirmPaymentRequest("mock-key-success", 10_000L)
+                new ConfirmPaymentRequest("mock-key-success-" + UUID.randomUUID(), 10_000L),
+                sponsorId
         );
 
         assertThat(confirmed.status()).isEqualTo(PaymentStatus.SUCCESS);
@@ -127,6 +129,10 @@ class FundingPaymentE2ETest {
         var funding = fundingRepository.findById(created.fundingId()).orElseThrow();
         assertThat(funding.getStatus()).isEqualTo(FundingStatus.PAID);
         assertThat(funding.getRewardType()).isEqualTo(RewardType.REWARD_POINT);
+
+        var idea = ideaRepository.findById(ideaId).orElseThrow();
+        assertThat(idea.getCurrentAmount()).isEqualTo(10_000L);
+        assertThat(idea.getSponsorCount()).isEqualTo(1);
     }
 
     @Test
@@ -146,10 +152,41 @@ class FundingPaymentE2ETest {
                 created.payment().orderId(),
                 50_000L,
                 "dev-webhook-secret",
-                "webhook-event-1"
+                "webhook-event-" + UUID.randomUUID()
         );
 
         var funding = fundingRepository.findById(created.fundingId()).orElseThrow();
         assertThat(funding.getStatus()).isEqualTo(FundingStatus.PAID);
+
+        var idea = ideaRepository.findById(ideaId).orElseThrow();
+        assertThat(idea.getCurrentAmount()).isEqualTo(50_000L);
+        assertThat(idea.getSponsorCount()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("카드: 후원 -> confirm -> 환불 완료")
+    void cardFundingRefundE2E() {
+        CreateFundingResponse created = fundingService.applySponsorship(
+                ideaId,
+                sponsorId,
+                new SponsorRequest(10_000L, PaymentMethod.CARD)
+        );
+
+        paymentService.confirmPayment(
+                created.payment().paymentId(),
+                new ConfirmPaymentRequest("mock-key-success-" + UUID.randomUUID(), 10_000L),
+                sponsorId
+        );
+
+        paymentService.refundPayment(created.payment().paymentId(), sponsorId);
+
+        var payment = paymentService.getPayment(created.payment().paymentId(), sponsorId, Role.SPONSOR);
+        assertThat(payment.status()).isEqualTo(PaymentStatus.REFUNDED);
+
+        var funding = fundingRepository.findById(created.fundingId()).orElseThrow();
+        assertThat(funding.getStatus()).isEqualTo(FundingStatus.REFUNDED);
+
+        var idea = ideaRepository.findById(ideaId).orElseThrow();
+        assertThat(idea.getCurrentAmount()).isZero();
     }
 }
