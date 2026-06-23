@@ -28,7 +28,7 @@ public class PreSettlementController {
             @PathVariable Long ideaId,
             @Valid @RequestBody PreSettlementRequest request,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
-        if (userDetails.getRole() != Role.PROPOSER) {
+        if (userDetails.getRole() != Role.USER) {
             throw new CustomException(ErrorCode.SETTLEMENT_ACCESS_DENIED);
         }
         return ApiResponse.ofSuccess(preSettlementService.requestPreSettlement(ideaId, request, userDetails.getUserId()));
@@ -68,7 +68,7 @@ public class PreSettlementController {
             @PathVariable Long ideaId,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         Role role = userDetails.getRole();
-        if (role != Role.ADMIN && role != Role.PROPOSER) {
+        if (role == Role.EXPERT) {
             throw new CustomException(ErrorCode.SETTLEMENT_ACCESS_DENIED);
         }
         return ApiResponse.ofSuccess(preSettlementService.getPreSettlements(ideaId, userDetails.getUserId(), role));

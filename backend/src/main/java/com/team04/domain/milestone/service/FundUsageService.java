@@ -77,7 +77,7 @@ public class FundUsageService {
      */
     @Transactional(readOnly = true)
     public List<FundUsageResponse> getFundUsages(Long ideaId, Long userId, Role role) {
-        if (role == Role.PROPOSER) {
+        if (role == Role.USER) {
             IdeaResponse idea = ideaService.getIdea(ideaId);
             if (!idea.userId().equals(userId)) {
                 throw new CustomException(ErrorCode.FORBIDDEN);

@@ -41,7 +41,7 @@ public class SecurityConfig {
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/users/me/business").hasRole("PROPOSER")
+                        .requestMatchers("/users/me/business").hasRole("USER")
                         .requestMatchers(HttpMethod.POST, "/auth/logout").authenticated()
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers("/actuator/health").permitAll() // 헬스체크
@@ -56,9 +56,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/ideas/{ideaId}/bookmark").authenticated()
                         .requestMatchers(HttpMethod.DELETE, "/ideas/{ideaId}/bookmark").authenticated()
                         .requestMatchers(HttpMethod.POST, "/ideas/{ideaId}/reports").authenticated()
-                        .requestMatchers("/ideas/**").hasRole("PROPOSER")
+                        .requestMatchers("/ideas/**").hasRole("USER")
                         .requestMatchers(HttpMethod.GET, "/experts/{expertId}").authenticated()
-                        .requestMatchers(HttpMethod.POST, "/matches/experts/{expertProfileId}").hasRole("PROPOSER")
+                        .requestMatchers(HttpMethod.POST, "/matches/experts/{expertProfileId}").hasRole("USER")
                         .requestMatchers("/experts/**").hasRole("EXPERT")
                         .requestMatchers("/matches/**").hasRole("EXPERT")
                         .anyRequest().authenticated()

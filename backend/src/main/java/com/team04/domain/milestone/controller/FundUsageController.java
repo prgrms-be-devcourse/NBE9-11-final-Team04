@@ -28,7 +28,7 @@ public class FundUsageController {
             @PathVariable Long ideaId,
             @Valid @RequestBody FundUsageRequest request,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
-        if (userDetails.getRole() != Role.PROPOSER) {
+        if (userDetails.getRole() != Role.USER) {
             throw new CustomException(ErrorCode.FORBIDDEN);
         }
         return ApiResponse.ofSuccess(fundUsageService.addFundUsage(ideaId, request, userDetails.getUserId()));
@@ -44,7 +44,7 @@ public class FundUsageController {
             @PathVariable Long ideaId,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         Role role = userDetails.getRole();
-        if (role != Role.ADMIN && role != Role.PROPOSER && role != Role.SPONSOR) {
+        if (role != Role.ADMIN && role != Role.USER) {
             throw new CustomException(ErrorCode.FORBIDDEN);
         }
         return ApiResponse.ofSuccess(fundUsageService.getFundUsages(ideaId, userDetails.getUserId(), role));
