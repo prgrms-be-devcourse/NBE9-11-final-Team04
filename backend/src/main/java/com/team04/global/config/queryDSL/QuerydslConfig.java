@@ -1,4 +1,4 @@
-package com.team04.global.config;
+package com.team04.global.config.queryDSL;
 
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;

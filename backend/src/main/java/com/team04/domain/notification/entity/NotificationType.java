@@ -16,6 +16,9 @@ public enum NotificationType {
     MILESTONE_REJECTED,                 // 마일스톤 반려 → 제안자
 
     REPORT_RECEIVED,                   // 신고 접수됨 → 관리자
+    DISPUTE_UNDER_REVIEW,              // 신고 검토 시작 → 피신고자
+    DISPUTE_RESOLVED,                  // 분쟁 처리 완료 → 신고자 + 피신고자
+    DISPUTE_REJECTED,                  // 신고 기각 → 신고자 + 피신고자
 
     ANNOUNCEMENT,                       // 관리자 공지 → 역할별/전체 사용자
 

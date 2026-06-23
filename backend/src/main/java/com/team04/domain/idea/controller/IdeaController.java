@@ -4,9 +4,6 @@ import com.team04.domain.idea.dto.request.IdeaDraftRequest;
 import com.team04.domain.idea.dto.response.IdeaDraftResponse;
 import com.team04.domain.idea.dto.response.IdeaSummaryResponse;
 import com.team04.domain.idea.entity.IdeaCategory;
-import com.team04.domain.user.entity.Role;
-import com.team04.global.exception.CustomException;
-import com.team04.global.exception.ErrorCode;
 import com.team04.global.response.ApiResponse;
 import com.team04.domain.idea.dto.request.CreateIdeaRequest;
 import com.team04.domain.idea.dto.request.ReportIdeaRequest;
@@ -117,6 +114,15 @@ public class IdeaController {
         return ApiResponse.ofSuccess(ideaService.publishDraft(draftId, userDetails.getUserId(), request));
     }
 
+    /** 로그인 제안자가 아이디어 본문 이미지를 사전 업로드합니다. */
+    @PostMapping("/images")
+    public ApiResponse<List<String>> uploadContentImages(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestPart("images") List<MultipartFile> images
+    ) {
+        return ApiResponse.ofSuccess(ideaService.uploadContentImages(userDetails.getUserId(), images));
+    }
+
     /** 로그인 사용자만 접근 가능한 아이디어 상세 정보를 조회합니다. */
     @GetMapping("/{ideaId}")
     public ApiResponse<IdeaResponse> getIdea(
@@ -142,9 +148,6 @@ public class IdeaController {
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestPart("image") MultipartFile image
     ) {
-        if (userDetails.getRole() != Role.PROPOSER) {
-            throw new CustomException(ErrorCode.FORBIDDEN);
-        }
         return ApiResponse.ofSuccess(ideaService.uploadIdeaImage(ideaId, userDetails.getUserId(), image));
     }
 
@@ -164,9 +167,6 @@ public class IdeaController {
             @PathVariable Long ideaId,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        if (userDetails.getRole() != Role.PROPOSER) {
-            throw new CustomException(ErrorCode.FORBIDDEN);
-        }
         ideaService.requestCancellation(ideaId, userDetails.getUserId());
         return ApiResponse.ofSuccessWithoutBody();
     }

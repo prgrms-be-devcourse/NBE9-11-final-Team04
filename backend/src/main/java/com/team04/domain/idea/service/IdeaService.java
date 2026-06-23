@@ -1,6 +1,8 @@
 package com.team04.domain.idea.service;
 
 import com.team04.domain.dispute.dto.request.CreateDisputeRequest;
+import com.team04.domain.dispute.entity.DisputeCategory;
+import com.team04.domain.dispute.entity.TargetType;
 import com.team04.domain.dispute.service.DisputeService;
 import com.team04.domain.idea.dto.request.IdeaDraftRequest;
 import com.team04.domain.idea.dto.response.*;
@@ -22,6 +24,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
@@ -44,6 +47,7 @@ public class IdeaService {
     private final MilestoneRepository milestoneRepository;
     private final DisputeService disputeService;
     private final StorageClient storageClient;
+    private final TransactionTemplate transactionTemplate;
 
     /** 아이디어를 등록하고 마일스톤을 함께 저장합니다. */
     @Transactional
@@ -66,7 +70,8 @@ public class IdeaService {
                 request.fundingStartAt(),
                 request.fundingEndAt(),
                 request.rewardType(),
-                request.imageUrl()
+                request.imageUrl(),
+                joinImageUrls(request.imageUrls())
         );
         Idea savedIdea = ideaRepository.save(idea);
 
@@ -172,6 +177,7 @@ public class IdeaService {
                 request.rewardType(),
                 request.imageUrl()
         );
+        draft.updateImageUrls(joinImageUrls(request.imageUrls()));
         return IdeaDraftResponse.of(ideaDraftRepository.save(draft));
     }
 
@@ -196,6 +202,7 @@ public class IdeaService {
                 request.rewardType(),
                 request.imageUrl()
         );
+        draft.updateImageUrls(joinImageUrls(request.imageUrls()));
         return IdeaDraftResponse.of(draft);
     }
 
@@ -211,8 +218,19 @@ public class IdeaService {
     public IdeaResponse publishDraft(Long draftId, Long userId, CreateIdeaRequest request) {
         IdeaDraft draft = findDraft(draftId, userId);
         IdeaResponse response = createIdea(userId, request);
+        Idea idea = findActiveIdea(response.ideaId());
+        idea.updateImageUrls(draft.getImageUrls());
         ideaDraftRepository.delete(draft);
-        return response;
+        return IdeaResponse.of(idea);
+    }
+
+    /** 로그인 사용자가 등록한 아이디어 목록을 조회합니다. */
+    @Transactional(readOnly = true)
+    public List<IdeaSummaryResponse> getMyIdeas(Long userId) {
+        return ideaRepository.findByUserIdAndDeletedAtIsNullOrderByCreatedAtDesc(userId)
+                .stream()
+                .map(IdeaSummaryResponse::of)
+                .toList();
     }
 
     /** 삭제되지 않은 아이디어 상세 정보를 조회합니다. */
@@ -247,20 +265,31 @@ public class IdeaService {
                 request.rewardType(),
                 request.imageUrl()
         );
+        idea.updateImageUrls(joinImageUrls(request.imageUrls()));
         return IdeaResponse.of(idea);
     }
 
+    /** 제안자가 본문 이미지를 아이디어 등록 전에 사전 업로드하고 URL 목록을 반환합니다. */
+    public List<String> uploadContentImages(Long userId, List<MultipartFile> images) {
+        validateImageFiles(images);
+        return images.stream()
+                .map(image -> storageClient.upload(image, "ideas/content"))
+                .toList();
+    }
+
     /** 작성자 본인이고 심사 대기 상태인 경우에만 대표 이미지를 업로드하고 URL을 저장합니다. */
-    @Transactional
     public IdeaResponse uploadIdeaImage(Long ideaId, Long userId, MultipartFile image) {
-        Idea idea = findActiveIdea(ideaId);
-        idea.validateOwner(userId);
         validateImageFile(image);
+        validateIdeaImageUploadPermission(ideaId, userId);
 
-        String imageUrl = storageClient.upload(image, "idea/image");
-        idea.updateImageUrl(imageUrl);
+        String imageUrl = storageClient.upload(image, "ideas/thumbnail");
 
-        return IdeaResponse.of(idea);
+        return transactionTemplate.execute(status -> {
+            Idea idea = findActiveIdea(ideaId);
+            idea.validateOwner(userId);
+            idea.updateImageUrl(imageUrl);
+            return IdeaResponse.of(idea);
+        });
     }
 
     /** 작성자 본인이고 심사 대기 상태인 경우에만 아이디어를 소프트 삭제합니다. */
@@ -279,7 +308,15 @@ public class IdeaService {
             throw new CustomException(ErrorCode.SELF_REPORT_NOT_ALLOWED);
         }
         disputeService.createDispute(reporterUserId,
-                new CreateDisputeRequest(ideaId, request.reason(), null));
+                new CreateDisputeRequest(
+                        TargetType.IDEA,
+                        ideaId,
+                        idea.getUserId(),
+                        DisputeCategory.IDEA_THEFT,
+                        "아이디어 도용 신고",
+                        request.reason(),
+                        null
+                ));
         return new ReportIdeaResponse(idea.getId(), reporterUserId, "아이디어 도용 신고가 접수되었습니다.");
     }
 
@@ -295,11 +332,36 @@ public class IdeaService {
         }
     }
 
+    /** S3 업로드 전에 대표 이미지 변경 권한과 수정 가능 상태를 검증합니다. */
+    private void validateIdeaImageUploadPermission(Long ideaId, Long userId) {
+        transactionTemplate.executeWithoutResult(status -> {
+            Idea idea = findActiveIdea(ideaId);
+            idea.validateOwner(userId);
+            idea.updateImageUrl(idea.getImageUrl());
+        });
+    }
+
+    /** 업로드할 이미지 파일 목록이 비어 있지 않은지 검증합니다. */
+    private void validateImageFiles(List<MultipartFile> images) {
+        if (images == null || images.isEmpty()) {
+            throw new CustomException(ErrorCode.INVALID_INPUT);
+        }
+        images.forEach(this::validateImageFile);
+    }
+
     /** 업로드할 이미지 파일이 비어 있지 않은지 검증합니다. */
     private void validateImageFile(MultipartFile image) {
         if (image == null || image.isEmpty()) {
             throw new CustomException(ErrorCode.INVALID_INPUT);
         }
+    }
+
+    /** 본문 이미지 URL 리스트를 DB 저장용 콤마 구분 문자열로 변환합니다. */
+    private String joinImageUrls(List<String> imageUrls) {
+        if (imageUrls == null || imageUrls.isEmpty()) {
+            return null;
+        }
+        return String.join(",", imageUrls);
     }
 
     /** 임시저장을 조회하고 작성자 본인 접근인지 검증합니다. */

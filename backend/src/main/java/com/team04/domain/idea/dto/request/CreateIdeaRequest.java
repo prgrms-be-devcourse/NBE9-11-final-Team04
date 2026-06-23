@@ -34,6 +34,7 @@ public record CreateIdeaRequest(
         @NotNull @Future LocalDateTime fundingEndAt,
         @NotNull RewardType rewardType,
         @Size(max = 2048) String imageUrl,
+        List<@Size(max = 2048) String> imageUrls,
         @NotEmpty @Size(min = 3, max = 3) List<@Valid @NotNull CreateMilestoneRequest> milestones
 ) {
 
