@@ -25,9 +25,7 @@ public class SettlementScheduler {
     /**
      * 매일 자정 실행
      * 펀딩 마감됐고 목표 금액 미달성인 프로젝트를 감지해
-     * 환불 장부(Settlement) + 후원자별 환불 레코드(Refund)를 자동 생성합니다.
-     * TransactionTemplate으로 프로젝트별 단일 트랜잭션 보장 —
-     * Settlement 생성 후 Refund 생성 실패 시 전체 롤백됩니다.
+     * 환불 장부(Settlement PENDING) + 후원자별 Refund(PENDING) 생성 후 PG 환불을 실행합니다.
      */
     @Scheduled(cron = "0 0 0 * * *")
     public void processFailedFundingRefunds() {
@@ -37,10 +35,21 @@ public class SettlementScheduler {
 
         for (Long ideaId : failedIdeaIds) {
             try {
-                transactionTemplate.executeWithoutResult(status -> {
+                List<Long> refundIds = transactionTemplate.execute(status -> {
                     settlementService.createGoalNotMetRefundSettlement(ideaId);
-                    refundService.createGoalNotMetRefunds(ideaId);
+                    return refundService.createGoalNotMetRefunds(ideaId);
                 });
+
+                if (refundIds != null) {
+                    for (Long refundId : refundIds) {
+                        try {
+                            refundService.executeRefund(refundId);
+                        } catch (Exception e) {
+                            log.error("개별 환불 PG 실행 실패 - refundId: {}, error: {}", refundId, e.getMessage());
+                        }
+                    }
+                    refundService.tryFinalizeRefundSettlement(ideaId);
+                }
                 log.info("환불 처리 완료 - ideaId: {}", ideaId);
             } catch (Exception e) {
                 log.error("환불 처리 실패 - ideaId: {}, error: {}", ideaId, e.getMessage());

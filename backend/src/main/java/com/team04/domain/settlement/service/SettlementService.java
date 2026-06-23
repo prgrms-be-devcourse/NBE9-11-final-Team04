@@ -147,7 +147,6 @@ public class SettlementService {
                 .idempotencyKey(idempotencyKey)
                 .build();
 
-        settlement.refund();
         return SettlementResponse.from(settlementRepository.save(settlement));
     }
 }

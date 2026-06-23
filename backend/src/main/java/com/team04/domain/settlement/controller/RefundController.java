@@ -21,11 +21,7 @@ public class RefundController {
 
     private final RefundService refundService;
 
-    /**
-     * 분쟁 환불 생성 (관리자 전용)
-     * GOAL_NOT_MET, CANCELLED는 내부 자동 생성 — 이 API는 DISPUTE 케이스만 처리
-     * sponsorId와 환불 금액은 payment 정보에서 내부 조회 (오입력/과다 환불 방지)
-     */
+    /** 분쟁 환불 — PENDING 생성 후 PG 환불 실행 */
     @PostMapping("/dispute")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<RefundResponse>> createDisputeRefund(
@@ -35,10 +31,7 @@ public class RefundController {
         return ResponseEntity.ok(ApiResponse.ofSuccess(response));
     }
 
-    /**
-     * 환불 완료 처리 (관리자 전용)
-     * TODO: 결제팀과 콜백 방식 협의 후 인증 처리 변경 필요 (현재 ADMIN 임시)
-     */
+    /** 환불 완료 수동 처리 (PG 콜백 대체) */
     @PatchMapping("/{refundId}/complete")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<RefundResponse>> completeRefund(
@@ -48,9 +41,16 @@ public class RefundController {
         return ResponseEntity.ok(ApiResponse.ofSuccess(response));
     }
 
-    /**
-     * 내 환불 내역 조회 (후원자 본인)
-     */
+    /** 실패한 환불 재시도 */
+    @PatchMapping("/{refundId}/retry")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<RefundResponse>> retryRefund(
+            @PathVariable Long refundId
+    ) {
+        RefundResponse response = refundService.retryRefund(refundId);
+        return ResponseEntity.ok(ApiResponse.ofSuccess(response));
+    }
+
     @GetMapping("/me")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<List<RefundResponse>>> getMyRefunds(

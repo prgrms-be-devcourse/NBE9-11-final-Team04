@@ -70,6 +70,7 @@ public enum ErrorCode {
     IDEA_NOT_OPEN(400, "F005", "후원 가능한 상태의 프로젝트가 아닙니다"),
     IDEA_SELF_FUNDING_NOT_ALLOWED(400, "F006", "본인 프로젝트는 후원할 수 없습니다"),
     INVALID_FUNDING_AMOUNT(400, "F007", "후원 금액이 올바르지 않습니다"),
+    DEPOSIT_AMOUNT_MISMATCH(400, "F010", "보증금 금액이 아이디어에 등록된 금액과 일치하지 않습니다"),
     PROJECT_FEE_NOT_FOUND(404, "F008", "존재하지 않는 프로젝트 수수료입니다"),
     PROJECT_FEE_ALREADY_PAID(409, "F009", "이미 수수료가 결제된 프로젝트입니다"),
 
@@ -129,6 +130,8 @@ public enum ErrorCode {
     // 환불
     REFUND_NOT_FOUND(404, "RF001", "존재하지 않는 환불 내역입니다"),
     REFUND_ALREADY_COMPLETED(409, "RF002", "이미 완료된 환불입니다"),
+    REFUND_NOT_PENDING(400, "RF003", "환불 처리가 가능한 상태가 아닙니다"),
+    REFUND_NOT_RETRYABLE(400, "RF004", "재시도할 수 없는 환불입니다"),
 
     // 파일 업로드
     FILE_UPLOAD_FAILED(500, "FL001", "파일 업로드에 실패했습니다"),

@@ -4,7 +4,6 @@ import com.team04.domain.funding.entity.Funding;
 import com.team04.domain.funding.entity.FundingTypes.FundingStatus;
 import com.team04.domain.funding.event.FundingPaidEvent;
 import com.team04.domain.funding.repository.FundingRepository;
-import com.team04.domain.idea.repository.IdeaRepository;
 import com.team04.domain.payment.client.PaymentGateway;
 import com.team04.domain.payment.dto.request.ConfirmPaymentRequest;
 import com.team04.domain.payment.dto.request.CreatePaymentRequest;
@@ -29,7 +28,8 @@ import com.team04.global.exception.CustomException;
 import com.team04.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.beans.factory.annotation.Value;
+import com.team04.domain.user.entity.Role;
+import com.team04.global.config.payment.PaymentProperties;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -51,18 +51,17 @@ public class PaymentService {
     private final VirtualAccountRepository virtualAccountRepository;
     private final PaymentWebhookLogRepository paymentWebhookLogRepository;
     private final FundingRepository fundingRepository;
-    private final IdeaRepository ideaRepository;
     private final PaymentGateway paymentGateway;
     private final ApplicationEventPublisher eventPublisher;
     private final ObjectProvider<PaymentService> selfProvider;
-
-    @Value("${payment.webhook.secret:dev-webhook-secret}")
-    private String webhookSecret;
+    private final PaymentProperties paymentProperties;
 
     // ── 결제 생성 ──────────────────────────────────────────────────────────
 
-    // 후원(funding)에 대한 결제 세션 생성 — PG 호출은 트랜잭션 밖에서 수행
-    public PaymentResponse createPayment(CreatePaymentRequest request) {
+    // 후원(funding)에 대한 결제 세션 생성 — 후원자 본인만 호출 가능
+    public PaymentResponse createPayment(CreatePaymentRequest request, Long sponsorId) {
+        validateSponsorOwnsFunding(request.fundingId(), sponsorId);
+
         CreatedPayment created = selfProvider.getObject().createPendingPayment(request);
 
         try {
@@ -73,7 +72,8 @@ public class PaymentService {
             );
 
             PaymentResponse.VbankInfo vbankInfo = null;
-            if (created.method() == PaymentMethod.VIRTUAL_ACCOUNT) {
+            if (created.method() == PaymentMethod.VIRTUAL_ACCOUNT
+                    && paymentGateway.issuesVirtualAccountAtCreateTime()) {
                 VirtualAccountIssueResult virtualAccount = selfProvider.getObject()
                         .issueAndSaveVirtualAccount(created.orderId(), created.amount());
                 selfProvider.getObject().saveVbankDeposit(created.id(), virtualAccount);
@@ -113,8 +113,10 @@ public class PaymentService {
 
     // ── 카드 결제 승인 ─────────────────────────────────────────────────────
 
-    // PG confirm 후 Payment SUCCESS + Funding PAID 처리
-    public PaymentResponse confirmPayment(Long paymentId, ConfirmPaymentRequest request) {
+    // PG confirm 후 Payment SUCCESS + Funding PAID 처리 (카드) 또는 가상계좌 발급 대기 — 후원자 본인만
+    public PaymentResponse confirmPayment(Long paymentId, ConfirmPaymentRequest request, Long sponsorId) {
+        validateSponsorOwnsPayment(paymentId, sponsorId);
+
         ConfirmPrepare prepare = selfProvider.getObject().prepareConfirm(paymentId, request.amount());
 
         PaymentConfirmResult result = paymentGateway.confirm(
@@ -128,6 +130,10 @@ public class PaymentService {
             throw new CustomException(ErrorCode.PAYMENT_FAILED);
         }
 
+        if (prepare.method() == PaymentMethod.VIRTUAL_ACCOUNT) {
+            return selfProvider.getObject().completeVirtualAccountConfirm(paymentId, result);
+        }
+
         Payment payment = selfProvider.getObject().completeCardPayment(
                 paymentId,
                 result.paymentKey(),
@@ -137,14 +143,35 @@ public class PaymentService {
         return toResponse(payment, null, null, null);
     }
 
+    @Transactional
+    public PaymentResponse completeVirtualAccountConfirm(Long paymentId, PaymentConfirmResult result) {
+        Payment payment = paymentRepository.findById(paymentId)
+                .orElseThrow(() -> new CustomException(ErrorCode.PAYMENT_NOT_FOUND));
+
+        validatePaymentConfirmable(payment, payment.getAmount());
+
+        if (!result.awaitingDeposit() || result.virtualAccount() == null) {
+            throw new CustomException(ErrorCode.PAYMENT_FAILED);
+        }
+
+        payment.registerVirtualAccountPending(result.paymentKey(), result.tossWebhookSecret());
+
+        VirtualAccountIssueResult issued = selfProvider.getObject()
+                .issueAndSaveVirtualAccount(payment.getOrderId(), payment.getAmount(), result.virtualAccount());
+        selfProvider.getObject().saveVbankDeposit(payment.getId(), issued);
+
+        PaymentResponse.VbankInfo vbankInfo = new PaymentResponse.VbankInfo(
+                issued.bankCode(),
+                issued.accountNumber(),
+                issued.dueDate()
+        );
+        return toResponse(payment, null, null, vbankInfo);
+    }
+
     @Transactional(readOnly = true)
     public ConfirmPrepare prepareConfirm(Long paymentId, Long amount) {
         Payment payment = paymentRepository.findById(paymentId)
                 .orElseThrow(() -> new CustomException(ErrorCode.PAYMENT_NOT_FOUND));
-
-        if (payment.getMethod() == PaymentMethod.VIRTUAL_ACCOUNT) {
-            throw new CustomException(ErrorCode.PAYMENT_NOT_READY);
-        }
 
         validatePaymentConfirmable(payment, amount);
         return ConfirmPrepare.from(payment);
@@ -204,41 +231,48 @@ public class PaymentService {
     }
 
     // 가상계좌 입금 완료 웹훅 — PG 검증 후 DB 반영 (멱등)
-    public void processDepositWebhook(String orderId, Long amount, String providedSecret, String eventId) {
-        verifyWebhookSecret(providedSecret);
+    public void processDepositWebhook(
+            String orderId,
+            Long amount,
+            String providedSecret,
+            String eventId,
+            String tossWebhookSecret
+    ) {
+        verifyWebhookAccess(providedSecret, orderId, tossWebhookSecret);
 
         String resolvedEventId = resolveEventId(eventId, orderId, amount);
         if (paymentWebhookLogRepository.existsByEventId(resolvedEventId)) {
             return;
         }
 
-        PaymentVerifyResult verifyResult = paymentGateway.verifyVirtualAccountDeposit(orderId, amount);
+        Payment payment = paymentRepository.findByOrderId(orderId)
+                .orElseThrow(() -> new CustomException(ErrorCode.PAYMENT_NOT_FOUND));
+
+        Long verifyAmount = amount != null ? amount : payment.getAmount();
+        PaymentVerifyResult verifyResult = paymentGateway.verifyVirtualAccountDeposit(orderId, verifyAmount);
         if (!verifyResult.verified()) {
             throw new CustomException(ErrorCode.PAYMENT_FAILED);
         }
 
-        selfProvider.getObject().completeDepositWebhook(orderId, amount);
+        boolean completed = selfProvider.getObject().completeDepositWebhook(orderId, verifyAmount);
+        if (completed) {
+            publishFundingPaidEvent(payment.getFundingId());
+        }
+    }
 
-        paymentWebhookLogRepository.save(PaymentWebhookLog.create(
-                resolvedEventId,
-                orderId,
-                "DONE",
-                amount,
-                "toss"
-        ));
-
-        Payment payment = paymentRepository.findByOrderId(orderId)
-                .orElseThrow(() -> new CustomException(ErrorCode.PAYMENT_NOT_FOUND));
-        publishFundingPaidEvent(payment.getFundingId());
+    /** 테스트·레거시 웹훅 호출용 */
+    @Deprecated
+    public void processDepositWebhook(String orderId, Long amount, String providedSecret, String eventId) {
+        processDepositWebhook(orderId, amount, providedSecret, eventId, null);
     }
 
     @Transactional
-    public void completeDepositWebhook(String orderId, Long amount) {
+    public boolean completeDepositWebhook(String orderId, Long amount) {
         Payment payment = paymentRepository.findByOrderId(orderId)
                 .orElseThrow(() -> new CustomException(ErrorCode.PAYMENT_NOT_FOUND));
 
         if (payment.getStatus() == PaymentStatus.SUCCESS) {
-            return;
+            return false;
         }
 
         if (payment.getMethod() != PaymentMethod.VIRTUAL_ACCOUNT) {
@@ -257,11 +291,34 @@ public class PaymentService {
                 .orElseThrow(() -> new CustomException(ErrorCode.PAYMENT_NOT_FOUND));
         vbankDeposit.markDeposited();
 
-        payment.complete("vbank-" + orderId);
+        payment.completeIfPending();
         funding.markAsPaid();
+        return true;
     }
 
-    // ── 조회 · 환불 ──────────────────────────────────────────────────────
+    @Transactional
+    public VirtualAccountIssueResult issueAndSaveVirtualAccount(
+            String orderId,
+            long amount,
+            VirtualAccountIssueResult issued
+    ) {
+        VirtualAccount saved = virtualAccountRepository.save(VirtualAccount.create(
+                orderId,
+                issued.bankCode(),
+                issued.accountNumber(),
+                issued.dueDate(),
+                amount
+        ));
+
+        return new VirtualAccountIssueResult(
+                saved.getId(),
+                saved.getBankCode(),
+                saved.getAccountNumber(),
+                saved.getDueDate()
+        );
+    }
+
+    // ── 조회 ──────────────────────────────────────────────────────────────
 
     // 내 결제 내역 조회 (스폰서 본인, 페이징)
     @Transactional(readOnly = true)
@@ -270,41 +327,17 @@ public class PaymentService {
                 .map(payment -> toResponse(payment, null, null, resolveVbankInfo(payment.getId())));
     }
 
-    // 결제 단건 조회
+    // 결제 단건 조회 — 후원자 본인 또는 ADMIN
     @Transactional(readOnly = true)
-    public PaymentResponse getPayment(Long paymentId) {
+    public PaymentResponse getPayment(Long paymentId, Long requesterId, Role requesterRole) {
+        if (requesterRole != Role.ADMIN) {
+            validateSponsorOwnsPayment(paymentId, requesterId);
+        }
+
         Payment payment = paymentRepository.findById(paymentId)
                 .orElseThrow(() -> new CustomException(ErrorCode.PAYMENT_NOT_FOUND));
 
         return toResponse(payment, null, null, resolveVbankInfo(payment.getId()));
-    }
-
-    // 환불 요청 — Payment/Funding REFUNDED + Idea 누적 후원금 차감
-    @Transactional
-    public void refundPayment(Long paymentId, Long sponsorId) {
-        Payment payment = paymentRepository.findById(paymentId)
-                .orElseThrow(() -> new CustomException(ErrorCode.PAYMENT_NOT_FOUND));
-
-        Funding funding = fundingRepository.findByIdForUpdate(payment.getFundingId())
-                .orElseThrow(() -> new CustomException(ErrorCode.FUNDING_NOT_FOUND));
-
-        if (!funding.getSponsorId().equals(sponsorId)) {
-            throw new CustomException(ErrorCode.FORBIDDEN);
-        }
-
-        if (payment.getStatus() != PaymentStatus.SUCCESS) {
-            throw new CustomException(ErrorCode.PAYMENT_NOT_READY);
-        }
-
-        if (funding.getStatus() != FundingStatus.PAID) {
-            throw new CustomException(ErrorCode.PAYMENT_NOT_READY);
-        }
-
-        funding.markAsRefunded();
-        payment.markAsRefunded();
-
-        ideaRepository.findByIdForUpdate(funding.getIdeaId())
-                .ifPresent(idea -> idea.subtractFundingAmount(funding.getAmount()));
     }
 
     // 결제 실패 처리 — PG 오류·가상계좌 만료 시 호출
@@ -312,8 +345,36 @@ public class PaymentService {
     public void failPayment(Long paymentId) {
         Payment payment = paymentRepository.findById(paymentId)
                 .orElseThrow(() -> new CustomException(ErrorCode.PAYMENT_NOT_FOUND));
-        if (payment.getStatus() == PaymentStatus.PENDING) {
-            payment.fail();
+        if (payment.getStatus() != PaymentStatus.PENDING) {
+            return;
+        }
+        payment.fail();
+        cancelFundingIfPending(payment.getFundingId());
+    }
+
+    private void cancelFundingIfPending(Long fundingId) {
+        fundingRepository.findById(fundingId).ifPresent(funding -> {
+            if (funding.getStatus() == FundingStatus.PENDING_PAYMENT) {
+                funding.markAsCancelled();
+            }
+        });
+    }
+
+    /**
+     * 결제가 속한 후원(Funding)의 후원자와 요청자가 일치하는지 검증합니다.
+     * 타인 결제의 생성·승인·조회를 차단합니다.
+     */
+    private void validateSponsorOwnsPayment(Long paymentId, Long sponsorId) {
+        Payment payment = paymentRepository.findById(paymentId)
+                .orElseThrow(() -> new CustomException(ErrorCode.PAYMENT_NOT_FOUND));
+        validateSponsorOwnsFunding(payment.getFundingId(), sponsorId);
+    }
+
+    private void validateSponsorOwnsFunding(Long fundingId, Long sponsorId) {
+        Funding funding = fundingRepository.findById(fundingId)
+                .orElseThrow(() -> new CustomException(ErrorCode.FUNDING_NOT_FOUND));
+        if (!funding.getSponsorId().equals(sponsorId)) {
+            throw new CustomException(ErrorCode.FORBIDDEN);
         }
     }
 
@@ -342,9 +403,45 @@ public class PaymentService {
         return "auto-" + orderId + "-" + amount;
     }
 
+    private void verifyWebhookAccess(String providedSecret, String orderId, String tossWebhookSecret) {
+        if (providedSecret != null && providedSecret.equals(paymentProperties.webhook().secret())) {
+            return;
+        }
+
+        if (tossWebhookSecret == null || tossWebhookSecret.isBlank()) {
+            throw new CustomException(ErrorCode.FORBIDDEN);
+        }
+
+        Payment payment = paymentRepository.findByOrderId(orderId)
+                .orElseThrow(() -> new CustomException(ErrorCode.PAYMENT_NOT_FOUND));
+
+        if (payment.getTossWebhookSecret() == null
+                || !payment.getTossWebhookSecret().equals(tossWebhookSecret)) {
+            throw new CustomException(ErrorCode.FORBIDDEN);
+        }
+    }
+
     private void verifyWebhookSecret(String providedSecret) {
+        String webhookSecret = paymentProperties.webhook().secret();
         if (providedSecret == null || !webhookSecret.equals(providedSecret)) {
             throw new CustomException(ErrorCode.FORBIDDEN);
+        }
+    }
+
+    public void verifyWebhookSecretOnly(String providedSecret) {
+        if (providedSecret != null && providedSecret.equals(paymentProperties.webhook().secret())) {
+            return;
+        }
+        throw new CustomException(ErrorCode.FORBIDDEN);
+    }
+
+    public void verifyWebhookSecretOnly(String providedSecret, String orderId, String tossWebhookSecret) {
+        try {
+            verifyWebhookAccess(providedSecret, orderId, tossWebhookSecret);
+        } catch (CustomException ignored) {
+            if (providedSecret == null || !providedSecret.equals(paymentProperties.webhook().secret())) {
+                throw new CustomException(ErrorCode.FORBIDDEN);
+            }
         }
     }
 

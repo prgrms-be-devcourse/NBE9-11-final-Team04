@@ -17,6 +17,7 @@ import com.team04.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.List;
 
@@ -28,6 +29,7 @@ public class MilestoneService {
     private final CompletionReportRepository completionReportRepository;
     private final SettlementService settlementService;
     private final RefundService refundService;
+    private final TransactionTemplate transactionTemplate;
 
     /**
      * 마일스톤 목록 조회
@@ -168,15 +170,24 @@ public class MilestoneService {
     /**
      * 이행 중단 처리
      * 관리자만 가능
-     * 현재 IN_PROGRESS 마일스톤 CANCELLED 전환 후 환불 장부 + 후원자별 환불 레코드 생성
+     * 마일스톤 CANCELLED → 환불 장부(PENDING) + Refund(PENDING) 생성 → PG 환불 실행
      */
-    @Transactional
     public void cancelMilestone(Long ideaId) {
-        Milestone milestone = milestoneRepository.findByIdeaIdAndStatusWithPessimisticLock(ideaId, MilestoneStatus.IN_PROGRESS)
-                .orElseThrow(() -> new CustomException(ErrorCode.MILESTONE_NOT_FOUND));
-        milestone.cancel();
-        settlementService.createCancelRefundSettlement(ideaId);
-        refundService.createCancelRefunds(ideaId);
+        List<Long> refundIds = transactionTemplate.execute(status -> {
+            Milestone milestone = milestoneRepository.findByIdeaIdAndStatusWithPessimisticLock(
+                            ideaId, MilestoneStatus.IN_PROGRESS)
+                    .orElseThrow(() -> new CustomException(ErrorCode.MILESTONE_NOT_FOUND));
+            milestone.cancel();
+            settlementService.createCancelRefundSettlement(ideaId);
+            return refundService.createCancelRefunds(ideaId);
+        });
+
+        if (refundIds != null) {
+            for (Long refundId : refundIds) {
+                refundService.executeRefund(refundId);
+            }
+            refundService.tryFinalizeRefundSettlement(ideaId);
+        }
     }
 
     private void startNextMilestone(Long ideaId, int step) {

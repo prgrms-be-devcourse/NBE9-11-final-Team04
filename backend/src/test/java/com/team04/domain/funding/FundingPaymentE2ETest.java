@@ -15,6 +15,9 @@ import com.team04.domain.payment.dto.request.ConfirmPaymentRequest;
 import com.team04.domain.payment.entity.PaymentTypes.PaymentMethod;
 import com.team04.domain.payment.entity.PaymentTypes.PaymentStatus;
 import com.team04.domain.payment.service.PaymentService;
+import com.team04.domain.settlement.dto.response.RefundResponse;
+import com.team04.domain.settlement.entity.RefundStatus;
+import com.team04.domain.settlement.service.RefundService;
 import com.team04.domain.user.entity.Role;
 import com.team04.domain.user.entity.User;
 import com.team04.domain.user.repository.UserRepository;
@@ -41,6 +44,9 @@ class FundingPaymentE2ETest {
 
     @Autowired
     private PaymentService paymentService;
+
+    @Autowired
+    private RefundService refundService;
 
     @Autowired
     private FundingRepository fundingRepository;
@@ -118,7 +124,8 @@ class FundingPaymentE2ETest {
 
         var confirmed = paymentService.confirmPayment(
                 created.payment().paymentId(),
-                new ConfirmPaymentRequest("mock-key-success", 10_000L)
+                new ConfirmPaymentRequest("mock-key-success", 10_000L),
+                sponsorId
         );
 
         assertThat(confirmed.status()).isEqualTo(PaymentStatus.SUCCESS);
@@ -126,6 +133,10 @@ class FundingPaymentE2ETest {
         var funding = fundingRepository.findById(created.fundingId()).orElseThrow();
         assertThat(funding.getStatus()).isEqualTo(FundingStatus.PAID);
         assertThat(funding.getRewardType()).isEqualTo(RewardType.REWARD_POINT);
+
+        var idea = ideaRepository.findById(ideaId).orElseThrow();
+        assertThat(idea.getCurrentAmount()).isEqualTo(10_000L);
+        assertThat(idea.getSponsorCount()).isEqualTo(1);
     }
 
     @Test
@@ -150,5 +161,42 @@ class FundingPaymentE2ETest {
 
         var funding = fundingRepository.findById(created.fundingId()).orElseThrow();
         assertThat(funding.getStatus()).isEqualTo(FundingStatus.PAID);
+
+        var idea = ideaRepository.findById(ideaId).orElseThrow();
+        assertThat(idea.getCurrentAmount()).isEqualTo(50_000L);
+        assertThat(idea.getSponsorCount()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("카드: 후원 -> confirm -> 환불 5단계 완료")
+    void cardFundingRefundE2E() {
+        CreateFundingResponse created = fundingService.applySponsorship(
+                ideaId,
+                sponsorId,
+                new SponsorRequest(10_000L, PaymentMethod.CARD)
+        );
+
+        paymentService.confirmPayment(
+                created.payment().paymentId(),
+                new ConfirmPaymentRequest("mock-key-success", 10_000L),
+                sponsorId
+        );
+
+        RefundResponse refund = refundService.requestSponsorRefund(
+                created.payment().paymentId(),
+                sponsorId
+        );
+
+        assertThat(refund.status()).isEqualTo(RefundStatus.COMPLETED);
+        assertThat(refund.pgCancelKey()).isNotBlank();
+
+        var payment = paymentService.getPayment(created.payment().paymentId(), sponsorId, Role.SPONSOR);
+        assertThat(payment.status()).isEqualTo(PaymentStatus.REFUNDED);
+
+        var funding = fundingRepository.findById(created.fundingId()).orElseThrow();
+        assertThat(funding.getStatus()).isEqualTo(FundingStatus.REFUNDED);
+
+        var idea = ideaRepository.findById(ideaId).orElseThrow();
+        assertThat(idea.getCurrentAmount()).isZero();
     }
 }
