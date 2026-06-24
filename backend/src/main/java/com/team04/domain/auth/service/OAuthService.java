@@ -95,9 +95,9 @@ public class OAuthService {
 
     @Transactional
     public OAuthResponse processKakao(OAuthLoginRequest request) {
-//        if (!oAuthCsrfRepository.validateAndDelete(request.state())) {
-//            throw new CustomException(ErrorCode.INVALID_OAUTH_STATE);
-//        }
+        if (!oAuthCsrfRepository.validateAndDelete(request.state())) {
+            throw new CustomException(ErrorCode.INVALID_OAUTH_STATE);
+        }
 
         KakaoUserInfo userInfo = kakaoOAuthClient.getUserInfo(request.code(), request.redirectUri());
 
