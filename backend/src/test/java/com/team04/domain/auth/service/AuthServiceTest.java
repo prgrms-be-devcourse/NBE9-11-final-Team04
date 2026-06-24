@@ -9,6 +9,7 @@ import com.team04.global.exception.CustomException;
 import com.team04.global.exception.ErrorCode;
 import com.team04.global.util.JwtUtil;
 import com.team04.infra.email.EmailService;
+import com.team04.infra.redis.AdminInviteRepository;
 import com.team04.infra.redis.OtpRepository;
 import com.team04.infra.redis.RefreshTokenRepository;
 import org.junit.jupiter.api.DisplayName;
@@ -44,6 +45,8 @@ class AuthServiceTest {
     private OtpRepository otpRepository;
     @Mock
     private EmailService emailService;
+    @Mock
+    private AdminInviteRepository adminInviteRepository;
 
     @InjectMocks
     private AuthService authService;
@@ -59,6 +62,7 @@ class AuthServiceTest {
     void signup_성공() {
         SignupRequest request = new SignupRequest("test@test.com", "password1!", "홍길동", "길동이", 25);
 
+        given(otpRepository.isVerified("test@test.com")).willReturn(true);
         given(jwtUtil.generateAccessToken(any(), any())).willReturn("accessToken");
         given(jwtUtil.generateRefreshToken(any())).willReturn("refreshToken");
 
@@ -73,6 +77,7 @@ class AuthServiceTest {
     void signup_이메일중복() {
         SignupRequest request = new SignupRequest("test@test.com", "password1!", "홍길동", "길동이", 25);
 
+        given(otpRepository.isVerified("test@test.com")).willReturn(true);
         given(userRepository.existsByEmail("test@test.com")).willReturn(true);
 
         assertThatThrownBy(() -> authService.signup(request))
