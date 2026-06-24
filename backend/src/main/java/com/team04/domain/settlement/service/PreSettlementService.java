@@ -52,6 +52,7 @@ public class PreSettlementService {
     )
     @Transactional
     public PreSettlementResponse requestPreSettlement(Long ideaId, PreSettlementRequest request, Long userId) {
+        ideaService.validateNotSuspended(ideaId);
         milestoneRepository.findByIdeaIdAndStatusWithPessimisticLock(ideaId, MilestoneStatus.IN_PROGRESS)
                 .orElseThrow(() -> new CustomException(ErrorCode.PRE_SETTLEMENT_MILESTONE_NOT_IN_PROGRESS));
 

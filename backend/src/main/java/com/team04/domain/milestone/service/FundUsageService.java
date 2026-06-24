@@ -37,6 +37,7 @@ public class FundUsageService {
      */
     @Transactional
     public FundUsageResponse addFundUsage(Long ideaId, FundUsageRequest request, Long userId) {
+        ideaService.validateNotSuspended(ideaId);
         IdeaResponse idea = ideaService.getIdea(ideaId);
         if (!idea.userId().equals(userId)) {
             throw new CustomException(ErrorCode.FORBIDDEN);

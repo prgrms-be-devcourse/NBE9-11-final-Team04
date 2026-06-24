@@ -287,4 +287,17 @@ public class Idea extends BaseEntity {
         this.rejectReason = reason;
         changeStatus(IdeaStatus.REJECTED);
     }
+
+    /** 관리자 일시 중단 처리합니다. */
+    public void suspend() {
+        changeStatus(IdeaStatus.SUSPENDED);
+    }
+
+    /** 관리자 일시 중단 해제 후 이전 상태(OPEN 또는 IN_PROGRESS)로 복원합니다. */
+    public void restore(IdeaStatus previousStatus) {
+        if (this.status != IdeaStatus.SUSPENDED) {
+            throw new CustomException(ErrorCode.INVALID_IDEA_STATUS_TRANSITION);
+        }
+        changeStatus(previousStatus);
+    }
 }

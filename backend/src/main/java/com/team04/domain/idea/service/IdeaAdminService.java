@@ -49,6 +49,23 @@ public class IdeaAdminService {
         idea.reject(reason);
     }
 
+    /** 관리자 권한으로 OPEN 또는 IN_PROGRESS 상태의 아이디어를 일시 중단합니다. */
+    @Transactional
+    public void suspendIdea(Long ideaId) {
+        Idea idea = findActiveIdea(ideaId);
+        idea.suspend();
+    }
+
+    /** 일시 중단된 아이디어를 이전 상태(OPEN 또는 IN_PROGRESS)로 복원합니다. */
+    @Transactional
+    public void restoreIdea(Long ideaId, IdeaStatus previousStatus) {
+        Idea idea = findActiveIdea(ideaId);
+        if (previousStatus != IdeaStatus.OPEN && previousStatus != IdeaStatus.IN_PROGRESS) {
+            throw new CustomException(ErrorCode.INVALID_IDEA_STATUS_TRANSITION);
+        }
+        idea.restore(previousStatus);
+    }
+
     /** 전체 아이디어 상태별 건수를 반환합니다. */
     @Transactional(readOnly = true)
     public Map<IdeaStatus, Long> getStatusStats() {

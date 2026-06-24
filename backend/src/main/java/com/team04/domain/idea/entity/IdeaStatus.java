@@ -31,7 +31,10 @@ public enum IdeaStatus {
     CANCELLATION_REQUESTED,
 
     /** 아이디어 진행이 취소된 상태입니다. */
-    CANCELLED;
+    CANCELLED,
+
+    /** 관리자가 일시 중단한 상태입니다. */
+    SUSPENDED;
 
     /** 아이디어 내용을 수정할 수 있는 심사 대기 상태인지 확인합니다. */
     public boolean isEditable() {
@@ -61,15 +64,21 @@ public enum IdeaStatus {
 
             case OPEN ->
                     targetStatus == IN_PROGRESS
+                            || targetStatus == SUSPENDED
                             || targetStatus == CANCELLED;
 
             case IN_PROGRESS ->
                     targetStatus == COMPLETED
                             || targetStatus == CANCELLATION_REQUESTED
+                            || targetStatus == SUSPENDED
                             || targetStatus == CANCELLED;
 
             case CANCELLATION_REQUESTED ->
                     targetStatus == CANCELLED
+                            || targetStatus == IN_PROGRESS;
+
+            case SUSPENDED ->
+                    targetStatus == OPEN
                             || targetStatus == IN_PROGRESS;
 
             case COMPLETED, CANCELLED, REJECTED ->

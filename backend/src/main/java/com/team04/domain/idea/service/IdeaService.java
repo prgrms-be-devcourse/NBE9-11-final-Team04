@@ -380,6 +380,14 @@ public class IdeaService {
         return draft;
     }
 
+    /** 관리자 일시 중단 상태인 경우 예외를 발생시킵니다. */
+    public void validateNotSuspended(Long ideaId) {
+        Idea idea = findActiveIdea(ideaId);
+        if (idea.getStatus() == IdeaStatus.SUSPENDED) {
+            throw new CustomException(ErrorCode.IDEA_SUSPENDED);
+        }
+    }
+
     /** 소프트 삭제되지 않은 아이디어를 조회하고 없으면 공통 예외를 발생시킵니다. */
     private Idea findActiveIdea(Long ideaId) {
         return ideaRepository.findByIdAndDeletedAtIsNull(ideaId)
