@@ -328,6 +328,5 @@ public class SettlementService {
         createCancelRefundSettlement(ideaId);
         createDepositForfeitSettlement(ideaId);
         refundService.createCancelRefunds(ideaId, false);
-        fundingService.forfeitDeposit(ideaId);
     }
 }
