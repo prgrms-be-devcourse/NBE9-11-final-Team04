@@ -47,8 +47,11 @@ public class DisputeService {
     private final DisputeParticipantValidator participantValidator;
     private final ApplicationEventPublisher eventPublisher;
     private final StorageClient storageClient;
-    private final RefundService refundService;
     private final IdeaAdminService ideaAdminService;
+
+    @Lazy
+    @Autowired
+    private RefundService refundService;
 
     @Lazy
     @Autowired
