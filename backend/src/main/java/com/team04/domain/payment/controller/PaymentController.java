@@ -92,17 +92,25 @@ public class PaymentController {
 
     @PostMapping("/webhooks/toss")
     public ApiResponse<Void> handleTossWebhook(
-            @RequestHeader(WEBHOOK_SECRET_HEADER) String webhookSecret,
-            @Valid @RequestBody TossWebhookRequest request
+            @RequestHeader(value = WEBHOOK_SECRET_HEADER, required = false) String webhookSecret,
+            @RequestBody TossWebhookRequest request
     ) {
-        if ("DONE".equalsIgnoreCase(request.status())) {
-            paymentService.processDepositWebhook(
-                    request.orderId(),
-                    request.amount(),
-                    webhookSecret,
-                    request.eventId()
-            );
+        if (!"DONE".equalsIgnoreCase(request.resolvedStatus())) {
+            return ApiResponse.ofSuccessWithoutBody();
         }
+
+        String orderId = request.resolvedOrderId();
+        if (orderId == null || orderId.isBlank()) {
+            return ApiResponse.ofSuccessWithoutBody();
+        }
+
+        paymentService.processDepositWebhook(
+                orderId,
+                request.resolvedAmount(),
+                webhookSecret,
+                request.resolvedEventId(),
+                request.resolvedSecret()
+        );
         return ApiResponse.ofSuccessWithoutBody();
     }
 }
