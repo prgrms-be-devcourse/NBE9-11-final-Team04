@@ -61,8 +61,7 @@ class PaymentWebhookIdempotencyTest {
                 proposer.getId(), "테스트", IdeaCategory.TECH, "한줄", "문제", "해결", "목표",
                 "고객", "경쟁", "팀", 1_000_000L, 300_000L,
                 LocalDateTime.now().minusDays(1), LocalDateTime.now().plusDays(30),
-                RewardType.REWARD_POINT, null, null,
-                "홍길동", "088", "12345678901234");
+                RewardType.REWARD_POINT, null, null);
         idea.changeStatus(IdeaStatus.EXPERT_PENDING);
         idea.changeStatus(IdeaStatus.ADMIN_PENDING);
         idea.changeStatus(IdeaStatus.OPEN);
