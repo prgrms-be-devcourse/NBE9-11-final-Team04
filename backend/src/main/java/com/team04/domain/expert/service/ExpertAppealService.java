@@ -9,6 +9,7 @@ import com.team04.domain.expert.repository.ExpertAppealRepository;
 import com.team04.domain.expert.repository.ExpertProfileRepository;
 import com.team04.global.exception.CustomException;
 import com.team04.global.exception.ErrorCode;
+import com.team04.global.storage.AppealStorageClient;
 import com.team04.global.storage.StorageClient;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -23,7 +24,7 @@ public class ExpertAppealService {
 
     private final ExpertProfileRepository expertProfileRepository;
     private final ExpertAppealRepository expertAppealRepository;
-    private final StorageClient storageClient;
+    private final AppealStorageClient appealStorageClient;
 
     private static final int MAX_APPEAL_COUNT = 3;
     private static final int APPEAL_DEADLINE_DAYS = 7;
@@ -54,18 +55,18 @@ public class ExpertAppealService {
         }
 
         // 파일 업로드
-        String fileUrl = null;
+        String fileKey = null;
         if (file != null && !file.isEmpty()) {
-            fileUrl = storageClient.upload(file, "expert/appeal");
+            fileKey = appealStorageClient.upload(file);
         }
 
         // 소명 자료 저장
-        ExpertAppeal appeal = ExpertAppeal.create(profile, fileUrl, request.content());
+        ExpertAppeal appeal = ExpertAppeal.create(profile, fileKey, request.content());
         expertAppealRepository.save(appeal);
 
         // 제출 횟수 증가
         profile.increaseAppealCount();
 
-        return ExpertAppealResponse.from(appeal, profile.getAppealCount());
+        return ExpertAppealResponse.from(appeal, profile.getAppealCount(), appealStorageClient);
     }
 }

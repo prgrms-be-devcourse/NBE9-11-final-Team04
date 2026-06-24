@@ -12,6 +12,7 @@ import com.team04.domain.expert.repository.ExpertProfileRepository;
 import com.team04.domain.user.repository.UserRepository;
 import com.team04.global.exception.CustomException;
 import com.team04.global.exception.ErrorCode;
+import com.team04.global.storage.AppealStorageClient;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -28,6 +29,7 @@ public class ExpertProfileService {
     private final ExpertProfileRepository expertProfileRepository;
     private final UserRepository userRepository;
     private final ExpertAppealRepository expertAppealRepository;
+    private final AppealStorageClient appealStorageClient;
 
     @Transactional
     public ExpertProfileResponse registerProfile(Long userId, ExpertProfileRequest request) {
@@ -78,7 +80,7 @@ public class ExpertProfileService {
         return expertAppealRepository
                 .findByExpertProfileIdOrderBySubmittedAtDesc(expertProfileId)
                 .stream()
-                .map(appeal -> ExpertAppealResponse.from(appeal, 0))
+                .map(appeal -> ExpertAppealResponse.from(appeal, 0, appealStorageClient))
                 .toList();
     }
 }
