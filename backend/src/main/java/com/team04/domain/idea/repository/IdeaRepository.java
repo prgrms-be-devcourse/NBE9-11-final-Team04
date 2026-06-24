@@ -28,6 +28,9 @@ public interface IdeaRepository extends JpaRepository<Idea, Long>, IdeaRepositor
     /** 특정 사용자가 등록한 소프트 삭제되지 않은 아이디어 목록을 최신순으로 조회합니다. */
     List<Idea> findByUserIdAndDeletedAtIsNullOrderByCreatedAtDesc(Long userId);
 
+    /** 여러 식별자에 해당하는 소프트 삭제되지 않은 아이디어 목록을 일괄 조회합니다. */
+    List<Idea> findByIdInAndDeletedAtIsNull(List<Long> ids);
+
     // [notification] 마감임박 알림 스케줄러에서 사용 — 목표금액 미달성이면서 마감일이 from~to 사이인 아이디어 조회
     @Query("SELECT i FROM Idea i WHERE i.status = :status AND i.fundingEndAt >= :from AND i.fundingEndAt < :to AND i.currentAmount < i.goalAmount AND i.deletedAt IS NULL")
     List<Idea> findClosingIdeas(@Param("status") IdeaStatus status,

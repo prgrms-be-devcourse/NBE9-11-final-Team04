@@ -19,7 +19,9 @@ import com.team04.domain.idea.dto.request.ReportIdeaRequest;
 import com.team04.domain.idea.dto.request.UpdateIdeaRequest;
 import com.team04.domain.idea.repository.IdeaRepository;
 import com.team04.global.storage.StorageClient;
+import com.team04.global.util.ImageUrlConverter;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
@@ -30,7 +32,10 @@ import org.springframework.web.multipart.MultipartFile;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /** 아이디어 등록, 조회, 수정, 삭제, 신고 비즈니스 로직을 처리하는 서비스입니다. */
 @Service
@@ -47,7 +52,6 @@ public class IdeaService {
     private final MilestoneRepository milestoneRepository;
     private final DisputeService disputeService;
     private final StorageClient storageClient;
-    private final TransactionTemplate transactionTemplate;
 
     /** 아이디어를 등록하고 마일스톤을 함께 저장합니다. */
     @Transactional
@@ -71,7 +75,7 @@ public class IdeaService {
                 request.fundingEndAt(),
                 request.rewardType(),
                 request.imageUrl(),
-                joinImageUrls(request.imageUrls())
+                ImageUrlConverter.join(request.imageUrls())
         );
         Idea savedIdea = ideaRepository.save(idea);
 
@@ -90,9 +94,9 @@ public class IdeaService {
         return IdeaResponse.of(savedIdea);
     }
 
-    /** 프로젝트 목록을 카테고리, 마감임박 필터, 정렬 조건에 따라 Slice로 조회합니다. */
+    /** 프로젝트 목록을 카테고리, 마감임박 필터, 정렬 조건에 따라 Page로 조회합니다. */
     @Transactional(readOnly = true)
-    public Slice<IdeaSummaryResponse> getProjects(
+    public Page<IdeaSummaryResponse> getProjects(
             IdeaCategory category,
             Boolean closingSoonOnly,
             String keyword,
@@ -139,11 +143,24 @@ public class IdeaService {
         }
     }
 
-    /** 로그인 사용자의 관심 프로젝트 목록을 Slice 페이지네이션으로 조회합니다. */
+    /** 로그인 사용자의 관심 프로젝트 목록을 Page 페이지네이션으로 조회합니다. */
     @Transactional(readOnly = true)
-    public Slice<IdeaResponse> getBookmarks(Long userId, Pageable pageable) {
-        return ideaBookmarkRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable)
-                .map(bookmark -> IdeaResponse.of(findActiveIdea(bookmark.getIdeaId())));
+    public Page<IdeaResponse> getBookmarks(Long userId, Pageable pageable) {
+        Page<IdeaBookmark> bookmarks = ideaBookmarkRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable);
+        List<Long> ideaIds = bookmarks.stream()
+                .map(IdeaBookmark::getIdeaId)
+                .toList();
+        Map<Long, Idea> ideasById = ideaRepository.findByIdInAndDeletedAtIsNull(ideaIds)
+                .stream()
+                .collect(Collectors.toMap(Idea::getId, Function.identity()));
+
+        return bookmarks.map(bookmark -> {
+            Idea idea = ideasById.get(bookmark.getIdeaId());
+            if (idea == null) {
+                throw new CustomException(ErrorCode.IDEA_NOT_FOUND);
+            }
+            return IdeaResponse.of(idea);
+        });
     }
 
     /** 보관 기간 내 본인 임시저장 목록을 최신 수정순으로 조회합니다. */
@@ -177,7 +194,7 @@ public class IdeaService {
                 request.rewardType(),
                 request.imageUrl()
         );
-        draft.updateImageUrls(joinImageUrls(request.imageUrls()));
+        draft.updateImageUrls(ImageUrlConverter.join(request.imageUrls()));
         return IdeaDraftResponse.of(ideaDraftRepository.save(draft));
     }
 
@@ -202,7 +219,7 @@ public class IdeaService {
                 request.rewardType(),
                 request.imageUrl()
         );
-        draft.updateImageUrls(joinImageUrls(request.imageUrls()));
+        draft.updateImageUrls(ImageUrlConverter.join(request.imageUrls()));
         return IdeaDraftResponse.of(draft);
     }
 
@@ -265,7 +282,7 @@ public class IdeaService {
                 request.rewardType(),
                 request.imageUrl()
         );
-        idea.updateImageUrls(joinImageUrls(request.imageUrls()));
+        idea.updateImageUrls(ImageUrlConverter.join(request.imageUrls()));
         return IdeaResponse.of(idea);
     }
 
@@ -280,16 +297,23 @@ public class IdeaService {
     /** 작성자 본인이고 심사 대기 상태인 경우에만 대표 이미지를 업로드하고 URL을 저장합니다. */
     public IdeaResponse uploadIdeaImage(Long ideaId, Long userId, MultipartFile image) {
         validateImageFile(image);
-        validateIdeaImageUploadPermission(ideaId, userId);
+        Idea idea = findActiveIdea(ideaId);
+        idea.validateOwner(userId);
+        idea.validateEditable();
 
         String imageUrl = storageClient.upload(image, "ideas/thumbnail");
 
-        return transactionTemplate.execute(status -> {
-            Idea idea = findActiveIdea(ideaId);
-            idea.validateOwner(userId);
-            idea.updateImageUrl(imageUrl);
-            return IdeaResponse.of(idea);
-        });
+        // S3 업로드 성공 후 DB 저장이 실패하면 업로드된 파일이 고아 파일로 남을 수 있습니다.
+        return updateIdeaImageUrl(ideaId, userId, imageUrl);
+    }
+
+    /** 대표 이미지 URL 저장은 별도 트랜잭션에서 재조회 후 처리합니다. */
+    @Transactional
+    public IdeaResponse updateIdeaImageUrl(Long ideaId, Long userId, String imageUrl) {
+        Idea idea = findActiveIdea(ideaId);
+        idea.validateOwner(userId);
+        idea.updateImageUrl(imageUrl);
+        return IdeaResponse.of(idea);
     }
 
     /** 작성자 본인이고 심사 대기 상태인 경우에만 아이디어를 소프트 삭제합니다. */
@@ -332,15 +356,6 @@ public class IdeaService {
         }
     }
 
-    /** S3 업로드 전에 대표 이미지 변경 권한과 수정 가능 상태를 검증합니다. */
-    private void validateIdeaImageUploadPermission(Long ideaId, Long userId) {
-        transactionTemplate.executeWithoutResult(status -> {
-            Idea idea = findActiveIdea(ideaId);
-            idea.validateOwner(userId);
-            idea.updateImageUrl(idea.getImageUrl());
-        });
-    }
-
     /** 업로드할 이미지 파일 목록이 비어 있지 않은지 검증합니다. */
     private void validateImageFiles(List<MultipartFile> images) {
         if (images == null || images.isEmpty()) {
@@ -356,20 +371,12 @@ public class IdeaService {
         }
     }
 
-    /** 본문 이미지 URL 리스트를 DB 저장용 콤마 구분 문자열로 변환합니다. */
-    private String joinImageUrls(List<String> imageUrls) {
-        if (imageUrls == null || imageUrls.isEmpty()) {
-            return null;
-        }
-        return String.join(",", imageUrls);
-    }
-
     /** 임시저장을 조회하고 작성자 본인 접근인지 검증합니다. */
     private IdeaDraft findDraft(Long draftId, Long userId) {
         IdeaDraft draft = ideaDraftRepository.findById(draftId)
                 .orElseThrow(() -> new CustomException(ErrorCode.IDEA_DRAFT_NOT_FOUND));
         draft.validateOwner(userId);
-        if (draft.getCreatedAt().isBefore(draftRetentionStartAt())) {
+        if (draft.getUpdatedAt().isBefore(draftRetentionStartAt())) {
             throw new CustomException(ErrorCode.IDEA_DRAFT_NOT_FOUND);
         }
         return draft;
