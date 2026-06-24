@@ -10,13 +10,13 @@ server {
         try_files $uri $uri/ /index.html;
     }
 
-    # 토스 웹훅 — 로컬/수동 배포용 (운영은 nginx.conf.template + envsubst)
+    # 토스 웹훅 — nginx가 서버 시크릿 헤더 주입 (토스는 커스텀 헤더 미전송)
     location /api/payments/webhooks/ {
         proxy_pass http://localhost:8080;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Webhook-Secret "ecaf908f9dea08daa8583b869ab1de3529813a073bc3e37849785d34ec1de63d";
+        proxy_set_header X-Webhook-Secret "${PAYMENT_WEBHOOK_SECRET}";
     }
 
     # 백엔드 API 프록시
