@@ -1,5 +1,6 @@
 package com.team04.infra.batch;
 
+import com.team04.domain.funding.service.FundingService;
 import com.team04.domain.idea.service.IdeaService;
 import com.team04.domain.settlement.service.RefundService;
 import com.team04.domain.settlement.service.SettlementService;
@@ -20,6 +21,7 @@ public class SettlementScheduler {
     private final IdeaService ideaService;
     private final SettlementService settlementService;
     private final RefundService refundService;
+    private final FundingService fundingService;
     private final TransactionTemplate transactionTemplate;
 
     /**
@@ -39,7 +41,9 @@ public class SettlementScheduler {
             try {
                 transactionTemplate.executeWithoutResult(status -> {
                     settlementService.createGoalNotMetRefundSettlement(ideaId);
+                    settlementService.createGoalNotMetDepositRefundSettlement(ideaId);
                     refundService.createGoalNotMetRefunds(ideaId);
+                    fundingService.releaseDeposit(ideaId);
                 });
                 log.info("환불 처리 완료 - ideaId: {}", ideaId);
             } catch (Exception e) {

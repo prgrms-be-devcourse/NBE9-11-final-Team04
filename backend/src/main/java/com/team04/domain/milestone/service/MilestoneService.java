@@ -1,5 +1,6 @@
 package com.team04.domain.milestone.service;
 
+import com.team04.domain.funding.service.FundingService;
 import com.team04.domain.milestone.dto.request.CompletionReportRequest;
 import com.team04.domain.milestone.dto.response.CompletionReportResponse;
 import com.team04.domain.milestone.dto.response.MilestoneResponse;
@@ -33,6 +34,7 @@ public class MilestoneService {
     private final CompletionReportRepository completionReportRepository;
     private final SettlementService settlementService;
     private final RefundService refundService;
+    private final FundingService fundingService;
     private final StorageClient storageClient;
 
     /**
@@ -141,22 +143,56 @@ public class MilestoneService {
     }
 
     /**
-     * 완료/소명 보고서 승인 (정상 진행)
+     * 완료 보고서 승인 (정상 진행)
      * 관리자만 가능
-     * 3단계 완료 승인 시 최종 정산 생성
+     * 3단계 완료 승인 시 최종 정산 + 보증금 전액 환급 생성
      * 3단계 미만 완료 승인 시 다음 마일스톤 자동 시작
      */
     @Transactional
-    public CompletionReportResponse approveReport(Long milestoneId) {
+    public CompletionReportResponse approveCompletionReport(Long milestoneId) {
         Milestone milestone = milestoneRepository.findByIdWithPessimisticLock(milestoneId)
                 .orElseThrow(() -> new CustomException(ErrorCode.MILESTONE_NOT_FOUND));
 
-        CompletionReport report = findLatestReport(milestoneId);
+        CompletionReport report = completionReportRepository
+                .findByMilestoneIdAndType(milestoneId, CompletionReportType.COMPLETION)
+                .orElseThrow(() -> new CustomException(ErrorCode.INVALID_MILESTONE_STATUS_TRANSITION));
+
         report.approve();
         milestone.complete();
 
         if (milestone.getStep() == 3) {
             settlementService.createFinalSettlement(milestone.getIdeaId());
+            settlementService.createCompletedDepositRefundSettlement(milestone.getIdeaId());
+            fundingService.releaseDeposit(milestone.getIdeaId());
+        } else {
+            startNextMilestone(milestone.getIdeaId(), milestone.getStep() + 1);
+        }
+
+        return CompletionReportResponse.from(report);
+    }
+
+    /**
+     * 소명 보고서 승인 (계속 진행 인정)
+     * 관리자만 가능
+     * 소명 인정 후 다음 마일스톤 자동 시작
+     */
+    @Transactional
+    public CompletionReportResponse approveAppealReport(Long milestoneId) {
+        Milestone milestone = milestoneRepository.findByIdWithPessimisticLock(milestoneId)
+                .orElseThrow(() -> new CustomException(ErrorCode.MILESTONE_NOT_FOUND));
+
+        CompletionReport report = completionReportRepository
+                .findByMilestoneIdAndType(milestoneId, CompletionReportType.APPEAL)
+                .orElseThrow(() -> new CustomException(ErrorCode.INVALID_MILESTONE_STATUS_TRANSITION));
+
+        report.approve();
+        milestone.complete();
+
+        if (milestone.getStep() == 3) {
+            // 3단계 소명 승인 = 최종 완성으로 처리
+            settlementService.createFinalSettlement(milestone.getIdeaId());
+            settlementService.createCompletedDepositRefundSettlement(milestone.getIdeaId());
+            fundingService.releaseDeposit(milestone.getIdeaId());
         } else {
             startNextMilestone(milestone.getIdeaId(), milestone.getStep() + 1);
         }
@@ -197,8 +233,9 @@ public class MilestoneService {
         report.approve();
         milestone.cancel();
 
-        settlementService.createCancelRefundSettlement(milestone.getIdeaId());
-        refundService.createCancelRefunds(milestone.getIdeaId());
+        settlementService.createJustifiedCancelRefundSettlement(milestone.getIdeaId());
+        settlementService.createDepositRefundSettlement(milestone.getIdeaId());
+        refundService.createCancelRefunds(milestone.getIdeaId(), true); // 정당한 사유 — 보증금 잔액 제안자 환급
     }
 
     /**
@@ -217,8 +254,9 @@ public class MilestoneService {
         }
 
         milestone.cancel();
-        settlementService.createForfeitSettlement(ideaId);
-        refundService.createCancelRefunds(ideaId);
+        settlementService.createCancelRefundSettlement(ideaId);        // 먹튀/잠수 — 후원금 잔액
+        settlementService.createDepositForfeitSettlement(ideaId);      // 먹튀/잠수 — 보증금 몰수
+        refundService.createCancelRefunds(ideaId, false); // 먹튀/잠수 — 보증금 전액 후원자 분배
     }
 
     /**
@@ -230,13 +268,14 @@ public class MilestoneService {
         Milestone milestone = milestoneRepository.findByIdeaIdAndStatusWithPessimisticLock(ideaId, MilestoneStatus.IN_PROGRESS)
                 .orElseThrow(() -> new CustomException(ErrorCode.MILESTONE_NOT_FOUND));
         milestone.cancel();
-        settlementService.createCancelRefundSettlement(ideaId);
-        refundService.createCancelRefunds(ideaId);
+        settlementService.createCancelRefundSettlement(ideaId);        // 수동 중단 — 후원금 잔액
+        settlementService.createDepositForfeitSettlement(ideaId);      // 수동 중단 — 보증금 몰수
+        refundService.createCancelRefunds(ideaId, false); // 수동 중단 — 보증금 전액 후원자 분배
     }
 
     /**
      * 펀딩 목표 달성 시 1단계 마일스톤 자동 시작
-     * TODO: 펀딩 도메인 담당자에게 FundingSuccessEvent 발행 요청 필요
+     * FundingAchievementListener에서 FundingPaidEvent 수신 후 목표 달성 확인 시 호출
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void startFirstMilestone(Long ideaId) {

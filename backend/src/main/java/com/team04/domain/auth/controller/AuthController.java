@@ -1,8 +1,11 @@
 package com.team04.domain.auth.controller;
 
 import com.team04.domain.auth.dto.request.*;
+import com.team04.domain.auth.dto.response.OAuthAuthorizeResponse;
+import com.team04.domain.auth.dto.response.OAuthResponse;
 import com.team04.domain.auth.dto.response.TokenResponse;
 import com.team04.domain.auth.service.AuthService;
+import com.team04.domain.auth.service.OAuthService;
 import com.team04.global.response.ApiResponse;
 import com.team04.global.security.CustomUserDetails;
 import jakarta.servlet.http.HttpServletResponse;
@@ -12,11 +15,9 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.time.Duration;
 
@@ -26,6 +27,7 @@ import java.time.Duration;
 public class AuthController {
 
     private final AuthService authService;
+    private final OAuthService oAuthService;
 
     @PostMapping("/signup")
     public ResponseEntity<ApiResponse<TokenResponse>> signup(
@@ -71,6 +73,74 @@ public class AuthController {
         authService.logout(userDetails.getUserId());
         clearTokenCookies(response);
         return ApiResponse.ofSuccessWithoutBody();
+    }
+
+    @PostMapping("/admin-invitations")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<Void> sendAdminInvite(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestBody @Valid AdminInviteRequest request
+    ) {
+        authService.sendAdminInvite(userDetails.getUserId(), request);
+        return ApiResponse.ofSuccessWithoutBody();
+    }
+
+    @PostMapping("/admin-signup")
+    public ResponseEntity<ApiResponse<TokenResponse>> adminSignup(
+            @RequestBody @Valid AdminSignupRequest request,
+            HttpServletResponse response
+    ) {
+        TokenResponse tokenResponse = authService.adminSignup(request);
+        setTokenCookies(response, tokenResponse);
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ofSuccess(tokenResponse));
+    }
+
+    @GetMapping("/oauth2/google/authorize")
+    public ApiResponse<OAuthAuthorizeResponse> getGoogleAuthorizeUrl(
+            @RequestParam String redirectUri
+    ) {
+        return ApiResponse.ofSuccess(oAuthService.getGoogleAuthorizeUrl(redirectUri));
+    }
+
+    @GetMapping("/oauth2/kakao/authorize")
+    public ApiResponse<OAuthAuthorizeResponse> getKakaoAuthorizeUrl(
+            @RequestParam String redirectUri
+    ) {
+        return ApiResponse.ofSuccess(oAuthService.getKakaoAuthorizeUrl(redirectUri));
+    }
+
+    @PostMapping("/oauth2/google")
+    public ApiResponse<OAuthResponse> processGoogle(
+            @RequestBody @Valid OAuthLoginRequest request,
+            HttpServletResponse response
+    ) {
+        OAuthResponse oAuthResponse = oAuthService.processGoogle(request);
+        if ("LOGIN".equals(oAuthResponse.type())) {
+            setTokenCookies(response, new TokenResponse(oAuthResponse.accessToken(), oAuthResponse.refreshToken()));
+        }
+        return ApiResponse.ofSuccess(oAuthResponse);
+    }
+
+    @PostMapping("/oauth2/kakao")
+    public ApiResponse<OAuthResponse> processKakao(
+            @RequestBody @Valid OAuthLoginRequest request,
+            HttpServletResponse response
+    ) {
+        OAuthResponse oAuthResponse = oAuthService.processKakao(request);
+        if ("LOGIN".equals(oAuthResponse.type())) {
+            setTokenCookies(response, new TokenResponse(oAuthResponse.accessToken(), oAuthResponse.refreshToken()));
+        }
+        return ApiResponse.ofSuccess(oAuthResponse);
+    }
+
+    @PostMapping("/oauth2/register")
+    public ResponseEntity<ApiResponse<TokenResponse>> oauthRegister(
+            @RequestBody @Valid OAuthRegisterRequest request,
+            HttpServletResponse response
+    ) {
+        TokenResponse tokenResponse = oAuthService.register(request);
+        setTokenCookies(response, tokenResponse);
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ofSuccess(tokenResponse));
     }
 
     @PostMapping("/token-refresh")

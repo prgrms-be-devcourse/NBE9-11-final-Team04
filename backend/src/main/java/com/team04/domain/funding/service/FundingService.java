@@ -115,6 +115,15 @@ public class FundingService {
         return DepositResponse.from(deposit);
     }
 
+    // 정당한 사유 중단 시 보증금 환급 — 소유자 검증 없이 시스템이 직접 처리
+    @Transactional
+    public DepositResponse releaseDeposit(Long ideaId) {
+        Deposit deposit = depositRepository.findByIdeaId(ideaId)
+                .orElseThrow(() -> new CustomException(ErrorCode.ESCROW_NOT_FOUND));
+        deposit.release();
+        return DepositResponse.from(deposit);
+    }
+
     // 프로젝트 실패·위반 시 보증금 몰수(FORFEITED)
     @Transactional
     public DepositResponse forfeitDeposit(Long ideaId) {
