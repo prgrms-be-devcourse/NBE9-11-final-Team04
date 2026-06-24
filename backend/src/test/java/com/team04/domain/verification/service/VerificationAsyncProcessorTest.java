@@ -71,16 +71,19 @@ class VerificationAsyncProcessorTest {
     void setUp() {
         given(verificationProperties.forbiddenKeywords()).willReturn(List.of("무조건 성공", "원금 보장"));
         processor.initializeForbiddenKeywordPatterns();
-        doAnswer(invocation -> {
+
+        lenient().doAnswer(invocation -> {
             invocation.getArgument(0, TransactionCallback.class).doInTransaction(null);
             return null;
         }).when(transactionTemplate).execute(any());
-        doAnswer(invocation -> {
+
+        lenient().doAnswer(invocation -> {
             ((java.util.function.Consumer<org.springframework.transaction.TransactionStatus>)
                     invocation.getArgument(0)).accept(null);
             return null;
         }).when(transactionTemplate).executeWithoutResult(any());
-        given(userRepository.findByRoleAndStatus(Role.ADMIN, UserStatus.ACTIVE)).willReturn(List.of());
+
+        lenient().when(userRepository.findByRoleAndStatus(Role.ADMIN, UserStatus.ACTIVE)).thenReturn(List.of());
     }
 
     private ProjectVerification aiVerifyingVerification() {
