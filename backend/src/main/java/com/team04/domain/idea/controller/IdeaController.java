@@ -14,6 +14,7 @@ import com.team04.domain.idea.service.IdeaService;
 import com.team04.global.security.CustomUserDetails;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.web.PageableDefault;
@@ -58,9 +59,9 @@ public class IdeaController {
         return ApiResponse.ofSuccess(ideaService.getTop5Ideas());
     }
 
-    /** 로그인 사용자의 관심 프로젝트 목록을 Slice 페이지네이션으로 제공합니다. */
+    /** 로그인 사용자의 관심 프로젝트 목록을 Page 페이지네이션으로 제공합니다. */
     @GetMapping("/bookmarks")
-    public ApiResponse<Slice<IdeaResponse>> getBookmarks(
+    public ApiResponse<Page<IdeaResponse>> getBookmarks(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PageableDefault(size = 20) Pageable pageable
     ) {
