@@ -62,26 +62,6 @@ public class ExpertMatchService {
         return ExpertMatchResponse.from(match);
     }
 
-    /** AI 검증 통과 후 자동으로 검증 완료 전문가에게 매칭 요청을 생성합니다. */
-    @Transactional
-    public ExpertMatchResponse requestMatch(Long ideaId) {
-        Idea idea = ideaRepository.findByIdAndDeletedAtIsNull(ideaId)
-                .orElseThrow(() -> new CustomException(ErrorCode.IDEA_NOT_FOUND));
-
-        ExpertProfile expertProfile = expertProfileRepository
-                .findFirstByVerifiedTrueAndStatusOrderByIdAsc(ExpertStatus.ACTIVE)
-                .orElseThrow(() -> new CustomException(ErrorCode.EXPERT_NOT_FOUND));
-
-        if (expertMatchRepository.existsByIdeaIdAndExpertProfile_Id(idea.getId(), expertProfile.getId())) {
-            throw new CustomException(ErrorCode.MATCH_ALREADY_REQUESTED);
-        }
-
-        ExpertMatch match = ExpertMatch.create(idea.getId(), expertProfile);
-        expertMatchRepository.save(match);
-
-        return ExpertMatchResponse.from(match);
-    }
-
     // POST /experts/{expertProfileId} — 매칭 요청
     @Transactional
     public ExpertMatchResponse requestMatch(Long userId, Long expertProfileId, MatchRequest request) {

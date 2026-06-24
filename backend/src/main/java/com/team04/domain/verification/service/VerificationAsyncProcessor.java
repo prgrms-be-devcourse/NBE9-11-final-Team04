@@ -4,7 +4,6 @@ import com.team04.domain.idea.entity.Idea;
 import com.team04.domain.idea.entity.IdeaBadge;
 import com.team04.domain.idea.entity.IdeaStatus;
 import com.team04.domain.idea.repository.IdeaRepository;
-import com.team04.domain.match.service.ExpertMatchService;
 import com.team04.domain.notification.entity.NotificationPriority;
 import com.team04.domain.notification.entity.NotificationType;
 import com.team04.domain.user.entity.Role;
@@ -51,7 +50,6 @@ public class VerificationAsyncProcessor {
     private final VerificationProperties verificationProperties;
     private final OpenAiVerificationService openAiVerificationService;
     private final ApplicationEventPublisher eventPublisher;
-    private final ExpertMatchService expertMatchService;
     private final UserRepository userRepository;
     private final TransactionTemplate transactionTemplate;
 
@@ -112,9 +110,6 @@ public class VerificationAsyncProcessor {
         publishProposerNotification(idea, result.decision());
         if (result.decision() == VerificationDecision.PENDING_ADMIN_REVIEW) {
             publishPendingAdminReviewNotification(idea.getId());
-        }
-        if (result.decision() == VerificationDecision.PASS) {
-            expertMatchService.requestMatch(idea.getId());
         }
     }
 
