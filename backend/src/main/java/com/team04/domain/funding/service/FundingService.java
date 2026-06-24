@@ -92,6 +92,11 @@ public class FundingService {
             throw new CustomException(ErrorCode.INVALID_FUNDING_AMOUNT);
         }
 
+        // 보증금은 목표 펀딩액의 30% 이하여야 함
+        if (idea.getGoalAmount() != null && request.amount() > Math.round(idea.getGoalAmount() * 0.3)) {
+            throw new CustomException(ErrorCode.DEPOSIT_EXCEEDS_LIMIT);
+        }
+
         if (idea.getDepositAmount() != null
                 && idea.getDepositAmount() > 0
                 && !idea.getDepositAmount().equals(request.amount())) {
