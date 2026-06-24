@@ -63,6 +63,16 @@ public class Settlement extends BaseEntity {
         this.status = SettlementStatus.COMPLETED;
     }
 
+    public void depositRefund() {
+        validatePendingStatus();
+        this.status = SettlementStatus.DEPOSIT_REFUNDED;
+    }
+
+    public void depositExhausted() {
+        validatePendingStatus();
+        this.status = SettlementStatus.DEPOSIT_EXHAUSTED;
+    }
+
     public void partialRefund() {
         validatePendingStatus();
         this.status = SettlementStatus.PARTIALLY_REFUNDED;

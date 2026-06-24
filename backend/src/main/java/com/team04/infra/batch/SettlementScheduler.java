@@ -39,6 +39,7 @@ public class SettlementScheduler {
             try {
                 transactionTemplate.executeWithoutResult(status -> {
                     settlementService.createGoalNotMetRefundSettlement(ideaId);
+                    settlementService.createGoalNotMetDepositRefundSettlement(ideaId);
                     refundService.createGoalNotMetRefunds(ideaId);
                 });
                 log.info("환불 처리 완료 - ideaId: {}", ideaId);
