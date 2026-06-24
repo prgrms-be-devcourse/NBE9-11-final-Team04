@@ -194,8 +194,19 @@ public class DisputeService {
         Dispute dispute = disputeRepository.findByIdWithDetails(disputeId)
                 .orElseThrow(() -> new CustomException(ErrorCode.DISPUTE_NOT_FOUND));
         dispute.updateStatus(request.status());
+        syncAppealStatus(disputeId, request.status());
         publishDisputeStatusNotifications(dispute, request.status());
         return DisputeResponse.of(dispute);
+    }
+
+    private void syncAppealStatus(Long disputeId, DisputeStatus newStatus) {
+        if (newStatus == DisputeStatus.RECEIVED) {
+            disputeAppealRepository.findByDisputeId(disputeId)
+                    .ifPresent(DisputeAppeal::reject);
+        } else if (newStatus == DisputeStatus.REJECTED) {
+            disputeAppealRepository.findByDisputeId(disputeId)
+                    .ifPresent(DisputeAppeal::approve);
+        }
     }
 
     private void publishDisputeStatusNotifications(Dispute dispute, DisputeStatus newStatus) {

@@ -22,7 +22,7 @@ public class DisputeAppeal extends BaseEntity {
     @JoinColumn(name = "dispute_id", nullable = false, unique = true)
     private Dispute dispute;
 
-    @Column(columnDefinition ="TEXT", nullable = false)
+    @Column(columnDefinition = "TEXT", nullable = false)
     private String content;
 
     @Column
@@ -30,6 +30,10 @@ public class DisputeAppeal extends BaseEntity {
 
     @Column(nullable = false)
     private int appealCount = 1;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private AppealStatus status = AppealStatus.SUBMITTED;
 
     private static final int MAX_APPEAL_COUNT = 3;
 
@@ -45,6 +49,15 @@ public class DisputeAppeal extends BaseEntity {
         }
         this.content = content;
         this.fileUrl = fileUrl;
+        this.status = AppealStatus.SUBMITTED;
         this.appealCount++;
+    }
+
+    public void approve() {
+        this.status = AppealStatus.APPROVED;
+    }
+
+    public void reject() {
+        this.status = AppealStatus.REJECTED;
     }
 }
