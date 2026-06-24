@@ -33,6 +33,9 @@ public class IdeaAdminService {
     @Transactional
     public void approve(Long ideaId) {
         Idea idea = findActiveIdea(ideaId);
+        if (idea.getStatus() != IdeaStatus.ADMIN_PENDING) {
+            throw new CustomException(ErrorCode.INVALID_IDEA_STATUS_TRANSITION);
+        }
         idea.open();
     }
 
@@ -40,6 +43,9 @@ public class IdeaAdminService {
     @Transactional
     public void reject(Long ideaId, String reason) {
         Idea idea = findActiveIdea(ideaId);
+        if (idea.getStatus() != IdeaStatus.ADMIN_PENDING) {
+            throw new CustomException(ErrorCode.INVALID_IDEA_STATUS_TRANSITION);
+        }
         idea.reject(reason);
     }
 

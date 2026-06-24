@@ -43,7 +43,7 @@ public class IdeaController {
 
     /** 카테고리와 마감임박 필터, 정렬 조건으로 프로젝트 목록을 제공합니다. */
     @GetMapping
-    public ApiResponse<Slice<IdeaSummaryResponse>> getProjects(
+    public ApiResponse<Page<IdeaSummaryResponse>> getProjects(
             @RequestParam(required = false) IdeaCategory category,
             @RequestParam(required = false, defaultValue = "false") Boolean closingSoon,
             @RequestParam(required = false) String keyword,
