@@ -80,7 +80,6 @@ public class TrustScore extends BaseEntity {
                 + milestoneSpecificityScore
                 + expertMatchingScore
                 + adminApprovalScore
-                + proposerHistoryScore
                 + proposerHistoryScore;
         return Math.min(total, ITEM_MAX_SCORE * 5);
     }
