@@ -44,11 +44,19 @@ public class Deposit extends BaseEntity {
 
     private LocalDateTime releasedAt;
 
+    /** 보증금 PG 결제와 연결 (결제 완료 후 HELD 확정) */
+    private Long paymentId;
+
     public static Deposit createHeld(Long ideaId, Long userId, Long amount) {
+        return createHeld(ideaId, userId, amount, null);
+    }
+
+    public static Deposit createHeld(Long ideaId, Long userId, Long amount, Long paymentId) {
         Deposit deposit = new Deposit();
         deposit.ideaId = ideaId;
         deposit.userId = userId;
         deposit.amount = amount;
+        deposit.paymentId = paymentId;
         deposit.status = FundingTypes.DepositStatus.HELD;
         deposit.paidAt = LocalDateTime.now();
         return deposit;
