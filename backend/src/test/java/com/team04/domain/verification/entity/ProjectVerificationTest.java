@@ -1,21 +1,19 @@
 package com.team04.domain.verification.entity;
 
-import com.team04.global.exception.CustomException;
-import com.team04.global.exception.ErrorCode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+/** ProjectVerification 상태 전이를 검증하는 테스트입니다. */
 class ProjectVerificationTest {
 
+    /** 검증 시작 시 AI_VERIFYING 상태로 전이되는지 확인합니다. */
     @Test
     @DisplayName("검증 시작 시 DRAFT에서 AI_VERIFYING으로 전이 성공")
     void startAiVerification_성공() {
-        // 검증 시작 로직이 최초 상태에서 AI 검증 상태로 변경되는지 확인한다.
         ProjectVerification verification = new ProjectVerification(1L);
 
         verification.startAiVerification();
@@ -23,60 +21,37 @@ class ProjectVerificationTest {
         assertThat(verification.getStatus()).isEqualTo(VerificationStatus.AI_VERIFYING);
     }
 
+    /** 참고용 검증 결과 저장 완료 시 AI_PASSED 상태로 전이되는지 확인합니다. */
     @Test
-    @DisplayName("보완 요청 시 NEEDS_REVISION 상태와 보완 기한 저장 성공")
-    void requestRevision_성공() {
-        // AI 검증 중 보완 요청이 발생하면 보완 상태와 마감 시간이 함께 저장되는지 확인한다.
-        ProjectVerification verification = new ProjectVerification(1L);
-        LocalDateTime revisionDueAt = LocalDateTime.now().plusDays(7);
-        verification.startAiVerification();
-
-        verification.requestRevision(revisionDueAt);
-
-        assertThat(verification.getStatus()).isEqualTo(VerificationStatus.NEEDS_REVISION);
-        assertThat(verification.getRevisionDueAt()).isEqualTo(revisionDueAt);
-    }
-
-    @Test
-    @DisplayName("재제출 시 횟수 증가와 보완 기한 초기화 성공")
-    void resubmit_성공() {
-        // 보완 상태에서 재제출하면 AI 검증으로 돌아가고 재제출 횟수와 보완 기한이 갱신되는지 확인한다.
+    @DisplayName("참고용 검증 완료 시 AI_PASSED로 전이 성공")
+    void completeAiVerification_성공() {
         ProjectVerification verification = new ProjectVerification(1L);
         verification.startAiVerification();
-        verification.requestRevision(LocalDateTime.now().plusDays(7));
+        verification.completeAiVerification();
 
-        verification.resubmit();
-
-        assertThat(verification.getStatus()).isEqualTo(VerificationStatus.AI_VERIFYING);
-        assertThat(verification.getResubmissionCount()).isEqualTo(1);
-        assertThat(verification.getRevisionDueAt()).isNull();
+        assertThat(verification.getStatus()).isEqualTo(VerificationStatus.AI_PASSED);
     }
 
+    /** OpenAI 장애 발생 시 관리자 재시도 상태로 전이되는지 확인합니다. */
     @Test
-    @DisplayName("30일 대기 반려 시 REJECTED 상태와 대기 종료 시간 저장 성공")
-    void rejectWithWaiting_성공() {
-        // 재제출 제한 초과 시 반려 상태와 대기 종료 시간이 함께 저장되는지 확인한다.
+    @DisplayName("AI 검증 중 장애 상태 전이 성공")
+    void markPendingAdminReview_성공() {
         ProjectVerification verification = new ProjectVerification(1L);
-        LocalDateTime waitingUntil = LocalDateTime.now().plusDays(30);
         verification.startAiVerification();
-        verification.requestRevision(LocalDateTime.now().plusDays(7));
 
-        verification.rejectWithWaiting(waitingUntil);
+        verification.markPendingAdminReview();
 
-        assertThat(verification.getStatus()).isEqualTo(VerificationStatus.REJECTED);
-        assertThat(verification.getWaitingUntil()).isEqualTo(waitingUntil);
+        assertThat(verification.getStatus()).isEqualTo(VerificationStatus.PENDING_ADMIN_REVIEW);
     }
 
+    /** DRAFT에서 검증 완료 상태로 직접 전이할 수 없는지 확인합니다. */
     @Test
-    @DisplayName("유효하지 않은 상태 전이 시 예외 발생")
-    void changeStatus_유효하지않은전이() {
-        // DRAFT 상태에서 바로 반려 상태로 변경할 수 없는지 확인한다.
+    @DisplayName("잘못된 상태 전이 예외 발생")
+    void invalidTransition_예외() {
         ProjectVerification verification = new ProjectVerification(1L);
 
-        assertThatThrownBy(() -> verification.changeStatus(VerificationStatus.REJECTED))
-                .isInstanceOf(CustomException.class)
-                .extracting(e -> ((CustomException) e).getErrorCode())
-                .isEqualTo(ErrorCode.INVALID_VERIFICATION_STATUS_TRANSITION);
+        assertThatThrownBy(verification::completeAiVerification)
+                .isInstanceOf(RuntimeException.class);
     }
 }
 

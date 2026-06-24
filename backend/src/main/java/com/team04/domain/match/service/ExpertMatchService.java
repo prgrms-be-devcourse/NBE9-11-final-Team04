@@ -1,6 +1,7 @@
 package com.team04.domain.match.service;
 
 import com.team04.domain.expert.entity.ExpertProfile;
+import com.team04.domain.expert.entity.ExpertStatus;
 import com.team04.domain.expert.repository.ExpertProfileRepository;
 import com.team04.domain.idea.entity.Idea;
 import com.team04.domain.idea.repository.IdeaRepository;

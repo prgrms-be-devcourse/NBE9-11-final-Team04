@@ -72,7 +72,6 @@ public class RefundService {
      *
      * 가상계좌 잔액 계산:
      *   SUM(payment SUCCESS) + 보증금 - SUM(pre_settlement COMPLETED)
-     *   TODO: 정욱님 잔액 추적 PR 머지 후 계산 로직 교체
      *
      * Deposit 상태 변경은 FundingService.forfeitDeposit() / releaseDeposit()으로 처리
      */
