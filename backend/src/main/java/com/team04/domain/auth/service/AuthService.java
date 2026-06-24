@@ -10,8 +10,10 @@ import com.team04.global.exception.CustomException;
 import com.team04.global.exception.ErrorCode;
 import com.team04.global.util.JwtUtil;
 import com.team04.infra.email.EmailService;
+import com.team04.infra.redis.AdminInviteRepository;
 import com.team04.infra.redis.OtpRepository;
 import com.team04.infra.redis.RefreshTokenRepository;
+import org.springframework.beans.factory.annotation.Value;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -30,6 +32,10 @@ public class AuthService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final OtpRepository otpRepository;
     private final EmailService emailService;
+    private final AdminInviteRepository adminInviteRepository;
+
+    @Value("${app.base-url}")
+    private String baseUrl;
 
     private static final Duration OTP_TTL = Duration.ofMinutes(5);
     private static final int OTP_LENGTH = 6;
@@ -133,6 +139,46 @@ public class AuthService {
 
         otpRepository.delete(request.email());
         otpRepository.saveVerified(request.email());
+    }
+
+    public void sendAdminInvite(Long adminId, AdminInviteRequest request) {
+        String token = adminInviteRepository.generate(request.email());
+        String inviteUrl = baseUrl + "/admin/signup?token=" + token;
+        emailService.sendAdminInvite(request.email(), inviteUrl);
+    }
+
+    @Transactional
+    public TokenResponse adminSignup(AdminSignupRequest request) {
+        String invitedEmail = adminInviteRepository.find(request.inviteToken())
+                .orElseThrow(() -> new CustomException(ErrorCode.INVALID_INVITE_TOKEN));
+
+        if (!invitedEmail.equals(request.email())) {
+            throw new CustomException(ErrorCode.INVALID_INVITE_TOKEN);
+        }
+
+        if (userRepository.existsByEmail(request.email())) {
+            throw new CustomException(ErrorCode.DUPLICATE_EMAIL);
+        }
+        if (userRepository.existsByNickname(request.nickname())) {
+            throw new CustomException(ErrorCode.DUPLICATE_NICKNAME);
+        }
+
+        User user = User.create(
+                request.email(),
+                passwordEncoder.encode(request.password()),
+                request.name(),
+                request.nickname(),
+                request.age(),
+                Role.ADMIN
+        );
+        userRepository.save(user);
+        adminInviteRepository.delete(request.inviteToken());
+
+        String accessToken = jwtUtil.generateAccessToken(user.getId(), user.getRole());
+        String refreshToken = jwtUtil.generateRefreshToken(user.getId());
+        refreshTokenRepository.save(user.getId(), refreshToken, REFRESH_TOKEN_TTL);
+
+        return new TokenResponse(accessToken, refreshToken);
     }
 
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();

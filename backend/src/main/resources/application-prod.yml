@@ -5,6 +5,9 @@ spring:
     password: ${DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
 
+app:
+  base-url: https://api.seedlink.com
+
   jpa:
     hibernate:
       ddl-auto: update
@@ -80,3 +83,4 @@ payment:
     client-key: ${TOSS_CLIENT_KEY:}
   webhook:
     secret: ${PAYMENT_WEBHOOK_SECRET:dev-webhook-secret}
+
