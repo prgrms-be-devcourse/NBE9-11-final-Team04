@@ -150,7 +150,7 @@ public class RefundService {
      * TODO: 경탁님 — DisputeResolvedEvent 인터페이스 확정 후 전체 환불 여부 결정
      */
     @Transactional
-    public RefundResponse createDisputeRefund(Long paymentId) {
+    public RefundResponse createDisputeRefund(Long paymentId, Long ideaId) {
         if (refundRepository.existsByPaymentId(paymentId)) {
             throw new CustomException(ErrorCode.REFUND_ALREADY_COMPLETED);
         }
@@ -160,6 +160,10 @@ public class RefundService {
 
         com.team04.domain.funding.entity.Funding funding = fundingRepository.findById(payment.getFundingId())
                 .orElseThrow(() -> new CustomException(ErrorCode.FUNDING_NOT_FOUND));
+
+        if (!funding.getIdeaId().equals(ideaId)) {
+            throw new CustomException(ErrorCode.INVALID_INPUT);
+        }
 
         Refund refund = Refund.builder()
                 .paymentId(payment.getId())

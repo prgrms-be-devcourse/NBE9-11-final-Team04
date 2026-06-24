@@ -3,6 +3,10 @@ package com.team04.domain.dispute.service;
 import com.team04.domain.dispute.dto.request.AdminDisputeStatusRequest;
 import com.team04.domain.dispute.dto.request.CreateAppealRequest;
 import com.team04.domain.dispute.dto.request.CreateDisputeRequest;
+import com.team04.domain.dispute.dto.request.ForceRefundRequest;
+import com.team04.domain.settlement.dto.response.RefundResponse;
+import com.team04.domain.settlement.service.RefundService;
+import com.team04.domain.settlement.service.SettlementService;
 import com.team04.domain.dispute.dto.response.AdminDisputeResponse;
 import com.team04.domain.dispute.dto.response.DisputeResponse;
 import com.team04.domain.dispute.dto.response.DisputeStatsResponse;
@@ -20,6 +24,8 @@ import com.team04.global.exception.CustomException;
 import com.team04.global.exception.ErrorCode;
 import com.team04.global.storage.StorageClient;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -40,6 +46,11 @@ public class DisputeService {
     private final DisputeParticipantValidator participantValidator;
     private final ApplicationEventPublisher eventPublisher;
     private final StorageClient storageClient;
+    private final RefundService refundService;
+
+    @Lazy
+    @Autowired
+    private SettlementService settlementService;
 
     private static final List<DisputeStatus> ACTIVE_STATUSES = List.of(DisputeStatus.RECEIVED, DisputeStatus.PENDING);
     private static final String APPEAL_STORAGE_DIR = "dispute/appeal";
@@ -75,6 +86,14 @@ public class DisputeService {
                 NotificationType.REPORT_RECEIVED,
                 "[신고] " + request.title(),
                 request.category().name() + " | " + request.reason(),
+                saved.getId()
+        ));
+
+        eventPublisher.publishEvent(new NotificationEvent(
+                request.reportedUserId(),
+                NotificationType.DISPUTE_REPORTED,
+                "[신고 접수] " + request.title(),
+                "회원님을 대상으로 신고가 접수되었습니다. 7일 이내 소명 자료를 제출해 주세요.",
                 saved.getId()
         ));
 
@@ -138,6 +157,36 @@ public class DisputeService {
         long resolved = countMap.getOrDefault(DisputeStatus.RESOLVED, 0L);
         long rejected = countMap.getOrDefault(DisputeStatus.REJECTED, 0L);
         return new DisputeStatsResponse(received + pending + resolved + rejected, received, pending, resolved, rejected);
+    }
+
+    @Transactional
+    public RefundResponse forceRefund(Long disputeId, ForceRefundRequest request) {
+        Dispute dispute = disputeRepository.findById(disputeId)
+                .orElseThrow(() -> new CustomException(ErrorCode.DISPUTE_NOT_FOUND));
+        if (dispute.getStatus() != DisputeStatus.RESOLVED) {
+            throw new CustomException(ErrorCode.DISPUTE_INVALID_STATUS_TRANSITION);
+        }
+        if (dispute.getTargetType() != TargetType.IDEA) {
+            throw new CustomException(ErrorCode.INVALID_INPUT);
+        }
+        Long ideaId = dispute.getTargetId();
+        return refundService.createDisputeRefund(request.paymentId(), ideaId);
+    }
+
+    @Transactional
+    public void forceRefundAll(Long disputeId) {
+        Dispute dispute = disputeRepository.findById(disputeId)
+                .orElseThrow(() -> new CustomException(ErrorCode.DISPUTE_NOT_FOUND));
+        if (dispute.getStatus() != DisputeStatus.RESOLVED) {
+            throw new CustomException(ErrorCode.DISPUTE_INVALID_STATUS_TRANSITION);
+        }
+        if (dispute.getTargetType() != TargetType.IDEA) {
+            throw new CustomException(ErrorCode.INVALID_INPUT);
+        }
+        Long ideaId = dispute.getTargetId();
+        settlementService.createCancelRefundSettlement(ideaId);
+        settlementService.createDepositForfeitSettlement(ideaId);
+        refundService.createCancelRefunds(ideaId, false);
     }
 
     @Transactional

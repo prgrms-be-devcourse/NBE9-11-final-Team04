@@ -1,6 +1,7 @@
 package com.team04.domain.dispute.controller;
 
 import com.team04.domain.dispute.dto.request.AdminDisputeStatusRequest;
+import com.team04.domain.dispute.dto.request.ForceRefundRequest;
 import com.team04.domain.dispute.dto.response.AdminDisputeResponse;
 import com.team04.domain.dispute.dto.response.DisputeResponse;
 import com.team04.domain.dispute.dto.response.DisputeStatsResponse;
@@ -8,6 +9,7 @@ import com.team04.domain.dispute.entity.DisputeCategory;
 import com.team04.domain.dispute.entity.DisputeStatus;
 import com.team04.domain.dispute.entity.TargetType;
 import com.team04.domain.dispute.service.DisputeService;
+import com.team04.domain.settlement.dto.response.RefundResponse;
 import com.team04.global.response.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -44,5 +46,18 @@ public class AdminDisputeController {
             @PathVariable Long disputeId,
             @RequestBody @Valid AdminDisputeStatusRequest request) {
         return ApiResponse.ofSuccess(disputeService.updateDisputeStatus(disputeId, request));
+    }
+
+    @PostMapping("/{disputeId}/force-refund")
+    public ApiResponse<RefundResponse> forceRefund(
+            @PathVariable Long disputeId,
+            @RequestBody @Valid ForceRefundRequest request) {
+        return ApiResponse.ofSuccess(disputeService.forceRefund(disputeId, request));
+    }
+
+    @PostMapping("/{disputeId}/force-refund-all")
+    public ApiResponse<Void> forceRefundAll(@PathVariable Long disputeId) {
+        disputeService.forceRefundAll(disputeId);
+        return ApiResponse.ofSuccessWithoutBody();
     }
 }
