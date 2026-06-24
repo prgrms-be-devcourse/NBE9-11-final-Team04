@@ -4,6 +4,12 @@ import com.team04.domain.idea.entity.Idea;
 import com.team04.domain.idea.entity.IdeaBadge;
 import com.team04.domain.idea.entity.IdeaStatus;
 import com.team04.domain.idea.repository.IdeaRepository;
+import com.team04.domain.match.service.ExpertMatchService;
+import com.team04.domain.notification.entity.NotificationPriority;
+import com.team04.domain.notification.entity.NotificationType;
+import com.team04.domain.user.entity.Role;
+import com.team04.domain.user.repository.UserRepository;
+import com.team04.domain.user.status.UserStatus;
 import com.team04.domain.verification.dto.openai.AiVerificationStructuredResult;
 import com.team04.domain.verification.dto.request.VerificationRequest;
 import com.team04.domain.verification.entity.*;
@@ -13,14 +19,18 @@ import com.team04.domain.verification.repository.ProjectVerificationRepository;
 import com.team04.domain.verification.repository.TrustScoreRepository;
 import com.team04.domain.verification.repository.VerificationAuditLogRepository;
 import com.team04.domain.verification.repository.VerificationResultRepository;
+import com.team04.global.event.NotificationEvent;
 import com.team04.global.exception.CustomException;
 import com.team04.global.exception.ErrorCode;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -40,6 +50,10 @@ public class VerificationAsyncProcessor {
     private final IdeaRepository ideaRepository;
     private final VerificationProperties verificationProperties;
     private final OpenAiVerificationService openAiVerificationService;
+    private final ApplicationEventPublisher eventPublisher;
+    private final ExpertMatchService expertMatchService;
+    private final UserRepository userRepository;
+    private final TransactionTemplate transactionTemplate;
 
     private List<Pattern> forbiddenKeywordPatterns;
 
@@ -56,6 +70,12 @@ public class VerificationAsyncProcessor {
     @Async("verificationTaskExecutor")
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void processAiVerification(VerificationRequestedEvent event) {
+        transactionTemplate.executeWithoutResult(status -> processAiVerificationInTransaction(event));
+    }
+
+    /** 비동기 리스너와 분리된 트랜잭션 경계에서 AI 검증 핵심 처리를 수행합니다. */
+    @Transactional
+    public void processAiVerificationInTransaction(VerificationRequestedEvent event) {
         ProjectVerification verification = getVerification(event.verificationId());
         try {
             if (containsForbiddenKeyword(event.request())) {
@@ -66,7 +86,9 @@ public class VerificationAsyncProcessor {
         } catch (Exception exception) {
             VerificationStatus previous = verification.getStatus();
             verification.changeStatus(VerificationStatus.PENDING_ADMIN_REVIEW);
-            audit(verification, previous, VerificationStatus.PENDING_ADMIN_REVIEW, "AI 검증 재시도 소진 또는 장애로 관리자 검토 전환");
+            audit(verification, previous, VerificationStatus.PENDING_ADMIN_REVIEW,
+                    "AI 검증 재시도 소진 또는 장애로 관리자 검토 전환: " + exception.getMessage());
+            publishPendingAdminReviewNotification(verification.getIdeaId());
         }
     }
 
@@ -84,22 +106,69 @@ public class VerificationAsyncProcessor {
         )));
         Idea idea = updateIdeaAfterAiVerification(verification.getIdeaId(), result);
         audit(verification, previous, next, result.reason());
+        publishProposerNotification(idea, result.decision());
+        if (result.decision() == VerificationDecision.PENDING_ADMIN_REVIEW) {
+            publishPendingAdminReviewNotification(idea.getId());
+        }
+        if (result.decision() == VerificationDecision.PASS) {
+            expertMatchService.requestMatch(idea.getId());
+        }
     }
 
-    /** AI 검증 완료 후 결과와 무관하게 아이디어를 전문가 검토 대기 상태로 전이하고 신뢰도 점수를 반영합니다. */
+    /** AI 검증 완료 후 결과에 맞게 아이디어 상태와 신뢰도 점수를 반영합니다. */
     private Idea updateIdeaAfterAiVerification(Long ideaId, AiVerificationStructuredResult result) {
         TrustScore trustScore = updateTrustScore(ideaId, result);
         Idea idea = ideaRepository.findByIdAndDeletedAtIsNull(ideaId)
                 .orElseThrow(() -> new CustomException(ErrorCode.IDEA_NOT_FOUND));
 
-        if (idea.getStatus() == IdeaStatus.AI_PENDING) {
+        if (idea.getStatus() == IdeaStatus.AI_PENDING && result.decision() == VerificationDecision.PASS) {
             idea.changeStatus(IdeaStatus.EXPERT_PENDING);
+        }
+        if (idea.getStatus() == IdeaStatus.AI_PENDING && result.decision() == VerificationDecision.REJECT) {
+            idea.changeStatus(IdeaStatus.REJECTED);
         }
         if (trustScore.getTotalScore() >= 80) {
             idea.changeBadge(IdeaBadge.VERIFIED);
         }
 
         return ideaRepository.save(idea);
+    }
+
+    /** AI 검증 결과를 아이디어 제안자에게 알립니다. */
+    private void publishProposerNotification(Idea idea, VerificationDecision decision) {
+        NotificationType notificationType = decision == VerificationDecision.PASS
+                ? NotificationType.IDEA_AI_APPROVED
+                : NotificationType.IDEA_AI_REJECTED;
+        String title = decision == VerificationDecision.PASS
+                ? "AI 검증 통과"
+                : "AI 검증 결과 안내";
+        String message = switch (decision) {
+            case PASS -> "아이디어가 AI 검증을 통과했습니다.";
+            case NEEDS_REVISION -> "아이디어 AI 검증 결과 보완이 필요합니다.";
+            case REJECT -> "아이디어가 AI 검증에서 반려되었습니다.";
+            case PENDING_ADMIN_REVIEW -> "아이디어가 관리자 검토 대상으로 전환되었습니다.";
+        };
+        eventPublisher.publishEvent(new NotificationEvent(
+                idea.getUserId(),
+                notificationType,
+                title,
+                message,
+                idea.getId(),
+                NotificationPriority.NORMAL
+        ));
+    }
+
+    /** 관리자 검토가 필요한 검증 결과를 모든 활성 관리자에게 알립니다. */
+    private void publishPendingAdminReviewNotification(Long ideaId) {
+        userRepository.findByRoleAndStatus(Role.ADMIN, UserStatus.ACTIVE)
+                .forEach(admin -> eventPublisher.publishEvent(new NotificationEvent(
+                        admin.getId(),
+                        NotificationType.ANNOUNCEMENT,
+                        "AI 검증 관리자 검토 필요",
+                        "AI 검증 결과 관리자 검토가 필요한 아이디어가 있습니다.",
+                        ideaId,
+                        NotificationPriority.CRITICAL
+                )));
     }
 
     /** 검증 결과를 기반으로 미구현 항목은 0점 처리한 신뢰도 점수를 저장합니다. */

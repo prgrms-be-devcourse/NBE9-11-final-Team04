@@ -12,6 +12,8 @@ import com.team04.domain.idea.repository.IdeaDraftRepository;
 import com.team04.domain.milestone.dto.response.MilestoneResponse;
 import com.team04.domain.milestone.entity.Milestone;
 import com.team04.domain.milestone.repository.MilestoneRepository;
+import com.team04.domain.verification.dto.request.VerificationRequest;
+import com.team04.domain.verification.service.VerificationService;
 import com.team04.global.exception.CustomException;
 import com.team04.global.exception.ErrorCode;
 import com.team04.domain.idea.dto.request.CreateIdeaRequest;
@@ -48,6 +50,7 @@ public class IdeaService {
     private final DisputeService disputeService;
     private final StorageClient storageClient;
     private final TransactionTemplate transactionTemplate;
+    private final VerificationService verificationService;
 
     /** 아이디어를 등록하고 마일스톤을 함께 저장합니다. */
     @Transactional
@@ -87,7 +90,37 @@ public class IdeaService {
                         .toList()
         );
 
+        verificationService.requestVerification(
+                new VerificationRequest(
+                        savedIdea.getId(),
+                        request.title(),
+                        buildVerificationDescription(request),
+                        request.milestones().stream()
+                                .map(m -> new VerificationRequest.MilestoneInfo(
+                                        m.goal(),
+                                        m.expectedResult(),
+                                        m.expectedDate(),
+                                        null
+                                ))
+                                .toList()
+                ),
+                userId
+        );
+
         return IdeaResponse.of(savedIdea);
+    }
+
+    /** AI 검증에 전달할 아이디어 상세 설명을 생성합니다. */
+    private String buildVerificationDescription(CreateIdeaRequest request) {
+        return String.join("\n",
+                request.oneLineIntro(),
+                request.problemDefinition(),
+                request.solution(),
+                request.goal(),
+                request.targetCustomer(),
+                request.competitor(),
+                request.teamIntro()
+        );
     }
 
     /** 프로젝트 목록을 카테고리, 마감임박 필터, 정렬 조건에 따라 Slice로 조회합니다. */

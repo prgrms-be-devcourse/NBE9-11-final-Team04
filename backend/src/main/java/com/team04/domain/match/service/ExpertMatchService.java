@@ -1,6 +1,7 @@
 package com.team04.domain.match.service;
 
 import com.team04.domain.expert.entity.ExpertProfile;
+import com.team04.domain.expert.entity.ExpertStatus;
 import com.team04.domain.expert.repository.ExpertProfileRepository;
 import com.team04.domain.idea.entity.Idea;
 import com.team04.domain.idea.repository.IdeaRepository;
@@ -57,6 +58,26 @@ public class ExpertMatchService {
             // PENDING으로 다시 되돌리는 건 불가
             throw new CustomException(ErrorCode.INVALID_INPUT);
         }
+
+        return ExpertMatchResponse.from(match);
+    }
+
+    /** AI 검증 통과 후 자동으로 검증 완료 전문가에게 매칭 요청을 생성합니다. */
+    @Transactional
+    public ExpertMatchResponse requestMatch(Long ideaId) {
+        Idea idea = ideaRepository.findByIdAndDeletedAtIsNull(ideaId)
+                .orElseThrow(() -> new CustomException(ErrorCode.IDEA_NOT_FOUND));
+
+        ExpertProfile expertProfile = expertProfileRepository
+                .findFirstByVerifiedTrueAndStatusOrderByIdAsc(ExpertStatus.ACTIVE)
+                .orElseThrow(() -> new CustomException(ErrorCode.EXPERT_NOT_FOUND));
+
+        if (expertMatchRepository.existsByIdeaIdAndExpertProfile_Id(idea.getId(), expertProfile.getId())) {
+            throw new CustomException(ErrorCode.MATCH_ALREADY_REQUESTED);
+        }
+
+        ExpertMatch match = ExpertMatch.create(idea.getId(), expertProfile);
+        expertMatchRepository.save(match);
 
         return ExpertMatchResponse.from(match);
     }

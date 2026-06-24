@@ -24,18 +24,20 @@ public class VerificationController {
     /** 검증 요청을 접수하고 즉시 검증 진행 중 응답을 반환합니다. */
     @PostMapping
     public ApiResponse<VerificationResponse> requestVerification(
-            @Valid @RequestBody VerificationRequest request
+            @Valid @RequestBody VerificationRequest request,
+            @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        return ApiResponse.ofSuccess(verificationService.requestVerification(request));
+        return ApiResponse.ofSuccess(verificationService.requestVerification(request, userDetails.getUserId()));
     }
 
     /** 보완된 검증 요청을 재제출하고 즉시 검증 진행 중 응답을 반환합니다. */
     @PostMapping("/{verificationId}/resubmit")
     public ApiResponse<VerificationResponse> resubmit(
             @PathVariable Long verificationId,
-            @Valid @RequestBody VerificationRequest request
+            @Valid @RequestBody VerificationRequest request,
+            @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        return ApiResponse.ofSuccess(verificationService.resubmit(verificationId, request));
+        return ApiResponse.ofSuccess(verificationService.resubmit(verificationId, userDetails.getUserId(), request));
     }
 
     /** 아이디어 검증 결과를 조회합니다. 관리자 또는 본인 아이디어 제안자만 가능합니다. */
