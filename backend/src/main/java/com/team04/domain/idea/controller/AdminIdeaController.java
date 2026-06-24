@@ -1,7 +1,6 @@
 package com.team04.domain.idea.controller;
 
 import com.team04.domain.idea.dto.request.AdminIdeaRejectRequest;
-import com.team04.domain.idea.dto.request.RestoreIdeaRequest;
 import com.team04.domain.idea.dto.response.AdminIdeaReviewResponse;
 import com.team04.domain.idea.entity.IdeaStatus;
 import com.team04.domain.idea.service.IdeaAdminService;
@@ -62,11 +61,10 @@ public class AdminIdeaController {
         return ApiResponse.ofSuccessWithoutBody();
     }
 
-    /** 관리자가 일시 중단된 아이디어를 이전 상태로 복원합니다. */
+    /** 관리자가 일시 중단된 아이디어를 중단 전 상태로 복원합니다. */
     @PatchMapping("/{ideaId}/restore")
-    public ApiResponse<Void> restoreIdea(@PathVariable Long ideaId,
-                                         @RequestBody @Valid RestoreIdeaRequest request) {
-        ideaAdminService.restoreIdea(ideaId, request.previousStatus());
+    public ApiResponse<Void> restoreIdea(@PathVariable Long ideaId) {
+        ideaAdminService.restoreIdea(ideaId);
         return ApiResponse.ofSuccessWithoutBody();
     }
 

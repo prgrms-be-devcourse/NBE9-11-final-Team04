@@ -56,14 +56,24 @@ public class IdeaAdminService {
         idea.suspend();
     }
 
-    /** 일시 중단된 아이디어를 이전 상태(OPEN 또는 IN_PROGRESS)로 복원합니다. */
+    // 소명 수용(DisputeStatus.REJECTED) 시 DisputeService에서 호출됩니다.
+    /** 일시 중단된 아이디어를 중단 전 상태로 복원합니다. SUSPENDED 상태가 아니면 무시합니다. */
     @Transactional
-    public void restoreIdea(Long ideaId, IdeaStatus previousStatus) {
+    public void restoreIdea(Long ideaId) {
         Idea idea = findActiveIdea(ideaId);
-        if (previousStatus != IdeaStatus.OPEN && previousStatus != IdeaStatus.IN_PROGRESS) {
-            throw new CustomException(ErrorCode.INVALID_IDEA_STATUS_TRANSITION);
+        if (idea.getStatus() == IdeaStatus.SUSPENDED) {
+            idea.restore();
         }
-        idea.restore(previousStatus);
+    }
+
+    // 신고 인정(DisputeStatus.RESOLVED) 시 DisputeService에서 호출됩니다.
+    /** 분쟁 신고 인정으로 아이디어를 강제 취소합니다. 이미 종료된 상태면 무시합니다. */
+    @Transactional
+    public void cancelIdeaForDispute(Long ideaId) {
+        Idea idea = findActiveIdea(ideaId);
+        if (idea.getStatus() != IdeaStatus.COMPLETED && idea.getStatus() != IdeaStatus.CANCELLED) {
+            idea.changeStatus(IdeaStatus.CANCELLED);
+        }
     }
 
     /** 전체 아이디어 상태별 건수를 반환합니다. */

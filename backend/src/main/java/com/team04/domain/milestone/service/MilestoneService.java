@@ -85,7 +85,7 @@ public class MilestoneService {
     public CompletionReportResponse submitCompletionReport(
             Long milestoneId, CompletionReportRequest request, MultipartFile file) {
         Milestone milestone = findMilestone(milestoneId);
-        ideaService.validateNotSuspended(milestone.getIdeaId());
+        ideaService.validateNotSuspended(milestone.getIdeaId()); // 분쟁 처리 중 일시 중단된 프로젝트는 완료 보고서 제출 불가
 
         if (milestone.getStatus() != MilestoneStatus.IN_PROGRESS) {
             throw new CustomException(ErrorCode.INVALID_MILESTONE_STATUS_TRANSITION);

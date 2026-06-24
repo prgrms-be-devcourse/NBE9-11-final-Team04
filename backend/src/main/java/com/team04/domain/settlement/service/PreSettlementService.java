@@ -52,7 +52,7 @@ public class PreSettlementService {
     )
     @Transactional
     public PreSettlementResponse requestPreSettlement(Long ideaId, PreSettlementRequest request, Long userId) {
-        ideaService.validateNotSuspended(ideaId);
+        ideaService.validateNotSuspended(ideaId); // 분쟁 처리 중 일시 중단된 프로젝트는 선정산 신청 불가
         milestoneRepository.findByIdeaIdAndStatusWithPessimisticLock(ideaId, MilestoneStatus.IN_PROGRESS)
                 .orElseThrow(() -> new CustomException(ErrorCode.PRE_SETTLEMENT_MILESTONE_NOT_IN_PROGRESS));
 

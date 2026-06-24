@@ -33,6 +33,8 @@ public enum IdeaStatus {
     /** 아이디어 진행이 취소된 상태입니다. */
     CANCELLED,
 
+    // 분쟁 신고 처리 중 관리자가 프로젝트를 일시 중단할 때 사용합니다.
+    // 소명 수용(REJECTED) 시 이전 상태로 복원, 신고 인정(RESOLVED) 시 CANCELLED로 전환됩니다.
     /** 관리자가 일시 중단한 상태입니다. */
     SUSPENDED;
 
@@ -64,22 +66,23 @@ public enum IdeaStatus {
 
             case OPEN ->
                     targetStatus == IN_PROGRESS
-                            || targetStatus == SUSPENDED
+                            || targetStatus == SUSPENDED // 분쟁 신고 처리 중 관리자 일시 중단
                             || targetStatus == CANCELLED;
 
             case IN_PROGRESS ->
                     targetStatus == COMPLETED
                             || targetStatus == CANCELLATION_REQUESTED
-                            || targetStatus == SUSPENDED
+                            || targetStatus == SUSPENDED // 분쟁 신고 처리 중 관리자 일시 중단
                             || targetStatus == CANCELLED;
 
             case CANCELLATION_REQUESTED ->
                     targetStatus == CANCELLED
                             || targetStatus == IN_PROGRESS;
 
-            case SUSPENDED ->
+            case SUSPENDED -> // 소명 수용 시 이전 상태 복원, 신고 인정 시 CANCELLED 전환
                     targetStatus == OPEN
-                            || targetStatus == IN_PROGRESS;
+                            || targetStatus == IN_PROGRESS
+                            || targetStatus == CANCELLED;
 
             case COMPLETED, CANCELLED, REJECTED ->
                     false;

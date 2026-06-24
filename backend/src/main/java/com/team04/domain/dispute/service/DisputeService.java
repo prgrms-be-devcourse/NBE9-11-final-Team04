@@ -4,6 +4,7 @@ import com.team04.domain.dispute.dto.request.AdminDisputeStatusRequest;
 import com.team04.domain.dispute.dto.request.CreateAppealRequest;
 import com.team04.domain.dispute.dto.request.CreateDisputeRequest;
 import com.team04.domain.dispute.dto.request.ForceRefundRequest;
+import com.team04.domain.idea.service.IdeaAdminService;
 import com.team04.domain.settlement.dto.response.RefundResponse;
 import com.team04.domain.settlement.service.RefundService;
 import com.team04.domain.settlement.service.SettlementService;
@@ -47,6 +48,7 @@ public class DisputeService {
     private final ApplicationEventPublisher eventPublisher;
     private final StorageClient storageClient;
     private final RefundService refundService;
+    private final IdeaAdminService ideaAdminService;
 
     @Lazy
     @Autowired
@@ -195,6 +197,7 @@ public class DisputeService {
                 .orElseThrow(() -> new CustomException(ErrorCode.DISPUTE_NOT_FOUND));
         dispute.updateStatus(request.status());
         syncAppealStatus(disputeId, request.status());
+        syncIdeaStatus(dispute, request.status());
         publishDisputeStatusNotifications(dispute, request.status());
         return DisputeResponse.of(dispute);
     }
@@ -206,6 +209,18 @@ public class DisputeService {
         } else if (newStatus == DisputeStatus.REJECTED) {
             disputeAppealRepository.findByDisputeId(disputeId)
                     .ifPresent(DisputeAppeal::approve);
+        }
+    }
+
+    private void syncIdeaStatus(Dispute dispute, DisputeStatus newStatus) {
+        if (dispute.getTargetType() != TargetType.IDEA) return;
+        Long ideaId = dispute.getTargetId();
+        if (newStatus == DisputeStatus.REJECTED) {
+            // 소명 수용 → 일시 중단된 프로젝트 복원
+            ideaAdminService.restoreIdea(ideaId);
+        } else if (newStatus == DisputeStatus.RESOLVED) {
+            // 신고 인정 → 프로젝트 강제 취소
+            ideaAdminService.cancelIdeaForDispute(ideaId);
         }
     }
 
