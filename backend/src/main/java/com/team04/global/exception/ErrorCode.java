@@ -46,6 +46,7 @@ public enum ErrorCode {
     SELF_REPORT_NOT_ALLOWED(400, "I009", "본인 아이디어는 신고할 수 없습니다"),
     IDEA_BOOKMARK_ALREADY_EXISTS(409, "I010", "이미 관심 프로젝트로 저장한 아이디어입니다"),
     IDEA_BOOKMARK_NOT_FOUND(404, "I011", "존재하지 않는 관심 프로젝트입니다"),
+    INVALID_SETTLEMENT_ACCOUNT(400, "I012", "정산 계좌 정보가 올바르지 않습니다"),
 
     // 검증
     INVALID_VERIFICATION_STATUS_TRANSITION(400, "V001", "유효하지 않은 검증 상태 전이입니다"),
@@ -121,6 +122,10 @@ public enum ErrorCode {
     PRE_SETTLEMENT_MILESTONE_NOT_IN_PROGRESS(400, "PS003", "진행 중인 마일스톤에서만 선정산 신청이 가능합니다"),
     PRE_SETTLEMENT_NOT_FOUND(404, "PS004", "존재하지 않는 선정산입니다"),
     PRE_SETTLEMENT_REQUEST_FAILED(500, "PS005", "선정산 신청에 실패했습니다. 잠시 후 다시 시도해주세요"),
+    PRE_SETTLEMENT_INSUFFICIENT_AVAILABLE(400, "PS006", "가용 모금 잔액이 부족합니다"),
+    PRE_SETTLEMENT_NOT_REQUESTED(400, "PS007", "검토 대기 중인 정산 신청이 아닙니다"),
+    PRE_SETTLEMENT_INSUFFICIENT_VIRTUAL_DEPOSIT(400, "PS008", "가상 보증금 잔액이 부족합니다. 정산 신청금의 50%를 보증금에서 차감합니다"),
+    SETTLEMENT_ACCOUNT_NOT_REGISTERED(400, "PS008", "아이디어 등록 시 입력한 정산 계좌가 없습니다"),
 
     // 매칭
     MATCH_NOT_FOUND(404, "MA001", "존재하지 않는 매칭입니다"),
