@@ -82,7 +82,10 @@ public class RefundService {
     @Transactional
     public void createCancelRefunds(Long ideaId, boolean isJustified) {
         List<Object[]> results = excludeAlreadyRefundedPayments(paymentRepository.findPaymentsAndSponsorIdsToRefund(ideaId));
-        if (results.isEmpty()) return;
+        if (results.isEmpty()) {
+            updateDepositStatus(ideaId, isJustified);
+            return;
+        }
 
         // 보증금 조회
         Deposit deposit = depositRepository.findByIdeaId(ideaId)
@@ -106,12 +109,10 @@ public class RefundService {
         // 단순 포기/먹튀: 보증금 전액을 후원자 균등 분배하여 추가
         if (!isJustified) {
             refunds = addDepositShare(refunds, depositAmount);
-
-            fundingService.forfeitDeposit(ideaId);
         } else {
             // 정당한 사유: 선정산 여부와 관계없이 release (보증금 소진이어도 몰수가 아님)
-            fundingService.releaseDeposit(ideaId);
         }
+        updateDepositStatus(ideaId, isJustified);
 
         if (!refunds.isEmpty()) {
             refundRepository.saveAll(refunds);
@@ -204,6 +205,14 @@ public class RefundService {
         return results.stream()
                 .filter(row -> !refundedPaymentIds.contains(((Payment) row[0]).getId()))
                 .toList();
+    }
+
+    private void updateDepositStatus(Long ideaId, boolean isJustified) {
+        if (isJustified) {
+            fundingService.releaseDeposit(ideaId);
+            return;
+        }
+        fundingService.forfeitDeposit(ideaId);
     }
 
     private List<Refund> addDepositShare(List<Refund> refunds, long depositAmount) {
