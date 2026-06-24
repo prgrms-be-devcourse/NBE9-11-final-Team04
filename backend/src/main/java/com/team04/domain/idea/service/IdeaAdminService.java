@@ -71,7 +71,9 @@ public class IdeaAdminService {
     @Transactional
     public void cancelIdeaForDispute(Long ideaId) {
         Idea idea = findActiveIdea(ideaId);
-        if (idea.getStatus() != IdeaStatus.COMPLETED && idea.getStatus() != IdeaStatus.CANCELLED) {
+        if (idea.getStatus() != IdeaStatus.COMPLETED
+                && idea.getStatus() != IdeaStatus.CANCELLED
+                && idea.getStatus() != IdeaStatus.REJECTED) {
             idea.changeStatus(IdeaStatus.CANCELLED);
         }
     }

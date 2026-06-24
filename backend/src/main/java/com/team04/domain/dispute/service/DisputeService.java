@@ -203,7 +203,7 @@ public class DisputeService {
     }
 
     private void syncAppealStatus(Long disputeId, DisputeStatus newStatus) {
-        if (newStatus == DisputeStatus.RECEIVED) {
+        if (newStatus == DisputeStatus.RECEIVED || newStatus == DisputeStatus.RESOLVED) {
             disputeAppealRepository.findByDisputeId(disputeId)
                     .ifPresent(DisputeAppeal::reject);
         } else if (newStatus == DisputeStatus.REJECTED) {
