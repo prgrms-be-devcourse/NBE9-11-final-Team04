@@ -7,14 +7,11 @@ import type {
   SignupRequest,
   TokenResponse,
 } from '@/types/auth'
-import type { Role } from '@/types/enums'
 
 export interface OAuthResponse {
   type: 'LOGIN' | 'REGISTER'
-  // LOGIN fields
   accessToken: string | null
   refreshToken: string | null
-  // REGISTER fields
   oauthToken: string | null
   email: string | null
   name: string | null
@@ -25,7 +22,6 @@ export interface OAuthRegisterRequest {
   name: string
   nickname: string
   age: number
-  role: Role
 }
 
 interface OAuthAuthorizeResponse {

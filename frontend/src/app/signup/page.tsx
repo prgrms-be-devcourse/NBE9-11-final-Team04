@@ -8,21 +8,11 @@ import { authApi } from '@/api/auth'
 import { usersApi } from '@/api/users'
 import { useAuthStore } from '@/store/authStore'
 import { Input } from '@/components/ui/Input'
-import { type Role } from '@/types/enums'
 import { getErrorMessage } from '@/utils/format'
 
 const SHOW_SOCIAL = !!(process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || process.env.NEXT_PUBLIC_KAKAO_CLIENT_ID)
 
-const ROLES: { value: Role; icon: string; label: string; sub: string; desc: string }[] = [
-  { value: 'PROPOSER', icon: '💡', label: '제안자',  sub: 'PROPOSER', desc: '아이디어를 제안하고 크라우드펀딩으로 자금을 모읍니다.' },
-  { value: 'EXPERT',   icon: '🎓', label: '전문가',  sub: 'EXPERT',   desc: '국가 자격 기반으로 아이디어를 전문적으로 검토합니다.' },
-  { value: 'SPONSOR',  icon: '💰', label: '스폰서',  sub: 'SPONSOR',  desc: '신뢰 검증된 아이디어에 후원하고 성장을 지원합니다.' },
-]
-
-const ROLE_ICONS: Record<Role, string> = { PROPOSER: '💡', EXPERT: '🎓', SPONSOR: '💰', ADMIN: '🛡️' }
-const ROLE_LABELS: Record<Role, string> = { PROPOSER: '제안자', EXPERT: '전문가', SPONSOR: '스폰서', ADMIN: '관리자' }
-
-const STEPS = ['역할 선택', '기본 정보', '이메일 인증', '프로필 설정']
+const STEPS = ['기본 정보', '이메일 인증', '프로필 설정']
 
 function StepIndicator({ current }: { current: number }) {
   return (
@@ -68,7 +58,6 @@ export default function SignupPage() {
   const [profile, setProfile] = useState({ intro: '', portfolioUrl: '' })
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [form, setForm] = useState({
-    role: '' as Role,
     name: '',
     nickname: '',
     age: '' as unknown as number,
@@ -78,8 +67,8 @@ export default function SignupPage() {
   })
 
   const sendOtpMutation = useMutation({
-    mutationFn: () => authApi.sendEmailVerify({ email: form.email, nickname: form.nickname }),
-    onSuccess: () => { setError(''); setStep(2) },
+    mutationFn: () => authApi.sendEmailVerify({ email: form.email }),
+    onSuccess: () => { setError(''); setStep(1) },
     onError: (err) => setError(getErrorMessage(err)),
   })
 
@@ -90,13 +79,12 @@ export default function SignupPage() {
       name: form.name,
       nickname: form.nickname,
       age: Number(form.age),
-      role: form.role,
     }),
     onSuccess: async () => {
       const user = await usersApi.getMe()
       setUser(user)
       setError('')
-      setStep(3)
+      setStep(2)
     },
     onError: (err) => setError(getErrorMessage(err)),
   })
@@ -113,7 +101,8 @@ export default function SignupPage() {
   })
 
   const profileMutation = useMutation({
-    mutationFn: () => usersApi.updateProfile({
+    mutationFn: () => usersApi.updateMe({
+      nickname: form.nickname,
       intro: profile.intro || undefined,
       portfolioUrl: profile.portfolioUrl || undefined,
     }),
@@ -162,56 +151,24 @@ export default function SignupPage() {
 
         <StepIndicator current={step} />
 
-        {/* STEP 0: 역할 선택 */}
+        {/* STEP 0: 기본 정보 */}
         {step === 0 && (
-          <div>
-            <h2 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--fg)', marginBottom: '6px' }}>역할을 선택해주세요</h2>
-            <p style={{ fontSize: '14px', color: 'var(--fg-muted)', marginBottom: '24px' }}>가입 후에는 역할을 변경할 수 없습니다.</p>
+          <form onSubmit={handleInfoSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <h2 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--fg)', marginBottom: '0' }}>기본 정보 입력</h2>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '28px' }}>
-              {ROLES.map((r) => (
-                <button
-                  key={r.value}
-                  onClick={() => setForm({ ...form, role: r.value })}
-                  style={{
-                    border: `1.5px solid ${form.role === r.value ? 'var(--brand)' : 'var(--border)'}`,
-                    borderRadius: 'var(--radius-lg)',
-                    padding: '20px 16px',
-                    cursor: 'pointer',
-                    background: form.role === r.value ? 'var(--brand-tint)' : '#fff',
-                    textAlign: 'left',
-                    transition: 'all 0.2s',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-                    <span style={{ fontSize: '24px' }}>{r.icon}</span>
-                    <div>
-                      <div style={{ fontSize: '16px', fontWeight: 700, color: 'var(--fg)' }}>{r.label}</div>
-                      <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--brand-dark)' }}>{r.sub}</div>
-                    </div>
-                  </div>
-                  <div style={{ fontSize: '13px', color: 'var(--fg-muted)', lineHeight: 1.5 }}>{r.desc}</div>
-                </button>
-              ))}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              <Input label="이름" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="홍길동" required />
+              <Input label="닉네임" value={form.nickname} onChange={(e) => setForm({ ...form, nickname: e.target.value })} placeholder="사용할 닉네임" required />
             </div>
 
-            <button
-              onClick={() => { if (!form.role) { setError('역할을 선택해주세요.'); return } setError(''); setStep(1) }}
-              disabled={!form.role}
-              style={{
-                width: '100%', height: '52px', fontSize: '17px', fontWeight: 700,
-                background: form.role ? 'var(--brand)' : 'var(--border)',
-                color: form.role ? '#fff' : 'var(--fg-muted)',
-                border: 'none', borderRadius: 'var(--radius-md)', cursor: form.role ? 'pointer' : 'not-allowed',
-                fontFamily: 'inherit', transition: 'background 0.2s',
-              }}
-            >
-              이메일로 가입하기 →
-            </button>
+            <Input label="나이" type="number" min={19} value={form.age || ''} onChange={(e) => setForm({ ...form, age: Number(e.target.value) })} placeholder="만 나이" required />
+            <Input label="이메일" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="example@seedlink.com" required />
+            <Input label="비밀번호" type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="8자 이상" required />
+            <Input label="비밀번호 확인" type="password" value={form.confirmPassword} onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })} placeholder="비밀번호 재입력" required />
 
             {SHOW_SOCIAL && (
               <>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '16px 0' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '4px 0' }}>
                   <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
                   <span style={{ fontSize: '12px', color: 'var(--fg-muted)', whiteSpace: 'nowrap' }}>또는 소셜 계정으로 가입</span>
                   <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
@@ -233,44 +190,19 @@ export default function SignupPage() {
               </>
             )}
 
-            {error && <p style={{ fontSize: '14px', color: 'var(--error)', marginTop: '12px', textAlign: 'center' }}>{error}</p>}
-          </div>
-        )}
-
-        {/* STEP 1: 기본 정보 */}
-        {step === 1 && (
-          <form onSubmit={handleInfoSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <h2 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--fg)', marginBottom: '0' }}>기본 정보 입력</h2>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-              <Input label="이름" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="홍길동" required />
-              <Input label="닉네임" value={form.nickname} onChange={(e) => setForm({ ...form, nickname: e.target.value })} placeholder="사용할 닉네임" required />
-            </div>
-
-            <Input label="나이" type="number" min={19} value={form.age || ''} onChange={(e) => setForm({ ...form, age: Number(e.target.value) })} placeholder="만 나이" required />
-            <Input label="이메일" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="example@seedlink.com" required />
-            <Input label="비밀번호" type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="8자 이상" required />
-            <Input label="비밀번호 확인" type="password" value={form.confirmPassword} onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })} placeholder="비밀번호 재입력" required />
-
             {error && (
               <p style={{ fontSize: '14px', color: 'var(--error)', background: '#fff5f5', padding: '10px 14px', borderRadius: 'var(--radius-md)' }}>{error}</p>
             )}
 
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <button type="button" onClick={() => { setError(''); setStep(0) }}
-                style={{ flex: 1, height: '52px', fontSize: '15px', fontWeight: 600, background: '#fff', border: '1.5px solid var(--border)', borderRadius: 'var(--radius-md)', cursor: 'pointer', fontFamily: 'inherit', color: 'var(--fg-muted)' }}>
-                ← 이전
-              </button>
-              <button type="submit" disabled={sendOtpMutation.isPending}
-                style={{ flex: 2, height: '52px', fontSize: '17px', fontWeight: 700, background: sendOtpMutation.isPending ? 'var(--brand-tint)' : 'var(--brand)', color: sendOtpMutation.isPending ? 'var(--brand)' : '#fff', border: 'none', borderRadius: 'var(--radius-md)', cursor: sendOtpMutation.isPending ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
-                {sendOtpMutation.isPending ? '발송 중...' : '인증 코드 받기 →'}
-              </button>
-            </div>
+            <button type="submit" disabled={sendOtpMutation.isPending}
+              style={{ width: '100%', height: '52px', fontSize: '17px', fontWeight: 700, background: sendOtpMutation.isPending ? 'var(--brand-tint)' : 'var(--brand)', color: sendOtpMutation.isPending ? 'var(--brand)' : '#fff', border: 'none', borderRadius: 'var(--radius-md)', cursor: sendOtpMutation.isPending ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
+              {sendOtpMutation.isPending ? '발송 중...' : '인증 코드 받기 →'}
+            </button>
           </form>
         )}
 
-        {/* STEP 2: 이메일 인증 */}
-        {step === 2 && (
+        {/* STEP 1: 이메일 인증 */}
+        {step === 1 && (
           <form onSubmit={(e) => { e.preventDefault(); setError(''); verifyOtpMutation.mutate() }}
             style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <h2 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--fg)', marginBottom: '0' }}>이메일 인증</h2>
@@ -287,7 +219,7 @@ export default function SignupPage() {
             )}
 
             <div style={{ display: 'flex', gap: '10px' }}>
-              <button type="button" onClick={() => { setError(''); setStep(1) }}
+              <button type="button" onClick={() => { setError(''); setStep(0) }}
                 style={{ flex: 1, height: '52px', fontSize: '15px', fontWeight: 600, background: '#fff', border: '1.5px solid var(--border)', borderRadius: 'var(--radius-md)', cursor: 'pointer', fontFamily: 'inherit', color: 'var(--fg-muted)' }}>
                 ← 이전
               </button>
@@ -304,18 +236,14 @@ export default function SignupPage() {
           </form>
         )}
 
-        {/* STEP 3: 프로필 설정 */}
-        {step === 3 && (
+        {/* STEP 2: 프로필 설정 */}
+        {step === 2 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            {/* 축하 배너 */}
             <div style={{ textAlign: 'center', padding: '20px 0 4px' }}>
               <div style={{ fontSize: '40px', marginBottom: '10px' }}>🎉</div>
               <h2 style={{ fontSize: '20px', fontWeight: 800, color: 'var(--fg)', marginBottom: '6px' }}>
                 가입을 축하합니다!
               </h2>
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 12px', borderRadius: '99px', background: 'var(--brand-tint)', fontSize: '13px', fontWeight: 700, color: 'var(--brand-dark)' }}>
-                {ROLE_ICONS[form.role]} {ROLE_LABELS[form.role]}
-              </div>
               <p style={{ fontSize: '14px', color: 'var(--fg-muted)', marginTop: '10px', lineHeight: 1.6 }}>
                 프로필을 설정하면 다른 사용자에게<br />더 잘 알려질 수 있어요.
               </p>
@@ -364,11 +292,7 @@ export default function SignupPage() {
               <textarea
                 value={profile.intro}
                 onChange={(e) => setProfile({ ...profile, intro: e.target.value })}
-                placeholder={
-                  form.role === 'EXPERT'   ? '보유 전문 분야와 경력을 소개해주세요.' :
-                  form.role === 'PROPOSER' ? '어떤 아이디어를 실현하고 싶은지 소개해주세요.' :
-                                             '후원 관심 분야나 투자 성향을 소개해주세요.'
-                }
+                placeholder="자신을 소개해주세요."
                 rows={4}
                 style={{
                   width: '100%', border: '1.5px solid var(--border)', borderRadius: '10px',
@@ -384,7 +308,7 @@ export default function SignupPage() {
             {/* 포트폴리오 URL */}
             <div>
               <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: 'var(--fg)', marginBottom: '8px' }}>
-                {form.role === 'EXPERT' ? '포트폴리오 / 자격 증빙 URL' : '포트폴리오 URL'}
+                포트폴리오 URL
                 <span style={{ fontSize: '12px', fontWeight: 400, color: 'var(--fg-muted)', marginLeft: '6px' }}>(선택)</span>
               </label>
               <input
@@ -401,11 +325,6 @@ export default function SignupPage() {
                 onFocus={(e) => { e.target.style.borderColor = 'var(--brand)' }}
                 onBlur={(e) => { e.target.style.borderColor = 'var(--border)' }}
               />
-              {form.role === 'EXPERT' && (
-                <p style={{ fontSize: '12px', color: 'var(--fg-muted)', marginTop: '4px' }}>
-                  자격증, 경력 증빙 링크를 첨부하면 전문가 검증에 활용됩니다.
-                </p>
-              )}
             </div>
 
             {error && (
@@ -444,7 +363,7 @@ export default function SignupPage() {
           </div>
         )}
 
-        {step < 3 && (
+        {step < 2 && (
           <p style={{ textAlign: 'center', marginTop: '24px', fontSize: '14px', color: 'var(--fg-muted)' }}>
             이미 계정이 있으신가요?{' '}
             <Link href="/login" style={{ color: 'var(--brand-dark)', fontWeight: 700 }}>로그인</Link>

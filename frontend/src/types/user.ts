@@ -17,9 +17,6 @@ export interface User {
 
 export interface UpdateUserRequest {
   nickname: string
-}
-
-export interface UpdateProfileRequest {
   intro?: string
   portfolioUrl?: string
 }

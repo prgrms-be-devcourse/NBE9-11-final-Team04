@@ -1,5 +1,3 @@
-import type { Role } from './enums'
-
 export interface TokenResponse {
   accessToken: string
   refreshToken: string
@@ -11,7 +9,6 @@ export interface SignupRequest {
   name: string
   nickname: string
   age: number
-  role: Role
 }
 
 export interface LoginRequest {
@@ -21,7 +18,6 @@ export interface LoginRequest {
 
 export interface EmailSendRequest {
   email: string
-  nickname: string
 }
 
 export interface EmailVerifyRequest {

@@ -45,8 +45,7 @@ const sectionPad: React.CSSProperties = { padding: '80px 0' }
 function usePrimaryCta() {
   const { isAuthenticated, user } = useAuthStore()
   if (!isAuthenticated) return { href: '/signup',    label: '아이디어 제안하기 →' }
-  if (user?.role === 'SPONSOR') return { href: '/ideas',     label: '아이디어 후원하기 →' }
-  if (user?.role === 'EXPERT')  return { href: '/ideas',     label: '검토 아이디어 보기 →' }
+  if (user?.role === 'EXPERT') return { href: '/ideas', label: '검토 아이디어 보기 →' }
   return { href: '/ideas/new', label: '아이디어 제안하기 →' }
 }
 

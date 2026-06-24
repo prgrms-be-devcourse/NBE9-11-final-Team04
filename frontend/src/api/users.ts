@@ -4,7 +4,6 @@ import type {
   BusinessRegistrationRequest,
   BusinessRegistrationResponse,
   UpdatePasswordRequest,
-  UpdateProfileRequest,
   UpdateUserRequest,
   User,
 } from '@/types/user'
@@ -14,9 +13,6 @@ export const usersApi = {
 
   updateMe: (body: UpdateUserRequest) =>
     unwrap(apiClient.patch<ApiResponse<User>>('/users/me', body)),
-
-  updateProfile: (body: UpdateProfileRequest) =>
-    unwrap(apiClient.patch<ApiResponse<User>>('/users/me/profile', body)),
 
   updatePassword: (body: UpdatePasswordRequest) =>
     unwrap(apiClient.patch<ApiResponse<void>>('/users/me/password', body)),
@@ -34,7 +30,7 @@ export const usersApi = {
 
   updateProfileImage: (file: File) => {
     const formData = new FormData()
-    formData.append('image', file)
+    formData.append('file', file)
     return unwrap(apiClient.patch<ApiResponse<User>>('/users/me/profile-image', formData, {
       headers: { 'Content-Type': undefined },
     }))

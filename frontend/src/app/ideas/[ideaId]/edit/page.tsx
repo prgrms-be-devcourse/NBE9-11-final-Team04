@@ -5,7 +5,7 @@ import IdeaFormView from '@/components/views/IdeaFormView'
 
 export default function EditIdeaPage() {
   return (
-    <ProtectedRoute roles={['PROPOSER']}>
+    <ProtectedRoute roles={['USER']}>
       <IdeaFormView />
     </ProtectedRoute>
   )

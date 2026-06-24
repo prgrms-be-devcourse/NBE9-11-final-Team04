@@ -90,10 +90,8 @@ export function Gnb() {
   const navItems = (() => {
     const explore = { href: '/ideas', label: '아이디어 탐색' }
     switch (user?.role) {
-      case 'PROPOSER':
-        return [explore, { href: '/mypage/ideas', label: '내 아이디어' }, { href: '/fundings', label: '펀딩' }]
-      case 'SPONSOR':
-        return [explore, { href: '/mypage/payments', label: '후원 내역' }]
+      case 'USER':
+        return [explore, { href: '/mypage/ideas', label: '내 아이디어' }, { href: '/fundings', label: '펀딩' }, { href: '/mypage/payments', label: '후원 내역' }]
       case 'EXPERT':
         return [explore, { href: '/expert/matches', label: '매칭 관리' }]
       case 'ADMIN':

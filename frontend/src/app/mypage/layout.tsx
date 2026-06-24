@@ -20,9 +20,9 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { path: '/mypage',               label: '내 정보',    icon: '📊', exact: true },
-  { path: '/mypage/ideas',         label: '내 아이디어', icon: '💡', roles: ['PROPOSER'] },
+  { path: '/mypage/ideas',         label: '내 아이디어', icon: '💡', roles: ['USER'] },
   { path: '/mypage/matches',       label: '매칭 목록',  icon: '🤝', roles: ['EXPERT'] },
-  { path: '/mypage/payments',      label: '결제 내역',  icon: '💰', roles: ['PROPOSER', 'SPONSOR'] },
+  { path: '/mypage/payments',      label: '결제 내역',  icon: '💰', roles: ['USER'] },
   { path: '/mypage/notifications', label: '알림',       icon: '🔔' },
 ]
 
@@ -185,7 +185,7 @@ function MyPageContent({ children }: { children: React.ReactNode }) {
   const { user } = useAuthStore()
 
   useEffect(() => {
-    if (user?.role === 'PROPOSER') {
+    if (user?.role === 'USER') {
       queryClient.prefetchQuery({ queryKey: ['ideas', 'me'],     queryFn: ideasApi.getMyIdeas, staleTime: 30_000 })
       queryClient.prefetchQuery({ queryKey: ['ideas', 'drafts'], queryFn: ideasApi.getDrafts,  staleTime: 30_000 })
     }
