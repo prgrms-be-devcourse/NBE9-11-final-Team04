@@ -1,5 +1,7 @@
 package com.team04.domain.settlement.service;
 
+import com.team04.domain.funding.service.FundingService;
+import com.team04.domain.settlement.service.RefundService;
 import com.team04.domain.idea.dto.response.IdeaResponse;
 import com.team04.domain.idea.service.IdeaService;
 import com.team04.domain.milestone.service.MilestoneService;
@@ -27,6 +29,8 @@ public class SettlementService {
     private final SettlementRepository settlementRepository;
     private final IdeaService ideaService;
     private final PreSettlementRepository preSettlementRepository;
+    private final RefundService refundService;
+    private final FundingService fundingService;
 
     /**
      * 프로젝트별 정산 이력 전체 조회
@@ -224,7 +228,6 @@ public class SettlementService {
      * 정당한 사유 중단 후원자 환불 장부 생성
      * MilestoneService.refundMilestone()에서 호출
      * 후원금 잔액만 환불 재원 (보증금은 createDepositRefundSettlement에서 별도 처리)
-     * TODO: 정욱님 잔액 추적 PR 머지 후 totalAmount 계산 로직 교체
      */
     @Transactional
     public SettlementResponse createJustifiedCancelRefundSettlement(Long ideaId) {
@@ -258,7 +261,6 @@ public class SettlementService {
      * 단순 포기/먹튀 후원자 환불 장부 생성
      * MilestoneService.cancelMilestone() / forfeitMilestone()에서 호출
      * 후원금 잔액만 환불 재원 (보증금은 createDepositForfeitSettlement에서 별도 처리)
-     * TODO: 정욱님 잔액 추적 PR 머지 후 totalAmount 계산 로직 교체
      */
     @Transactional
     public SettlementResponse createCancelRefundSettlement(Long ideaId) {
@@ -313,5 +315,19 @@ public class SettlementService {
 
         settlement.forfeit();
         return SettlementResponse.from(settlementRepository.save(settlement));
+    }
+
+    /**
+     * 에스크로 강제 환불 (관리자 전용)
+     * 단순 포기/먹튀 케이스에서 관리자가 판정 시 호출
+     * 후원금 잔액 환불 장부 + 보증금 몰수 장부 + 후원자 환불 레코드 + 보증금 몰수
+     * 하나의 트랜잭션으로 묶어 정합성 보장
+     */
+    @Transactional
+    public void forceRefund(Long ideaId) {
+        createCancelRefundSettlement(ideaId);
+        createDepositForfeitSettlement(ideaId);
+        refundService.createCancelRefunds(ideaId, false);
+        fundingService.forfeitDeposit(ideaId);
     }
 }

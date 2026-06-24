@@ -183,6 +183,18 @@ public class RefundService {
     }
 
     /**
+     * 환불 실패 처리
+     * 결제팀 콜백용 — PENDING → FAILED
+     */
+    @Transactional
+    public RefundResponse failRefund(Long refundId) {
+        Refund refund = refundRepository.findById(refundId)
+                .orElseThrow(() -> new CustomException(ErrorCode.REFUND_NOT_FOUND));
+        refund.fail();
+        return RefundResponse.from(refund);
+    }
+
+    /**
      * 후원자별 환불 내역 조회
      */
     @Transactional(readOnly = true)
