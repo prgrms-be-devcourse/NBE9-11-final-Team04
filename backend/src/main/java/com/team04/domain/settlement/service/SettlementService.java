@@ -221,18 +221,14 @@ public class SettlementService {
         return SettlementResponse.from(settlementRepository.save(settlement));
     }
     /**
-     * 이행 중단 후원자 환불 장부 생성
-     * MilestoneService.refundMilestone() / cancelMilestone() / forfeitMilestone()에서 호출
-     *
-     * isJustified=true  (정당한 사유): 후원금 잔액만 환불 재원. 보증금 잔액은 제안자 환급.
-     * isJustified=false (포기/먹튀):   후원금 잔액만 환불 재원. 보증금은 별도 몰수 장부.
-     *
+     * 정당한 사유 중단 후원자 환불 장부 생성
+     * MilestoneService.refundMilestone()에서 호출
+     * 후원금 잔액만 환불 재원 (보증금은 createDepositRefundSettlement에서 별도 처리)
      * TODO: 정욱님 잔액 추적 PR 머지 후 totalAmount 계산 로직 교체
      */
     @Transactional
-    public SettlementResponse createCancelRefundSettlement(Long ideaId, boolean isJustified) {
-        String suffix = isJustified ? "JUSTIFIED" : "CANCELLED";
-        String idempotencyKey = "idea-" + ideaId + "-REFUND-" + suffix;
+    public SettlementResponse createJustifiedCancelRefundSettlement(Long ideaId) {
+        String idempotencyKey = "idea-" + ideaId + "-REFUND-JUSTIFIED";
 
         if (settlementRepository.findByIdempotencyKey(idempotencyKey).isPresent()) {
             throw new CustomException(ErrorCode.SETTLEMENT_DUPLICATE);
@@ -240,25 +236,51 @@ public class SettlementService {
 
         IdeaResponse idea = ideaService.getIdea(ideaId);
         long fundingAmount = idea.currentAmount();
-        long depositAmount = idea.depositAmount();
         long preSettlementTotal = preSettlementRepository
                 .sumAmountByIdeaIdAndStatus(ideaId, PreSettlementStatus.COMPLETED);
 
-        // 후원금 잔액 = 총 후원금 - 선정산액
         long fundingBalance = Math.max(fundingAmount - preSettlementTotal, 0);
-
-        // 총 환불 재원 — 포기/먹튀는 보증금 별도 장부로 분리하므로 후원금 잔액만
-        long totalRefundAmount = fundingBalance;
-
-        // 장부상 totalAmount
-        long totalAmount = fundingAmount;
 
         Settlement settlement = Settlement.builder()
                 .ideaId(ideaId)
                 .type(SettlementType.FINAL)
-                .totalAmount(totalAmount)
+                .totalAmount(fundingAmount)
                 .platformFee(0L)
-                .payoutAmount(totalRefundAmount)
+                .payoutAmount(fundingBalance)
+                .idempotencyKey(idempotencyKey)
+                .build();
+
+        settlement.refund();
+        return SettlementResponse.from(settlementRepository.save(settlement));
+    }
+
+    /**
+     * 단순 포기/먹튀 후원자 환불 장부 생성
+     * MilestoneService.cancelMilestone() / forfeitMilestone()에서 호출
+     * 후원금 잔액만 환불 재원 (보증금은 createDepositForfeitSettlement에서 별도 처리)
+     * TODO: 정욱님 잔액 추적 PR 머지 후 totalAmount 계산 로직 교체
+     */
+    @Transactional
+    public SettlementResponse createCancelRefundSettlement(Long ideaId) {
+        String idempotencyKey = "idea-" + ideaId + "-REFUND-CANCELLED";
+
+        if (settlementRepository.findByIdempotencyKey(idempotencyKey).isPresent()) {
+            throw new CustomException(ErrorCode.SETTLEMENT_DUPLICATE);
+        }
+
+        IdeaResponse idea = ideaService.getIdea(ideaId);
+        long fundingAmount = idea.currentAmount();
+        long preSettlementTotal = preSettlementRepository
+                .sumAmountByIdeaIdAndStatus(ideaId, PreSettlementStatus.COMPLETED);
+
+        long fundingBalance = Math.max(fundingAmount - preSettlementTotal, 0);
+
+        Settlement settlement = Settlement.builder()
+                .ideaId(ideaId)
+                .type(SettlementType.FINAL)
+                .totalAmount(fundingAmount)
+                .platformFee(0L)
+                .payoutAmount(fundingBalance)
                 .idempotencyKey(idempotencyKey)
                 .build();
 

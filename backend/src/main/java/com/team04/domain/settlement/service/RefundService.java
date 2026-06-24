@@ -119,6 +119,7 @@ public class RefundService {
         // 단순 포기/먹튀: 보증금 전액을 후원자 균등 분배하여 추가
         if (!isJustified) {
             long depositPerSponsor = depositAmount / results.size();
+            // TODO: 나머지(depositAmount % results.size()) 처리 필요 — 현재 소수점 절사로 일부 금액 유실 가능
             refunds = refunds.stream()
                     .map(refund -> Refund.builder()
                             .paymentId(refund.getPaymentId())
@@ -131,13 +132,9 @@ public class RefundService {
             // TODO: 정욱님 — Deposit.forfeit() / release() 호출 주체 확정 후 수정
             deposit.forfeit();
         } else {
-            // 정당한 사유: 보증금 - 선정산 잔액이 있으면 제안자에게 환급
+            // 정당한 사유: 선정산 여부와 관계없이 release (보증금 소진이어도 몰수가 아님)
             // TODO: 정욱님 — Deposit.forfeit() / release() 호출 주체 확정 후 수정
-            if (preSettlementTotal < depositAmount) {
-                deposit.release();
-            } else {
-                deposit.forfeit();
-            }
+            deposit.release();
         }
 
         if (!refunds.isEmpty()) {

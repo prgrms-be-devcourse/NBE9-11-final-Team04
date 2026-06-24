@@ -185,7 +185,13 @@ public class MilestoneService {
         report.approve();
         milestone.complete();
 
-        startNextMilestone(milestone.getIdeaId(), milestone.getStep() + 1);
+        if (milestone.getStep() == 3) {
+            // 3단계 소명 승인 = 최종 완성으로 처리
+            settlementService.createFinalSettlement(milestone.getIdeaId());
+            settlementService.createCompletedDepositRefundSettlement(milestone.getIdeaId());
+        } else {
+            startNextMilestone(milestone.getIdeaId(), milestone.getStep() + 1);
+        }
 
         return CompletionReportResponse.from(report);
     }
@@ -223,7 +229,7 @@ public class MilestoneService {
         report.approve();
         milestone.cancel();
 
-        settlementService.createCancelRefundSettlement(milestone.getIdeaId(), true);
+        settlementService.createJustifiedCancelRefundSettlement(milestone.getIdeaId());
         settlementService.createDepositRefundSettlement(milestone.getIdeaId());
         refundService.createCancelRefunds(milestone.getIdeaId(), true); // 정당한 사유 — 보증금 잔액 제안자 환급
     }
@@ -244,7 +250,7 @@ public class MilestoneService {
         }
 
         milestone.cancel();
-        settlementService.createCancelRefundSettlement(ideaId, false); // 먹튀/잠수 — 후원금 잔액
+        settlementService.createCancelRefundSettlement(ideaId);        // 먹튀/잠수 — 후원금 잔액
         settlementService.createDepositForfeitSettlement(ideaId);      // 먹튀/잠수 — 보증금 몰수
         refundService.createCancelRefunds(ideaId, false); // 먹튀/잠수 — 보증금 전액 후원자 분배
     }
@@ -258,7 +264,7 @@ public class MilestoneService {
         Milestone milestone = milestoneRepository.findByIdeaIdAndStatusWithPessimisticLock(ideaId, MilestoneStatus.IN_PROGRESS)
                 .orElseThrow(() -> new CustomException(ErrorCode.MILESTONE_NOT_FOUND));
         milestone.cancel();
-        settlementService.createCancelRefundSettlement(ideaId, false); // 수동 중단 — 후원금 잔액
+        settlementService.createCancelRefundSettlement(ideaId);        // 수동 중단 — 후원금 잔액
         settlementService.createDepositForfeitSettlement(ideaId);      // 수동 중단 — 보증금 몰수
         refundService.createCancelRefunds(ideaId, false); // 수동 중단 — 보증금 전액 후원자 분배
     }
