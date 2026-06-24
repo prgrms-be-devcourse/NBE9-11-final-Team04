@@ -8,6 +8,9 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.springframework.test.util.ReflectionTestUtils;
+
+import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -49,9 +52,9 @@ class DisputeStatusTest {
     }
 
     @Test
-    @DisplayName("PENDING → RECEIVED 불허")
-    void PENDING_to_RECEIVED_불허() {
-        assertThat(DisputeStatus.PENDING.canTransitionTo(DisputeStatus.RECEIVED)).isFalse();
+    @DisplayName("PENDING → RECEIVED 허용 (관리자 소명 재요청)")
+    void PENDING_to_RECEIVED_허용() {
+        assertThat(DisputeStatus.PENDING.canTransitionTo(DisputeStatus.RECEIVED)).isTrue();
     }
 
     @ParameterizedTest
@@ -75,8 +78,10 @@ class DisputeStatusTest {
     private Dispute createDispute() {
         User reporter = User.create("a@test.com", "pw", "신고자", "reporter", 30, Role.USER);
         User reported = User.create("b@test.com", "pw", "피신고자", "reported", 30, Role.USER);
-        return new Dispute(reporter, reported, TargetType.IDEA, 1L,
+        Dispute dispute = new Dispute(reporter, reported, TargetType.IDEA, 1L,
                 DisputeCategory.IDEA_THEFT, "제목", "이유", null);
+        ReflectionTestUtils.setField(dispute, "createdAt", LocalDateTime.now());
+        return dispute;
     }
 
     @Test
@@ -117,20 +122,20 @@ class DisputeStatusTest {
     }
 
     @Test
-    @DisplayName("RESOLVED 상태에서 소명 가능 (추가 제출 허용)")
-    void isAppealable_RESOLVED_true() {
+    @DisplayName("RESOLVED 상태에서 소명 불가")
+    void isAppealable_RESOLVED_false() {
         Dispute dispute = createDispute();
         dispute.updateStatus(DisputeStatus.PENDING);
         dispute.updateStatus(DisputeStatus.RESOLVED);
-        assertThat(dispute.isAppealable()).isTrue();
+        assertThat(dispute.isAppealable()).isFalse();
     }
 
     @Test
-    @DisplayName("REJECTED 상태에서 소명 가능 (추가 제출 허용)")
-    void isAppealable_REJECTED_true() {
+    @DisplayName("REJECTED 상태에서 소명 불가")
+    void isAppealable_REJECTED_false() {
         Dispute dispute = createDispute();
         dispute.updateStatus(DisputeStatus.PENDING);
         dispute.updateStatus(DisputeStatus.REJECTED);
-        assertThat(dispute.isAppealable()).isTrue();
+        assertThat(dispute.isAppealable()).isFalse();
     }
 }

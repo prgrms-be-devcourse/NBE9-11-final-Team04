@@ -81,4 +81,11 @@ public record TossWebhookRequest(
         }
         return data != null ? data.paymentKey() : null;
     }
+
+    public String resolvedEventId() {
+        if (eventId != null && !eventId.isBlank()) {
+            return eventId;
+        }
+        return resolvedTransactionKey();
+    }
 }

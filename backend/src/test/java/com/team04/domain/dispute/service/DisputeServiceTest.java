@@ -62,6 +62,7 @@ class DisputeServiceTest {
         dispute = new Dispute(reporter, reported, TargetType.IDEA, 10L,
                 DisputeCategory.IDEA_THEFT, "아이디어 도용 신고", "명백한 도용입니다", null);
         ReflectionTestUtils.setField(dispute, "id", 1L);
+        ReflectionTestUtils.setField(dispute, "createdAt", java.time.LocalDateTime.now());
     }
 
     // ─────────────────────────────────────────────

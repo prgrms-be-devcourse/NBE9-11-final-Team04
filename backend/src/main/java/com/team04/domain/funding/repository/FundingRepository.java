@@ -5,11 +5,9 @@ import com.team04.domain.funding.entity.FundingTypes.FundingStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import jakarta.persistence.LockModeType;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -32,8 +30,7 @@ public interface FundingRepository extends JpaRepository<Funding, Long> {
     @Query("SELECT COALESCE(SUM(f.amount), 0) FROM Funding f WHERE f.ideaId = :ideaId AND f.status = :status")
     Long sumAmountByIdeaIdAndStatus(@Param("ideaId") Long ideaId, @Param("status") FundingStatus status);
 
-    @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("SELECT f FROM Funding f WHERE f.id = :id")
+    @Query(value = "SELECT * FROM fundings WHERE id = :id FOR UPDATE", nativeQuery = true)
     Optional<Funding> findByIdForUpdate(@Param("id") Long id);
 
     /**
