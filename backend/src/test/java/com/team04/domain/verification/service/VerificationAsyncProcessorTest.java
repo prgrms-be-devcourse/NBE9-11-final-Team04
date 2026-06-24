@@ -76,8 +76,8 @@ class VerificationAsyncProcessorTest {
             return null;
         }).when(transactionTemplate).execute(any());
         doAnswer(invocation -> {
-            invocation.getArgument(0, org.springframework.transaction.support.TransactionCallbackWithoutResult.class)
-                    .doInTransaction(null);
+            ((java.util.function.Consumer<org.springframework.transaction.TransactionStatus>)
+                    invocation.getArgument(0)).accept(null);
             return null;
         }).when(transactionTemplate).executeWithoutResult(any());
         given(userRepository.findByRoleAndStatus(Role.ADMIN, UserStatus.ACTIVE)).willReturn(List.of());
