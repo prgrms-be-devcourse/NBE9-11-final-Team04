@@ -67,9 +67,9 @@ public class MilestoneService {
             throw new CustomException(ErrorCode.MILESTONE_NOT_FOUND);
         }
         CompletionReport report = completionReportRepository.findById(reportId)
-                .orElseThrow(() -> new CustomException(ErrorCode.INVALID_MILESTONE_STATUS_TRANSITION));
+                .orElseThrow(() -> new CustomException(ErrorCode.COMPLETION_REPORT_NOT_FOUND));
         if (!report.getMilestoneId().equals(milestoneId)) {
-            throw new CustomException(ErrorCode.INVALID_MILESTONE_STATUS_TRANSITION);
+            throw new CustomException(ErrorCode.COMPLETION_REPORT_MISMATCH);
         }
         return CompletionReportResponse.from(report);
     }

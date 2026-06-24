@@ -47,6 +47,9 @@ public class PreSettlement {
      * REQUESTED 상태에서만 가능합니다.
      */
     public void complete() {
+        if (this.status == PreSettlementStatus.COMPLETED) {
+            return;
+        }
         if (this.status != PreSettlementStatus.REQUESTED) {
             throw new CustomException(ErrorCode.SETTLEMENT_INVALID_STATUS_TRANSITION);
         }
@@ -58,6 +61,9 @@ public class PreSettlement {
      * REQUESTED 상태에서만 가능합니다.
      */
     public void fail() {
+        if (this.status == PreSettlementStatus.FAILED) {
+            return;
+        }
         if (this.status != PreSettlementStatus.REQUESTED) {
             throw new CustomException(ErrorCode.SETTLEMENT_INVALID_STATUS_TRANSITION);
         }

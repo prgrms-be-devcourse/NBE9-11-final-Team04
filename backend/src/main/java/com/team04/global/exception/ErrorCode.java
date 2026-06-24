@@ -90,6 +90,8 @@ public enum ErrorCode {
     INVALID_MILESTONE_COUNT(400, "M003", "현재 상태에서 해당 상태로 전이할 수 없습니다"),
     INVALID_MILESTONE_STEP(400, "M004", "유효하지 않은 마일스톤 단계입니다"),
     INVALID_MILESTONE_STATUS_TRANSITION(400, "M005", "현재 상태에서 해당 상태로 전이할 수 없습니다"),
+    COMPLETION_REPORT_NOT_FOUND(404, "M006", "존재하지 않는 완료/소명 보고서입니다"),
+    COMPLETION_REPORT_MISMATCH(400, "M007", "요청한 마일스톤의 완료/소명 보고서가 아닙니다"),
 
     // 결제
     PAYMENT_NOT_FOUND(404, "P001", "존재하지 않는 결제입니다"),

@@ -325,8 +325,16 @@ public class SettlementService {
      */
     @Transactional
     public void forceRefund(Long ideaId) {
-        createCancelRefundSettlement(ideaId);
-        createDepositForfeitSettlement(ideaId);
+        if (!settlementExists(ideaId, "REFUND-CANCELLED")) {
+            createCancelRefundSettlement(ideaId);
+        }
+        if (!settlementExists(ideaId, "DEPOSIT-FORFEITED")) {
+            createDepositForfeitSettlement(ideaId);
+        }
         refundService.createCancelRefunds(ideaId, false);
+    }
+
+    private boolean settlementExists(Long ideaId, String suffix) {
+        return settlementRepository.findByIdempotencyKey("idea-" + ideaId + "-" + suffix).isPresent();
     }
 }

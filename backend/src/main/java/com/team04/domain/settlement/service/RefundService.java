@@ -20,7 +20,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 @Service
 @RequiredArgsConstructor
@@ -41,7 +45,7 @@ public class RefundService {
      */
     @Transactional
     public void createGoalNotMetRefunds(Long ideaId) {
-        List<Object[]> results = paymentRepository.findPaymentsAndSponsorIdsToRefund(ideaId);
+        List<Object[]> results = excludeAlreadyRefundedPayments(paymentRepository.findPaymentsAndSponsorIdsToRefund(ideaId));
 
         List<Refund> refunds = results.stream()
                 .map(row -> {
@@ -77,7 +81,7 @@ public class RefundService {
      */
     @Transactional
     public void createCancelRefunds(Long ideaId, boolean isJustified) {
-        List<Object[]> results = paymentRepository.findPaymentsAndSponsorIdsToRefund(ideaId);
+        List<Object[]> results = excludeAlreadyRefundedPayments(paymentRepository.findPaymentsAndSponsorIdsToRefund(ideaId));
         if (results.isEmpty()) return;
 
         // 보증금 조회
@@ -97,37 +101,11 @@ public class RefundService {
         // 후원금 잔액 = 총 후원금 - 선정산액
         long fundingBalance = Math.max(totalPayment - preSettlementTotal, 0);
 
-        // 후원금 잔액을 후원 비율대로 분배
-        long finalFundingBalance = fundingBalance;
-        List<Refund> refunds = results.stream()
-                .map(row -> {
-                    Payment payment = (Payment) row[0];
-                    Long sponsorId = (Long) row[1];
-                    // 후원 비율 = 개인 후원금 / 총 후원금
-                    long refundAmount = totalPayment > 0
-                            ? Math.round((double) payment.getAmount() / totalPayment * finalFundingBalance)
-                            : 0;
-                    return Refund.builder()
-                            .paymentId(payment.getId())
-                            .sponsorId(sponsorId)
-                            .amount(refundAmount)
-                            .reason(RefundReason.CANCELLED)
-                            .build();
-                })
-                .toList();
+        List<Refund> refunds = distributeFundingBalance(results, totalPayment, fundingBalance);
 
         // 단순 포기/먹튀: 보증금 전액을 후원자 균등 분배하여 추가
         if (!isJustified) {
-            long depositPerSponsor = depositAmount / results.size();
-            // TODO: 나머지(depositAmount % results.size()) 처리 필요 — 현재 소수점 절사로 일부 금액 유실 가능
-            refunds = refunds.stream()
-                    .map(refund -> Refund.builder()
-                            .paymentId(refund.getPaymentId())
-                            .sponsorId(refund.getSponsorId())
-                            .amount(refund.getAmount() + depositPerSponsor)
-                            .reason(RefundReason.CANCELLED)
-                            .build())
-                    .toList();
+            refunds = addDepositShare(refunds, depositAmount);
 
             fundingService.forfeitDeposit(ideaId);
         } else {
@@ -203,5 +181,105 @@ public class RefundService {
                 .stream()
                 .map(RefundResponse::from)
                 .toList();
+    }
+
+    private List<Object[]> excludeAlreadyRefundedPayments(List<Object[]> results) {
+        if (results.isEmpty()) {
+            return results;
+        }
+
+        Set<Long> paymentIds = results.stream()
+                .map(row -> ((Payment) row[0]).getId())
+                .collect(Collectors.toSet());
+
+        Set<Long> refundedPaymentIds = refundRepository.findByPaymentIdIn(paymentIds)
+                .stream()
+                .map(Refund::getPaymentId)
+                .collect(Collectors.toSet());
+
+        if (refundedPaymentIds.isEmpty()) {
+            return results;
+        }
+
+        return results.stream()
+                .filter(row -> !refundedPaymentIds.contains(((Payment) row[0]).getId()))
+                .toList();
+    }
+
+    private List<Refund> addDepositShare(List<Refund> refunds, long depositAmount) {
+        long depositPerSponsor = depositAmount / refunds.size();
+        long remainder = depositAmount % refunds.size();
+        List<Refund> sortedRefunds = refunds.stream()
+                .sorted((left, right) -> left.getPaymentId().compareTo(right.getPaymentId()))
+                .toList();
+
+        return IntStream.range(0, sortedRefunds.size())
+                .mapToObj(index -> {
+                    Refund refund = sortedRefunds.get(index);
+                    long remainderShare = index < remainder ? 1 : 0;
+                    return Refund.builder()
+                            .paymentId(refund.getPaymentId())
+                            .sponsorId(refund.getSponsorId())
+                            .amount(refund.getAmount() + depositPerSponsor + remainderShare)
+                            .reason(RefundReason.CANCELLED)
+                            .build();
+                })
+                .toList();
+    }
+
+    private List<Refund> distributeFundingBalance(List<Object[]> results, long totalPayment, long fundingBalance) {
+        if (totalPayment <= 0 || fundingBalance <= 0) {
+            return results.stream()
+                    .map(row -> {
+                        Payment payment = (Payment) row[0];
+                        Long sponsorId = (Long) row[1];
+                        return createCancelRefund(payment, sponsorId, 0);
+                    })
+                    .toList();
+        }
+
+        List<FundingShare> shares = results.stream()
+                .map(row -> {
+                    Payment payment = (Payment) row[0];
+                    Long sponsorId = (Long) row[1];
+                    long weightedAmount = payment.getAmount() * fundingBalance;
+                    long baseAmount = weightedAmount / totalPayment;
+                    long remainder = weightedAmount % totalPayment;
+                    return new FundingShare(payment, sponsorId, baseAmount, remainder);
+                })
+                .toList();
+
+        long distributedAmount = shares.stream()
+                .mapToLong(FundingShare::baseAmount)
+                .sum();
+        long remainderAmount = fundingBalance - distributedAmount;
+        Set<Long> extraPaymentIds = shares.stream()
+                .sorted(Comparator
+                        .comparingLong(FundingShare::remainder).reversed()
+                        .thenComparing(share -> share.payment().getId()))
+                .limit(remainderAmount)
+                .map(share -> share.payment().getId())
+                .collect(Collectors.toSet());
+
+        return shares.stream()
+                .sorted(Comparator.comparing(share -> share.payment().getId()))
+                .map(share -> createCancelRefund(
+                        share.payment(),
+                        share.sponsorId(),
+                        share.baseAmount() + (extraPaymentIds.contains(share.payment().getId()) ? 1 : 0)
+                ))
+                .toList();
+    }
+
+    private Refund createCancelRefund(Payment payment, Long sponsorId, long amount) {
+        return Refund.builder()
+                .paymentId(payment.getId())
+                .sponsorId(sponsorId)
+                .amount(amount)
+                .reason(RefundReason.CANCELLED)
+                .build();
+    }
+
+    private record FundingShare(Payment payment, Long sponsorId, long baseAmount, long remainder) {
     }
 }
