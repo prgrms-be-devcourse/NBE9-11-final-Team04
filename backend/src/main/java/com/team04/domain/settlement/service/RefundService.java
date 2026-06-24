@@ -3,6 +3,7 @@ package com.team04.domain.settlement.service;
 import com.team04.domain.funding.entity.Deposit;
 import com.team04.domain.funding.repository.DepositRepository;
 import com.team04.domain.funding.repository.FundingRepository;
+import com.team04.domain.funding.service.FundingService;
 import com.team04.domain.idea.dto.response.IdeaResponse;
 import com.team04.domain.idea.service.IdeaService;
 import com.team04.domain.payment.entity.Payment;
@@ -31,6 +32,7 @@ public class RefundService {
     private final PreSettlementRepository preSettlementRepository;
     private final DepositRepository depositRepository;
     private final IdeaService ideaService;
+    private final FundingService fundingService;
 
     /**
      * 목표 미달성 환불 레코드 일괄 생성
@@ -72,7 +74,7 @@ public class RefundService {
      *   SUM(payment SUCCESS) + 보증금 - SUM(pre_settlement COMPLETED)
      *   TODO: 정욱님 잔액 추적 PR 머지 후 계산 로직 교체
      *
-     * TODO: 정욱님 — Deposit.forfeit() / release() 호출 주체 확정 후 수정
+     * Deposit 상태 변경은 FundingService.forfeitDeposit() / releaseDeposit()으로 처리
      */
     @Transactional
     public void createCancelRefunds(Long ideaId, boolean isJustified) {
@@ -80,7 +82,6 @@ public class RefundService {
         if (results.isEmpty()) return;
 
         // 보증금 조회
-        // TODO: 정욱님 — Deposit.forfeit() / release() 호출 주체 확정 후 수정
         Deposit deposit = depositRepository.findByIdeaId(ideaId)
                 .orElseThrow(() -> new CustomException(ErrorCode.DEPOSIT_NOT_FOUND));
         long depositAmount = deposit.getAmount();
@@ -129,12 +130,10 @@ public class RefundService {
                             .build())
                     .toList();
 
-            // TODO: 정욱님 — Deposit.forfeit() / release() 호출 주체 확정 후 수정
-            deposit.forfeit();
+            fundingService.forfeitDeposit(ideaId);
         } else {
             // 정당한 사유: 선정산 여부와 관계없이 release (보증금 소진이어도 몰수가 아님)
-            // TODO: 정욱님 — Deposit.forfeit() / release() 호출 주체 확정 후 수정
-            deposit.release();
+            fundingService.releaseDeposit(ideaId);
         }
 
         if (!refunds.isEmpty()) {

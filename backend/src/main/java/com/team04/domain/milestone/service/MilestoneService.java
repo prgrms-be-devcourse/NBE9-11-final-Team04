@@ -1,5 +1,6 @@
 package com.team04.domain.milestone.service;
 
+import com.team04.domain.funding.service.FundingService;
 import com.team04.domain.milestone.dto.request.CompletionReportRequest;
 import com.team04.domain.milestone.dto.response.CompletionReportResponse;
 import com.team04.domain.milestone.dto.response.MilestoneResponse;
@@ -33,6 +34,7 @@ public class MilestoneService {
     private final CompletionReportRepository completionReportRepository;
     private final SettlementService settlementService;
     private final RefundService refundService;
+    private final FundingService fundingService;
     private final StorageClient storageClient;
 
     /**
@@ -161,6 +163,7 @@ public class MilestoneService {
         if (milestone.getStep() == 3) {
             settlementService.createFinalSettlement(milestone.getIdeaId());
             settlementService.createCompletedDepositRefundSettlement(milestone.getIdeaId());
+            fundingService.releaseDeposit(milestone.getIdeaId());
         } else {
             startNextMilestone(milestone.getIdeaId(), milestone.getStep() + 1);
         }
@@ -189,6 +192,7 @@ public class MilestoneService {
             // 3단계 소명 승인 = 최종 완성으로 처리
             settlementService.createFinalSettlement(milestone.getIdeaId());
             settlementService.createCompletedDepositRefundSettlement(milestone.getIdeaId());
+            fundingService.releaseDeposit(milestone.getIdeaId());
         } else {
             startNextMilestone(milestone.getIdeaId(), milestone.getStep() + 1);
         }
