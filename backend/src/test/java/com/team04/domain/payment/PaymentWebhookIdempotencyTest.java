@@ -11,6 +11,7 @@ import com.team04.domain.idea.entity.IdeaStatus;
 import com.team04.domain.idea.entity.RewardType;
 import com.team04.domain.idea.repository.IdeaRepository;
 import com.team04.domain.payment.entity.PaymentTypes.PaymentMethod;
+import com.team04.domain.payment.entity.PaymentWebhookLog;
 import com.team04.domain.payment.repository.PaymentWebhookLogRepository;
 import com.team04.domain.payment.service.PaymentService;
 import com.team04.domain.user.entity.Role;
@@ -82,7 +83,9 @@ class PaymentWebhookIdempotencyTest {
 
         assertThat(fundingRepository.findById(created.fundingId()).orElseThrow().getStatus())
                 .isEqualTo(FundingStatus.PAID);
-        assertThat(paymentWebhookLogRepository.findAll()).hasSize(1);
-        assertThat(paymentWebhookLogRepository.findAll().getFirst().getStatus()).isEqualTo("DONE");
+
+        PaymentWebhookLog log = paymentWebhookLogRepository.findByEventId(eventId).orElseThrow();
+        assertThat(log.getStatus()).isEqualTo("DONE");
+        assertThat(log.getOrderId()).isEqualTo(orderId);
     }
 }
