@@ -77,6 +77,7 @@ public enum ErrorCode {
     DEPOSIT_AMOUNT_MISMATCH(400, "F010", "보증금 금액이 아이디어에 등록된 금액과 일치하지 않습니다"),
     PROJECT_FEE_NOT_FOUND(404, "F008", "존재하지 않는 프로젝트 수수료입니다"),
     PROJECT_FEE_ALREADY_PAID(409, "F009", "이미 수수료가 결제된 프로젝트입니다"),
+    DEPOSIT_NOT_FOUND(404, "F010", "존재하지 않는 보증금입니다"),
 
     // 마일스톤
     MILESTONE_NOT_FOUND(404, "M001", "존재하지 않는 마일스톤입니다"),

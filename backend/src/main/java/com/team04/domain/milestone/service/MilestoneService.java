@@ -197,8 +197,8 @@ public class MilestoneService {
         report.approve();
         milestone.cancel();
 
-        settlementService.createCancelRefundSettlement(milestone.getIdeaId());
-        refundService.createCancelRefunds(milestone.getIdeaId());
+        settlementService.createCancelRefundSettlement(milestone.getIdeaId(), true);
+        refundService.createCancelRefunds(milestone.getIdeaId(), true); // 정당한 사유 — 보증금 잔액 제안자 환급
     }
 
     /**
@@ -217,8 +217,8 @@ public class MilestoneService {
         }
 
         milestone.cancel();
-        settlementService.createForfeitSettlement(ideaId);
-        refundService.createCancelRefunds(ideaId);
+        settlementService.createCancelRefundSettlement(ideaId, false); // 먹튀/잠수 — 후원금 잔액 + 보증금 전액
+        refundService.createCancelRefunds(ideaId, false); // 먹튀/잠수 — 보증금 전액 후원자 분배
     }
 
     /**
@@ -230,13 +230,13 @@ public class MilestoneService {
         Milestone milestone = milestoneRepository.findByIdeaIdAndStatusWithPessimisticLock(ideaId, MilestoneStatus.IN_PROGRESS)
                 .orElseThrow(() -> new CustomException(ErrorCode.MILESTONE_NOT_FOUND));
         milestone.cancel();
-        settlementService.createCancelRefundSettlement(ideaId);
-        refundService.createCancelRefunds(ideaId);
+        settlementService.createCancelRefundSettlement(ideaId, false); // 수동 중단 — 후원금 잔액 + 보증금 전액
+        refundService.createCancelRefunds(ideaId, false); // 수동 중단 — 보증금 전액 후원자 분배
     }
 
     /**
      * 펀딩 목표 달성 시 1단계 마일스톤 자동 시작
-     * TODO: 펀딩 도메인 담당자에게 FundingSuccessEvent 발행 요청 필요
+     * FundingAchievementListener에서 FundingPaidEvent 수신 후 목표 달성 확인 시 호출
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void startFirstMilestone(Long ideaId) {

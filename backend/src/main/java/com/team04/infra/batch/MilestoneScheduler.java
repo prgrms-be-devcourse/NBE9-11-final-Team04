@@ -21,7 +21,7 @@ import java.util.List;
 public class MilestoneScheduler {
 
     private static final ZoneId KST = ZoneId.of("Asia/Seoul");
-    private static final int OVERDUE_GRACE_DAYS = 3;
+    private static final int OVERDUE_GRACE_DAYS = 7;
 
     private final MilestoneRepository milestoneRepository;
     private final MilestoneService milestoneService;
