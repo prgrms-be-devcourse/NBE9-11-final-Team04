@@ -9,6 +9,8 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Getter
 @Table(name = "disputes")
@@ -74,8 +76,12 @@ public class Dispute extends BaseEntity {
         this.status = newStatus;
     }
 
+    private static final int APPEAL_DEADLINE_DAYS = 7;
+
     public boolean isAppealable() {
-        return this.status != DisputeStatus.PENDING;
+        return this.status == DisputeStatus.RECEIVED
+                && getCreatedAt() != null
+                && getCreatedAt().plusDays(APPEAL_DEADLINE_DAYS).isAfter(LocalDateTime.now());
     }
 
 }
