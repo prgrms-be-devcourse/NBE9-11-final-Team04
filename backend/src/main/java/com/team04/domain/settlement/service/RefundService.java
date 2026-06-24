@@ -1,10 +1,12 @@
 package com.team04.domain.settlement.service;
 
+import com.team04.domain.dispute.entity.DisputeStatus;
+import com.team04.domain.dispute.entity.TargetType;
+import com.team04.domain.dispute.repository.DisputeRepository;
 import com.team04.domain.funding.entity.Deposit;
 import com.team04.domain.funding.repository.DepositRepository;
 import com.team04.domain.funding.repository.FundingRepository;
 import com.team04.domain.funding.service.FundingService;
-import com.team04.domain.idea.dto.response.IdeaResponse;
 import com.team04.domain.idea.service.IdeaService;
 import com.team04.domain.payment.entity.Payment;
 import com.team04.domain.payment.repository.PaymentRepository;
@@ -33,6 +35,7 @@ public class RefundService {
     private final DepositRepository depositRepository;
     private final IdeaService ideaService;
     private final FundingService fundingService;
+    private final DisputeRepository disputeRepository;
 
     /**
      * 목표 미달성 환불 레코드 일괄 생성
@@ -172,6 +175,24 @@ public class RefundService {
                 .build();
 
         return RefundResponse.from(refundRepository.save(refund));
+    }
+
+    /**
+     * 분쟁 단건 환불
+     * RESOLVED 상태의 IDEA 분쟁에서 관리자가 특정 후원자 결제를 수동 환불할 때 사용
+     * 전체 환불(DisputeResolvedEvent)로 처리되지 못한 건을 개별 재처리하는 용도
+     */
+    @Transactional
+    public RefundResponse forceDisputeRefund(Long disputeId, Long paymentId) {
+        var dispute = disputeRepository.findById(disputeId)
+                .orElseThrow(() -> new CustomException(ErrorCode.DISPUTE_NOT_FOUND));
+        if (dispute.getStatus() != DisputeStatus.RESOLVED) {
+            throw new CustomException(ErrorCode.DISPUTE_INVALID_STATUS_TRANSITION);
+        }
+        if (dispute.getTargetType() != TargetType.IDEA) {
+            throw new CustomException(ErrorCode.INVALID_INPUT);
+        }
+        return createDisputeRefund(paymentId, dispute.getTargetId());
     }
 
     /**

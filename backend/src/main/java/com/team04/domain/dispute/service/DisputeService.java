@@ -3,30 +3,25 @@ package com.team04.domain.dispute.service;
 import com.team04.domain.dispute.dto.request.AdminDisputeStatusRequest;
 import com.team04.domain.dispute.dto.request.CreateAppealRequest;
 import com.team04.domain.dispute.dto.request.CreateDisputeRequest;
-import com.team04.domain.dispute.dto.request.ForceRefundRequest;
-import com.team04.domain.idea.service.IdeaAdminService;
-import com.team04.domain.settlement.dto.response.RefundResponse;
-import com.team04.domain.settlement.service.RefundService;
-import com.team04.domain.settlement.service.SettlementService;
 import com.team04.domain.dispute.dto.response.AdminDisputeResponse;
 import com.team04.domain.dispute.dto.response.DisputeResponse;
 import com.team04.domain.dispute.dto.response.DisputeStatsResponse;
 import com.team04.domain.dispute.entity.*;
 import com.team04.domain.dispute.repository.DisputeAppealRepository;
 import com.team04.domain.dispute.repository.DisputeRepository;
+import com.team04.domain.idea.service.IdeaAdminService;
+import com.team04.domain.notification.entity.NotificationPriority;
 import com.team04.domain.notification.entity.NotificationType;
 import com.team04.domain.user.entity.Role;
 import com.team04.domain.user.entity.User;
 import com.team04.domain.user.repository.UserRepository;
-import com.team04.domain.notification.entity.NotificationPriority;
+import com.team04.global.event.DisputeResolvedEvent;
 import com.team04.global.event.NotificationEvent;
 import com.team04.global.event.ReportNotificationEvent;
 import com.team04.global.exception.CustomException;
 import com.team04.global.exception.ErrorCode;
 import com.team04.global.storage.StorageClient;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -48,14 +43,6 @@ public class DisputeService {
     private final ApplicationEventPublisher eventPublisher;
     private final StorageClient storageClient;
     private final IdeaAdminService ideaAdminService;
-
-    @Lazy
-    @Autowired
-    private RefundService refundService;
-
-    @Lazy
-    @Autowired
-    private SettlementService settlementService;
 
     private static final List<DisputeStatus> ACTIVE_STATUSES = List.of(DisputeStatus.RECEIVED, DisputeStatus.PENDING);
     private static final String APPEAL_STORAGE_DIR = "dispute/appeal";
@@ -165,36 +152,6 @@ public class DisputeService {
     }
 
     @Transactional
-    public RefundResponse forceRefund(Long disputeId, ForceRefundRequest request) {
-        Dispute dispute = disputeRepository.findById(disputeId)
-                .orElseThrow(() -> new CustomException(ErrorCode.DISPUTE_NOT_FOUND));
-        if (dispute.getStatus() != DisputeStatus.RESOLVED) {
-            throw new CustomException(ErrorCode.DISPUTE_INVALID_STATUS_TRANSITION);
-        }
-        if (dispute.getTargetType() != TargetType.IDEA) {
-            throw new CustomException(ErrorCode.INVALID_INPUT);
-        }
-        Long ideaId = dispute.getTargetId();
-        return refundService.createDisputeRefund(request.paymentId(), ideaId);
-    }
-
-    @Transactional
-    public void forceRefundAll(Long disputeId) {
-        Dispute dispute = disputeRepository.findById(disputeId)
-                .orElseThrow(() -> new CustomException(ErrorCode.DISPUTE_NOT_FOUND));
-        if (dispute.getStatus() != DisputeStatus.RESOLVED) {
-            throw new CustomException(ErrorCode.DISPUTE_INVALID_STATUS_TRANSITION);
-        }
-        if (dispute.getTargetType() != TargetType.IDEA) {
-            throw new CustomException(ErrorCode.INVALID_INPUT);
-        }
-        Long ideaId = dispute.getTargetId();
-        settlementService.createCancelRefundSettlement(ideaId);
-        settlementService.createDepositForfeitSettlement(ideaId);
-        refundService.createCancelRefunds(ideaId, false);
-    }
-
-    @Transactional
     public DisputeResponse updateDisputeStatus(Long disputeId, AdminDisputeStatusRequest request) {
         Dispute dispute = disputeRepository.findByIdWithDetails(disputeId)
                 .orElseThrow(() -> new CustomException(ErrorCode.DISPUTE_NOT_FOUND));
@@ -202,6 +159,9 @@ public class DisputeService {
         syncAppealStatus(disputeId, request.status());
         syncIdeaStatus(dispute, request.status());
         publishDisputeStatusNotifications(dispute, request.status());
+        if (request.status() == DisputeStatus.RESOLVED && dispute.getTargetType() == TargetType.IDEA) {
+            eventPublisher.publishEvent(new DisputeResolvedEvent(dispute.getTargetId()));
+        }
         return DisputeResponse.of(dispute);
     }
 

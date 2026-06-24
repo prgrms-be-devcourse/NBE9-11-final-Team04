@@ -10,6 +10,7 @@ import com.team04.domain.dispute.entity.DisputeStatus;
 import com.team04.domain.dispute.entity.TargetType;
 import com.team04.domain.dispute.service.DisputeService;
 import com.team04.domain.settlement.dto.response.RefundResponse;
+import com.team04.domain.settlement.service.RefundService;
 import com.team04.global.response.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +27,7 @@ import org.springframework.web.bind.annotation.*;
 public class AdminDisputeController {
 
     private final DisputeService disputeService;
+    private final RefundService refundService;
 
     @GetMapping("/stats")
     public ApiResponse<DisputeStatsResponse> getDisputeStats() {
@@ -52,12 +54,6 @@ public class AdminDisputeController {
     public ApiResponse<RefundResponse> forceRefund(
             @PathVariable Long disputeId,
             @RequestBody @Valid ForceRefundRequest request) {
-        return ApiResponse.ofSuccess(disputeService.forceRefund(disputeId, request));
-    }
-
-    @PostMapping("/{disputeId}/force-refund-all")
-    public ApiResponse<Void> forceRefundAll(@PathVariable Long disputeId) {
-        disputeService.forceRefundAll(disputeId);
-        return ApiResponse.ofSuccessWithoutBody();
+        return ApiResponse.ofSuccess(refundService.forceDisputeRefund(disputeId, request.paymentId()));
     }
 }
