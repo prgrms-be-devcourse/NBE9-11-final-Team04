@@ -3,6 +3,7 @@ package com.team04.domain.dispute.controller;
 import com.team04.domain.dispute.dto.request.AdminDisputeStatusRequest;
 import com.team04.domain.dispute.dto.response.AdminDisputeResponse;
 import com.team04.domain.dispute.dto.response.DisputeResponse;
+import com.team04.domain.dispute.dto.response.DisputeStatsResponse;
 import com.team04.domain.dispute.entity.DisputeCategory;
 import com.team04.domain.dispute.entity.DisputeStatus;
 import com.team04.domain.dispute.entity.TargetType;
@@ -23,6 +24,11 @@ import org.springframework.web.bind.annotation.*;
 public class AdminDisputeController {
 
     private final DisputeService disputeService;
+
+    @GetMapping("/stats")
+    public ApiResponse<DisputeStatsResponse> getDisputeStats() {
+        return ApiResponse.ofSuccess(disputeService.getDisputeStats());
+    }
 
     @GetMapping
     public ApiResponse<Page<AdminDisputeResponse>> getDisputeList(

@@ -5,6 +5,7 @@ import com.team04.domain.dispute.dto.request.CreateAppealRequest;
 import com.team04.domain.dispute.dto.request.CreateDisputeRequest;
 import com.team04.domain.dispute.dto.response.AdminDisputeResponse;
 import com.team04.domain.dispute.dto.response.DisputeResponse;
+import com.team04.domain.dispute.dto.response.DisputeStatsResponse;
 import com.team04.domain.dispute.entity.*;
 import com.team04.domain.dispute.repository.DisputeAppealRepository;
 import com.team04.domain.dispute.repository.DisputeRepository;
@@ -27,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -113,6 +115,8 @@ public class DisputeService {
                         appeal -> appeal.update(request.content(), resolvedFileUrl),
                         () -> disputeAppealRepository.save(new DisputeAppeal(dispute, request.content(), resolvedFileUrl))
                 );
+
+        dispute.updateStatus(DisputeStatus.PENDING);
     }
 
     @Transactional(readOnly = true)
@@ -120,6 +124,20 @@ public class DisputeService {
             DisputeStatus status, DisputeCategory category, TargetType targetType, Pageable pageable) {
         return disputeRepository.findAllByFilters(status, category, targetType, pageable)
                 .map(AdminDisputeResponse::of);
+    }
+
+    @Transactional(readOnly = true)
+    public DisputeStatsResponse getDisputeStats() {
+        Map<DisputeStatus, Long> countMap = disputeRepository.countGroupByStatus().stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        row -> (DisputeStatus) row[0],
+                        row -> (Long) row[1]
+                ));
+        long received = countMap.getOrDefault(DisputeStatus.RECEIVED, 0L);
+        long pending  = countMap.getOrDefault(DisputeStatus.PENDING, 0L);
+        long resolved = countMap.getOrDefault(DisputeStatus.RESOLVED, 0L);
+        long rejected = countMap.getOrDefault(DisputeStatus.REJECTED, 0L);
+        return new DisputeStatsResponse(received + pending + resolved + rejected, received, pending, resolved, rejected);
     }
 
     @Transactional
@@ -140,6 +158,14 @@ public class DisputeService {
             eventPublisher.publishEvent(new NotificationEvent(
                     reportedId, NotificationType.DISPUTE_UNDER_REVIEW,
                     "[신고 검토 시작] " + title, "관리자가 신고 내용을 검토하고 있습니다", dispute.getId()
+            ));
+            return;
+        }
+
+        if (newStatus == DisputeStatus.RECEIVED) {
+            eventPublisher.publishEvent(new NotificationEvent(
+                    reportedId, NotificationType.DISPUTE_UNDER_REVIEW,
+                    "[소명 재제출 요청] " + title, "관리자가 소명 자료 보완을 요청했습니다", dispute.getId()
             ));
             return;
         }

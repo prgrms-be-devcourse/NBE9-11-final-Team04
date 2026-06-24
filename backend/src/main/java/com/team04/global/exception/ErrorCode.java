@@ -104,6 +104,8 @@ public enum ErrorCode {
     DISPUTE_INVALID_STATUS_TRANSITION(400, "D006", "유효하지 않은 분쟁 상태 전이입니다"),
     DISPUTE_ALREADY_PENDING(409, "D007", "이미 처리 중인 신고가 존재합니다"),
     DISPUTE_APPEAL_NOT_ALLOWED(400, "D008", "소명을 제출할 수 없는 상태입니다"),
+    DISPUTE_APPEAL_LIMIT_EXCEEDED(400, "D009", "소명 제출 횟수(3회)를 초과했습니다"),
+    DISPUTE_APPEAL_PERIOD_EXPIRED(400, "D010", "소명 가능 기간(7일)이 만료되었습니다"),
 
     //정산
     SETTLEMENT_NOT_FOUND(404, "S001", "존재하지 않는 정산입니다"),

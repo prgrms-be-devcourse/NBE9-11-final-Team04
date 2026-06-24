@@ -10,7 +10,7 @@ public enum DisputeStatus {
     PENDING {
         @Override
         public boolean canTransitionTo(DisputeStatus next) {
-            return next == RESOLVED || next == REJECTED;
+            return next == RESOLVED || next == REJECTED || next == RECEIVED;
         }
     },
     RESOLVED {
