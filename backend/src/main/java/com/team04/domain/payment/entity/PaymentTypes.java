@@ -10,6 +10,12 @@ public final class PaymentTypes {
         VIRTUAL_ACCOUNT   // 가상계좌 입금
     }
 
+    /** 결제 목적 — 후원 결제와 제안자 보증금 결제를 구분합니다. */
+    public enum PaymentPurpose {
+        SPONSORSHIP,  // 후원(Funding) 결제
+        DEPOSIT       // 제안자 보증금 결제
+    }
+
     public enum PaymentStatus {
         PENDING,   // 대기 — 결제 요청 생성, 승인 전
         SUCCESS,   // 성공 — PG 승인 완료

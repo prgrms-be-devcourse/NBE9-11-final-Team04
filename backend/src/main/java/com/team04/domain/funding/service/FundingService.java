@@ -26,6 +26,7 @@ import com.team04.domain.payment.dto.response.PaymentResponse;
 import com.team04.domain.payment.entity.Payment;
 import com.team04.domain.payment.entity.PaymentTypes.PaymentStatus;
 import com.team04.domain.payment.repository.PaymentRepository;
+import com.team04.domain.payment.service.IdeaVbankPoolService;
 import com.team04.domain.payment.service.PaymentService;
 import com.team04.global.exception.CustomException;
 import com.team04.global.exception.ErrorCode;
@@ -61,6 +62,7 @@ public class FundingService {
     private final MilestoneRepository milestoneRepository;
     private final PaymentRepository paymentRepository;
     private final PaymentService paymentService;
+    private final IdeaVbankPoolService ideaVbankPoolService;
 
     /** fundingId(ideaId)별 SSE 구독자 목록 */
     private final Map<Long, Set<SseEmitter>> sseEmitters = new ConcurrentHashMap<>();
@@ -75,7 +77,7 @@ public class FundingService {
         return DepositResponse.from(deposit);
     }
 
-    // 창작자 보증금 납부 — PG 연동 전 Mock 납부 완료(HELD) 처리
+    // 창작자 보증금 납부 — PG 결제 세션 생성 (결제 완료 후 Deposit HELD)
     @Transactional
     public DepositResponse payDeposit(Long ideaId, Long userId, PayDepositRequest request) {
         Idea idea = ideaRepository.findByIdAndDeletedAtIsNull(ideaId)
@@ -96,10 +98,13 @@ public class FundingService {
             throw new CustomException(ErrorCode.DEPOSIT_AMOUNT_MISMATCH);
         }
 
-        Deposit deposit = depositRepository.save(
-                Deposit.createHeld(ideaId, userId, request.amount())
+        PaymentResponse payment = paymentService.createDepositPayment(
+                ideaId,
+                userId,
+                request.amount(),
+                request.paymentMethod()
         );
-        return DepositResponse.from(deposit);
+        return DepositResponse.pendingPayment(ideaId, userId, request.amount(), payment);
     }
 
     // 조건 충족 시 창작자에게 보증금 환급(REFUNDED)
@@ -139,6 +144,10 @@ public class FundingService {
         LocalDateTime now = LocalDateTime.now();
         if (idea.getStatus() == IdeaStatus.OPEN && !now.isBefore(idea.getFundingStartAt())) {
             idea.changeStatus(IdeaStatus.IN_PROGRESS);
+        }
+
+        if (ideaVbankPoolService.usePoolForCreateTimeVbank()) {
+            ideaVbankPoolService.ensurePoolForIdea(request.ideaId());
         }
 
         return FundingDetailResponse.from(idea);
@@ -310,7 +319,7 @@ public class FundingService {
     /**
      * 펀딩 목표 달성 여부 확인
      * currentAmount >= goalAmount 이면 목표 달성
-     * FundingAchievementListener에서 마일스톤 자동 시작 트리거에 사용
+     * FundingAchievementListener에서 SSE push에 사용 (목표 달성·마일스톤 시작은 본 리스너에서 처리)
      */
     public boolean isFundingGoalAchieved(Long ideaId) {
         Idea idea = ideaRepository.findByIdAndDeletedAtIsNull(ideaId)

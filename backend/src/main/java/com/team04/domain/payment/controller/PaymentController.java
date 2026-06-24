@@ -3,6 +3,7 @@ package com.team04.domain.payment.controller;
 import com.team04.domain.payment.dto.request.ConfirmPaymentRequest;
 import com.team04.domain.payment.dto.request.CreatePaymentRequest;
 import com.team04.domain.payment.dto.request.TossWebhookRequest;
+import com.team04.domain.payment.dto.response.PaymentConfigResponse;
 import com.team04.domain.payment.dto.response.PaymentResponse;
 import com.team04.domain.payment.service.PaymentService;
 import com.team04.domain.user.entity.Role;
@@ -55,6 +56,21 @@ public class PaymentController {
             throw new CustomException(ErrorCode.FORBIDDEN);
         }
         return ApiResponse.ofSuccess(paymentService.createPayment(request, userDetails.getUserId()));
+    }
+
+    @GetMapping("/config")
+    public ApiResponse<PaymentConfigResponse> getPaymentConfig() {
+        return ApiResponse.ofSuccess(paymentService.getPaymentConfig());
+    }
+
+    /** 시연용 — 테스트 결제창 없이 즉시 결제 완료 */
+    @PostMapping("/{paymentId}/demo-confirm")
+    public ApiResponse<PaymentResponse> demoConfirmPayment(
+            @PathVariable Long paymentId,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        return ApiResponse.ofSuccess(
+                paymentService.demoConfirmPayment(paymentId, userDetails.getUserId()));
     }
 
     @PostMapping("/{paymentId}/confirm")
