@@ -17,7 +17,6 @@ import com.team04.global.exception.ErrorCode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -35,6 +34,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.never;
 
+/** VerificationService의 검증 접수와 조회 흐름을 검증하는 테스트입니다. */
 @ExtendWith(MockitoExtension.class)
 class VerificationServiceTest {
 
@@ -52,6 +52,7 @@ class VerificationServiceTest {
     @InjectMocks
     private VerificationService verificationService;
 
+    /** 테스트용 검증 요청을 생성합니다. */
     private VerificationRequest request() {
         return new VerificationRequest(
                 1L,
@@ -66,6 +67,7 @@ class VerificationServiceTest {
         );
     }
 
+    /** 테스트용 아이디어를 생성합니다. */
     private Idea idea(Long userId) {
         return new Idea(
                 userId,
@@ -88,6 +90,7 @@ class VerificationServiceTest {
         );
     }
 
+    /** 신규 검증 요청이 AI_VERIFYING 상태로 저장되고 이벤트를 발행하는지 확인합니다. */
     @Test
     @DisplayName("신규 검증 요청 성공")
     void requestVerification_신규요청성공() {
@@ -103,23 +106,7 @@ class VerificationServiceTest {
         then(eventPublisher).should().publishEvent(any(VerificationRequestedEvent.class));
     }
 
-    @Test
-    @DisplayName("보완 필요 상태 검증 요청 시 재제출 API 사용 예외 발생")
-    void requestVerification_보완상태예외() {
-        given(ideaRepository.findByIdAndDeletedAtIsNull(1L)).willReturn(Optional.of(idea(1L)));
-        ProjectVerification verification = new ProjectVerification(1L);
-        verification.startAiVerification();
-        verification.requestRevision(LocalDateTime.now().plusDays(7));
-        given(projectVerificationRepository.findByIdeaId(1L)).willReturn(Optional.of(verification));
-
-        assertThatThrownBy(() -> verificationService.requestVerification(request(), 1L))
-                .isInstanceOf(CustomException.class)
-                .extracting(e -> ((CustomException) e).getErrorCode())
-                .isEqualTo(ErrorCode.USE_RESUBMIT_API);
-
-        then(projectVerificationRepository).should(never()).save(any());
-    }
-
+    /** 진행 중인 검증 요청에 중복 접수를 차단하는지 확인합니다. */
     @Test
     @DisplayName("진행 중인 검증 요청 시 중복 진행 예외 발생")
     void requestVerification_진행중예외() {
@@ -134,76 +121,20 @@ class VerificationServiceTest {
                 .isEqualTo(ErrorCode.VERIFICATION_ALREADY_IN_PROGRESS);
     }
 
+    /** 이미 완료된 검증 요청에 재제출 개념 없이 재접수를 차단하는지 확인합니다. */
     @Test
-    @DisplayName("보완안 재제출 성공")
-    void resubmit_성공() {
+    @DisplayName("완료된 검증 요청 재접수 시 상태 전이 예외 발생")
+    void requestVerification_완료상태예외() {
         given(ideaRepository.findByIdAndDeletedAtIsNull(1L)).willReturn(Optional.of(idea(1L)));
         ProjectVerification verification = new ProjectVerification(1L);
         verification.startAiVerification();
-        verification.requestRevision(LocalDateTime.now().plusDays(7));
-        given(projectVerificationRepository.findById(1L)).willReturn(Optional.of(verification));
+        verification.completeAiVerification();
+        given(projectVerificationRepository.findByIdeaId(1L)).willReturn(Optional.of(verification));
 
-        var response = verificationService.resubmit(1L, 1L, request());
-
-        assertThat(response.status()).isEqualTo(VerificationStatus.AI_VERIFYING);
-        assertThat(response.resubmissionCount()).isEqualTo(1);
-        then(auditLogRepository).should().save(any(VerificationAuditLog.class));
-        then(eventPublisher).should().publishEvent(any(VerificationRequestedEvent.class));
-    }
-
-    @Test
-    @DisplayName("대기 기간 중 재제출 시 예외 발생")
-    void resubmit_대기기간예외() {
-        given(ideaRepository.findByIdAndDeletedAtIsNull(any())).willReturn(Optional.of(idea(1L)));
-        ProjectVerification verification = new ProjectVerification(1L);
-        verification.updateWaitingUntil(LocalDateTime.now().plusDays(1));
-        given(projectVerificationRepository.findById(1L)).willReturn(Optional.of(verification));
-
-        assertThatThrownBy(() -> verificationService.resubmit(1L, 1L, request()))
+        assertThatThrownBy(() -> verificationService.requestVerification(request(), 1L))
                 .isInstanceOf(CustomException.class)
                 .extracting(e -> ((CustomException) e).getErrorCode())
-                .isEqualTo(ErrorCode.VERIFICATION_WAITING_PERIOD_ACTIVE);
-    }
-
-    @Test
-    @DisplayName("보완 기한 만료 검증 건 자동 반려 성공")
-    void rejectExpiredRevisionRequests_성공() {
-        ProjectVerification verification = new ProjectVerification(1L);
-        verification.startAiVerification();
-        verification.requestRevision(LocalDateTime.now().minusDays(1));
-        given(projectVerificationRepository.findAllByStatusAndRevisionDueAtBefore(
-                any(VerificationStatus.class),
-                any(LocalDateTime.class)
-        )).willReturn(List.of(verification));
-        given(ideaRepository.findByIdInAndDeletedAtIsNull(any())).willReturn(List.of(idea(1L)));
-        ArgumentCaptor<VerificationAuditLog> captor = ArgumentCaptor.forClass(VerificationAuditLog.class);
-
-        verificationService.rejectExpiredRevisionRequests();
-
-        assertThat(verification.getStatus()).isEqualTo(VerificationStatus.REJECTED);
-        then(auditLogRepository).should().save(captor.capture());
-        assertThat(captor.getValue().getNextStatus()).isEqualTo(VerificationStatus.REJECTED);
-    }
-
-    @Test
-    @DisplayName("재제출 3회 초과 시 30일 대기 반려 처리")
-    void resubmit_3회초과대기반려() {
-        given(ideaRepository.findByIdAndDeletedAtIsNull(any())).willReturn(Optional.of(idea(1L)));
-        ProjectVerification verification = new ProjectVerification(1L);
-        verification.startAiVerification();
-        verification.requestRevision(LocalDateTime.now().plusDays(7));
-        verification.resubmit();
-        verification.requestRevision(LocalDateTime.now().plusDays(7));
-        verification.resubmit();
-        verification.requestRevision(LocalDateTime.now().plusDays(7));
-        verification.resubmit();
-        given(projectVerificationRepository.findById(1L)).willReturn(Optional.of(verification));
-
-        var response = verificationService.resubmit(1L, 1L, request());
-
-        assertThat(response.status()).isEqualTo(VerificationStatus.REJECTED);
-        assertThat(verification.getWaitingUntil()).isAfter(LocalDateTime.now());
-        then(auditLogRepository).should().save(any(VerificationAuditLog.class));
-        then(eventPublisher).should(never()).publishEvent(any(VerificationRequestedEvent.class));
+                .isEqualTo(ErrorCode.INVALID_VERIFICATION_STATUS_TRANSITION);
+        then(projectVerificationRepository).should(never()).save(any());
     }
 }

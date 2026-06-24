@@ -21,7 +21,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -133,7 +132,7 @@ class VerificationAsyncProcessorTest {
     void processAiVerification_AI통과성공() {
         ProjectVerification verification = aiVerifyingVerification();
         AiVerificationStructuredResult result = new AiVerificationStructuredResult(
-                VerificationDecision.PASS,
+                VerificationDecision.INFO,
                 List.of(
                         new AiVerificationStructuredResult.CheckResult(
                                 VerificationCheckCode.EXAGGERATED_ADVERTISEMENT, true, 20, "과대광고 없음"),
@@ -159,31 +158,14 @@ class VerificationAsyncProcessorTest {
     }
 
     @Test
-    @DisplayName("금칙어 포함 검증 요청 반려 성공")
-    void processAiVerification_금칙어반려성공() {
-        ProjectVerification verification = aiVerifyingVerification();
-        given(projectVerificationRepository.findById(null)).willReturn(Optional.of(verification));
-        given(trustScoreRepository.findByIdeaId(1L)).willReturn(Optional.empty());
-        given(trustScoreRepository.save(any(TrustScore.class))).willAnswer(invocation -> invocation.getArgument(0));
-        given(ideaRepository.findByIdAndDeletedAtIsNull(1L)).willReturn(Optional.of(idea()));
-        given(ideaRepository.save(any(Idea.class))).willAnswer(invocation -> invocation.getArgument(0));
-
-        processor.processAiVerification(new VerificationRequestedEvent(null, request("무조건 성공 서비스", "정상 설명")));
-
-        assertThat(verification.getStatus()).isEqualTo(VerificationStatus.REJECTED);
-        then(openAiVerificationService).should(never()).verify(any());
-        then(verificationResultRepository).should().save(any(VerificationResult.class));
-    }
-
-    @Test
-    @DisplayName("보완 필요 판단 시 보완 기한 저장 성공")
-    void processAiVerification_보완필요성공() {
+    @DisplayName("금칙어 포함 검증 요청도 AI 검증 결과와 합쳐 저장 성공")
+    void processAiVerification_금칙어참고결과저장성공() {
         ProjectVerification verification = aiVerifyingVerification();
         AiVerificationStructuredResult result = new AiVerificationStructuredResult(
-                VerificationDecision.NEEDS_REVISION,
+                VerificationDecision.INFO,
                 List.of(new AiVerificationStructuredResult.CheckResult(
-                        VerificationCheckCode.MILESTONE_SPECIFICITY, false, 10, "마일스톤 보완 필요")),
-                "보완 필요"
+                        VerificationCheckCode.MILESTONE_SPECIFICITY, true, 16, "마일스톤 구체적")),
+                "AI 검증 완료"
         );
         given(projectVerificationRepository.findById(null)).willReturn(Optional.of(verification));
         given(openAiVerificationService.verify(any())).willReturn(result);
@@ -192,10 +174,11 @@ class VerificationAsyncProcessorTest {
         given(ideaRepository.findByIdAndDeletedAtIsNull(1L)).willReturn(Optional.of(idea()));
         given(ideaRepository.save(any(Idea.class))).willAnswer(invocation -> invocation.getArgument(0));
 
-        processor.processAiVerification(new VerificationRequestedEvent(null, request("정상 제목", "정상 설명")));
+        processor.processAiVerification(new VerificationRequestedEvent(null, request("무조건 성공 서비스", "정상 설명")));
 
-        assertThat(verification.getStatus()).isEqualTo(VerificationStatus.NEEDS_REVISION);
-        assertThat(verification.getRevisionDueAt()).isAfter(LocalDateTime.now().plusDays(6));
+        assertThat(verification.getStatus()).isEqualTo(VerificationStatus.AI_PASSED);
+        then(openAiVerificationService).should().verify(any());
+        then(verificationResultRepository).should(times(2)).save(any(VerificationResult.class));
     }
 
     @Test
@@ -206,7 +189,7 @@ class VerificationAsyncProcessorTest {
         TrustScore savedHighTrustScore = new TrustScore(1L);
         savedHighTrustScore.updateScores(20, 20, 20, 20, 20);
         AiVerificationStructuredResult result = new AiVerificationStructuredResult(
-                VerificationDecision.PASS,
+                VerificationDecision.INFO,
                 List.of(new AiVerificationStructuredResult.CheckResult(
                         VerificationCheckCode.MILESTONE_SPECIFICITY, true, 20, "마일스톤 구체적")),
                 "AI 검증 통과"
@@ -228,14 +211,12 @@ class VerificationAsyncProcessorTest {
     @DisplayName("AI 검증 장애 시 관리자 검토 전환 성공")
     void processAiVerification_AI장애관리자검토성공() {
         ProjectVerification verification = aiVerifyingVerification();
-        ArgumentCaptor<VerificationAuditLog> captor = ArgumentCaptor.forClass(VerificationAuditLog.class);
         given(projectVerificationRepository.findById(null)).willReturn(Optional.of(verification));
         given(openAiVerificationService.verify(any())).willThrow(new RuntimeException("AI 장애"));
 
         processor.processAiVerification(new VerificationRequestedEvent(null, request("정상 제목", "정상 설명")));
 
         assertThat(verification.getStatus()).isEqualTo(VerificationStatus.PENDING_ADMIN_REVIEW);
-        then(auditLogRepository).should().save(captor.capture());
-        assertThat(captor.getValue().getNextStatus()).isEqualTo(VerificationStatus.PENDING_ADMIN_REVIEW);
+        then(auditLogRepository).should().save(any(VerificationAuditLog.class));
     }
 }
