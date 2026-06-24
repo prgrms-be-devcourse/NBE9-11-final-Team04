@@ -25,7 +25,10 @@ public enum VerificationStatus {
     PENDING_ADMIN_REVIEW,
 
     /** 전문가 매칭이 진행 중인 상태입니다. */
-    EXPERT_MATCHING;
+    EXPERT_MATCHING,
+
+    /** 아이디어 취소 신청으로 검증이 중단된 상태입니다. */
+    CANCELLED;
 
     /** 현재 상태에서 목표 상태로 전이할 수 있는지 확인합니다. */
     public boolean canTransitionTo(VerificationStatus targetStatus) {
@@ -34,7 +37,8 @@ public enum VerificationStatus {
             case AI_VERIFYING -> targetStatus == AI_PASSED
                     || targetStatus == NEEDS_REVISION
                     || targetStatus == REJECTED
-                    || targetStatus == PENDING_ADMIN_REVIEW;
+                    || targetStatus == PENDING_ADMIN_REVIEW
+                    || targetStatus == CANCELLED;
             case AI_PASSED -> targetStatus == EXPERT_MATCHING
                     || targetStatus == PENDING_ADMIN_REVIEW;
             case NEEDS_REVISION -> targetStatus == AI_VERIFYING
@@ -43,6 +47,7 @@ public enum VerificationStatus {
                     || targetStatus == NEEDS_REVISION
                     || targetStatus == REJECTED;
             case EXPERT_MATCHING, REJECTED -> false;
+            case CANCELLED -> false;
         };
     }
 

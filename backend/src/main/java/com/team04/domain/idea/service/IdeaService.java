@@ -13,6 +13,8 @@ import com.team04.domain.milestone.dto.response.MilestoneResponse;
 import com.team04.domain.milestone.entity.Milestone;
 import com.team04.domain.milestone.repository.MilestoneRepository;
 import com.team04.domain.verification.dto.request.VerificationRequest;
+import com.team04.domain.verification.entity.VerificationStatus;
+import com.team04.domain.verification.repository.ProjectVerificationRepository;
 import com.team04.domain.verification.service.VerificationService;
 import com.team04.global.exception.CustomException;
 import com.team04.global.exception.ErrorCode;
@@ -25,10 +27,8 @@ import com.team04.global.util.ImageUrlConverter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
@@ -54,8 +54,8 @@ public class IdeaService {
     private final MilestoneRepository milestoneRepository;
     private final DisputeService disputeService;
     private final StorageClient storageClient;
-    private final TransactionTemplate transactionTemplate;
     private final VerificationService verificationService;
+    private final ProjectVerificationRepository projectVerificationRepository;
 
     /** 아이디어를 등록하고 마일스톤을 함께 저장합니다. */
     @Transactional
@@ -156,6 +156,9 @@ public class IdeaService {
         Idea idea = findActiveIdea(ideaId);
         idea.validateOwner(userId);
         idea.requestCancellation();
+        projectVerificationRepository.findByIdeaId(ideaId)
+                .filter(v -> v.getStatus() == VerificationStatus.AI_VERIFYING)
+                .ifPresent(v -> v.changeStatus(VerificationStatus.CANCELLED));
     }
 
     /** 중복 여부를 확인한 뒤 로그인 사용자의 관심 프로젝트를 저장합니다. */

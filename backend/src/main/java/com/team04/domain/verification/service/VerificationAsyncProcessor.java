@@ -77,6 +77,9 @@ public class VerificationAsyncProcessor {
     @Transactional
     public void processAiVerificationInTransaction(VerificationRequestedEvent event) {
         ProjectVerification verification = getVerification(event.verificationId());
+        if (verification.getStatus() == VerificationStatus.CANCELLED) {
+            return;
+        }
         try {
             if (containsForbiddenKeyword(event.request())) {
                 applyDecision(verification, forbiddenKeywordResult());
