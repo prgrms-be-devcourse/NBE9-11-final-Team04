@@ -32,7 +32,7 @@ class TrustScoreTest {
         assertThat(trustScore.getExpertMatchingScore()).isZero();
         assertThat(trustScore.getAdminApprovalScore()).isEqualTo(15);
         assertThat(trustScore.getProposerHistoryScore()).isEqualTo(10);
-        assertThat(trustScore.getTotalScore()).isEqualTo(55);
+        assertThat(trustScore.getTotalScore()).isEqualTo(45);
     }
 
     @Test

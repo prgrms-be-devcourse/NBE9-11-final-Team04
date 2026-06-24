@@ -5,15 +5,12 @@ import com.team04.domain.idea.entity.IdeaBadge;
 import com.team04.domain.idea.entity.IdeaCategory;
 import com.team04.domain.idea.entity.RewardType;
 import com.team04.domain.idea.repository.IdeaRepository;
+import com.team04.domain.user.entity.Role;
+import com.team04.domain.user.repository.UserRepository;
+import com.team04.domain.user.status.UserStatus;
 import com.team04.domain.verification.dto.openai.AiVerificationStructuredResult;
 import com.team04.domain.verification.dto.request.VerificationRequest;
-import com.team04.domain.verification.entity.ProjectVerification;
-import com.team04.domain.verification.entity.TrustScore;
-import com.team04.domain.verification.entity.VerificationAuditLog;
-import com.team04.domain.verification.entity.VerificationCheckCode;
-import com.team04.domain.verification.entity.VerificationDecision;
-import com.team04.domain.verification.entity.VerificationResult;
-import com.team04.domain.verification.entity.VerificationStatus;
+import com.team04.domain.verification.entity.*;
 import com.team04.domain.verification.event.VerificationRequestedEvent;
 import com.team04.domain.verification.properties.VerificationProperties;
 import com.team04.domain.verification.repository.ProjectVerificationRepository;
@@ -27,9 +24,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import static org.mockito.Mockito.times;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.transaction.support.TransactionCallback;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -40,7 +38,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
-import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class VerificationAsyncProcessorTest {
@@ -61,6 +59,10 @@ class VerificationAsyncProcessorTest {
     private OpenAiVerificationService openAiVerificationService;
     @Mock
     private ApplicationEventPublisher eventPublisher;
+    @Mock
+    private UserRepository userRepository;
+    @Mock
+    private TransactionTemplate transactionTemplate;
 
     @InjectMocks
     private VerificationAsyncProcessor processor;
@@ -69,6 +71,16 @@ class VerificationAsyncProcessorTest {
     void setUp() {
         given(verificationProperties.forbiddenKeywords()).willReturn(List.of("무조건 성공", "원금 보장"));
         processor.initializeForbiddenKeywordPatterns();
+        doAnswer(invocation -> {
+            invocation.getArgument(0, TransactionCallback.class).doInTransaction(null);
+            return null;
+        }).when(transactionTemplate).execute(any());
+        doAnswer(invocation -> {
+            invocation.getArgument(0, org.springframework.transaction.support.TransactionCallbackWithoutResult.class)
+                    .doInTransaction(null);
+            return null;
+        }).when(transactionTemplate).executeWithoutResult(any());
+        given(userRepository.findByRoleAndStatus(Role.ADMIN, UserStatus.ACTIVE)).willReturn(List.of());
     }
 
     private ProjectVerification aiVerifyingVerification() {
@@ -116,29 +128,16 @@ class VerificationAsyncProcessorTest {
     @Test
     @DisplayName("AI 검증 통과 처리 성공")
     void processAiVerification_AI통과성공() {
-        // OpenAI 검증 결과가 PASS이면 검증 결과와 신뢰도 점수를 저장하고 알림 이벤트를 발행하는지 확인한다.
         ProjectVerification verification = aiVerifyingVerification();
         AiVerificationStructuredResult result = new AiVerificationStructuredResult(
                 VerificationDecision.PASS,
                 List.of(
                         new AiVerificationStructuredResult.CheckResult(
-                                VerificationCheckCode.EXAGGERATED_ADVERTISEMENT,
-                                true,
-                                20,
-                                "과대광고 없음"
-                        ),
+                                VerificationCheckCode.EXAGGERATED_ADVERTISEMENT, true, 20, "과대광고 없음"),
                         new AiVerificationStructuredResult.CheckResult(
-                                VerificationCheckCode.SIMILAR_SERVICE,
-                                true,
-                                18,
-                                "유사 서비스 차별점 있음"
-                        ),
+                                VerificationCheckCode.SIMILAR_SERVICE, true, 18, "유사 서비스 차별점 있음"),
                         new AiVerificationStructuredResult.CheckResult(
-                                VerificationCheckCode.MILESTONE_SPECIFICITY,
-                                true,
-                                16,
-                                "마일스톤 구체적"
-                        )
+                                VerificationCheckCode.MILESTONE_SPECIFICITY, true, 16, "마일스톤 구체적")
                 ),
                 "AI 검증 통과"
         );
@@ -159,7 +158,6 @@ class VerificationAsyncProcessorTest {
     @Test
     @DisplayName("금칙어 포함 검증 요청 반려 성공")
     void processAiVerification_금칙어반려성공() {
-        // 요청 본문에 금칙어가 포함되면 OpenAI 호출 없이 사전 필터링으로 반려되는지 확인한다.
         ProjectVerification verification = aiVerifyingVerification();
         given(projectVerificationRepository.findById(null)).willReturn(Optional.of(verification));
         given(trustScoreRepository.findByIdeaId(1L)).willReturn(Optional.empty());
@@ -177,16 +175,11 @@ class VerificationAsyncProcessorTest {
     @Test
     @DisplayName("보완 필요 판단 시 보완 기한 저장 성공")
     void processAiVerification_보완필요성공() {
-        // OpenAI 검증 결과가 NEEDS_REVISION이면 보완 상태와 7일 기한이 저장되는지 확인한다.
         ProjectVerification verification = aiVerifyingVerification();
         AiVerificationStructuredResult result = new AiVerificationStructuredResult(
                 VerificationDecision.NEEDS_REVISION,
                 List.of(new AiVerificationStructuredResult.CheckResult(
-                        VerificationCheckCode.MILESTONE_SPECIFICITY,
-                        false,
-                        10,
-                        "마일스톤 보완 필요"
-                )),
+                        VerificationCheckCode.MILESTONE_SPECIFICITY, false, 10, "마일스톤 보완 필요")),
                 "보완 필요"
         );
         given(projectVerificationRepository.findById(null)).willReturn(Optional.of(verification));
@@ -205,25 +198,19 @@ class VerificationAsyncProcessorTest {
     @Test
     @DisplayName("신뢰도 총점 80점 이상 시 인증 배지 부여 성공")
     void processAiVerification_인증배지부여성공() {
-        // 신뢰도 점수 총점이 80점 이상이면 아이디어에 VERIFIED 배지가 부여되는지 확인한다.
         ProjectVerification verification = aiVerifyingVerification();
         Idea idea = idea();
-        TrustScore trustScore = new TrustScore(1L);
         TrustScore savedHighTrustScore = new TrustScore(1L);
         savedHighTrustScore.updateScores(20, 20, 20, 20, 20);
         AiVerificationStructuredResult result = new AiVerificationStructuredResult(
                 VerificationDecision.PASS,
                 List.of(new AiVerificationStructuredResult.CheckResult(
-                        VerificationCheckCode.MILESTONE_SPECIFICITY,
-                        true,
-                        20,
-                        "마일스톤 구체적"
-                )),
+                        VerificationCheckCode.MILESTONE_SPECIFICITY, true, 20, "마일스톤 구체적")),
                 "AI 검증 통과"
         );
         given(projectVerificationRepository.findById(null)).willReturn(Optional.of(verification));
         given(openAiVerificationService.verify(any())).willReturn(result);
-        given(trustScoreRepository.findByIdeaId(1L)).willReturn(Optional.of(trustScore));
+        given(trustScoreRepository.findByIdeaId(1L)).willReturn(Optional.empty());
         given(trustScoreRepository.save(any(TrustScore.class))).willReturn(savedHighTrustScore);
         given(ideaRepository.findByIdAndDeletedAtIsNull(1L)).willReturn(Optional.of(idea));
         given(ideaRepository.save(any(Idea.class))).willAnswer(invocation -> invocation.getArgument(0));
@@ -237,7 +224,6 @@ class VerificationAsyncProcessorTest {
     @Test
     @DisplayName("AI 검증 장애 시 관리자 검토 전환 성공")
     void processAiVerification_AI장애관리자검토성공() {
-        // AI 검증 중 예외가 발생하면 관리자 검토 상태로 전환하고 감사 로그를 저장하는지 확인한다.
         ProjectVerification verification = aiVerifyingVerification();
         ArgumentCaptor<VerificationAuditLog> captor = ArgumentCaptor.forClass(VerificationAuditLog.class);
         given(projectVerificationRepository.findById(null)).willReturn(Optional.of(verification));
@@ -250,4 +236,3 @@ class VerificationAsyncProcessorTest {
         assertThat(captor.getValue().getNextStatus()).isEqualTo(VerificationStatus.PENDING_ADMIN_REVIEW);
     }
 }
-
