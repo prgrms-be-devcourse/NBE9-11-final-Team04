@@ -54,7 +54,6 @@ public class IdeaRepositoryImpl implements IdeaRepositoryCustom {
                 )
                 .orderBy(orderBy(idea, sort), idea.id.desc())
                 .offset(pageable.getOffset())
-                .limit(pageable.getPageSize() + 1L)
                 .limit(pageable.getPageSize())
                 .fetch();
 

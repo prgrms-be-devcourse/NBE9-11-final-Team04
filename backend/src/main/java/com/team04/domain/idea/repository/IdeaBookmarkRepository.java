@@ -14,9 +14,6 @@ public interface IdeaBookmarkRepository extends JpaRepository<IdeaBookmark, Long
     /** 사용자가 이미 해당 아이디어를 북마크했는지 확인합니다. */
     boolean existsByUserIdAndIdeaId(Long userId, Long ideaId);
 
-    /** 사용자와 아이디어 ID로 북마크를 삭제합니다. */
-    void deleteByUserIdAndIdeaId(Long userId, Long ideaId);
-
     /** 로그인 사용자의 북마크를 최신순 Page 페이지로 조회합니다. */
     Page<IdeaBookmark> findByUserIdOrderByCreatedAtDesc(Long userId, Pageable pageable);
 

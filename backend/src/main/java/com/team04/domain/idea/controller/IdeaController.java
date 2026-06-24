@@ -118,10 +118,9 @@ public class IdeaController {
     /** 로그인 제안자가 아이디어 본문 이미지를 사전 업로드합니다. */
     @PostMapping("/images")
     public ApiResponse<List<String>> uploadContentImages(
-            @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestPart("images") List<MultipartFile> images
     ) {
-        return ApiResponse.ofSuccess(ideaService.uploadContentImages(userDetails.getUserId(), images));
+        return ApiResponse.ofSuccess(ideaService.uploadContentImages(images));
     }
 
     /** 로그인 사용자만 접근 가능한 아이디어 상세 정보를 조회합니다. */
@@ -200,5 +199,13 @@ public class IdeaController {
             @Valid @RequestBody ReportIdeaRequest request
     ) {
         return ApiResponse.ofSuccess(ideaService.reportIdea(ideaId, userDetails.getUserId(), request));
+    }
+
+    /** 로그인 사용자가 등록한 본인 아이디어 목록을 조회합니다. */
+    @GetMapping("/me")
+    public ApiResponse<List<IdeaSummaryResponse>> getMyIdeas(
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        return ApiResponse.ofSuccess(ideaService.getMyIdeas(userDetails.getUserId()));
     }
 }

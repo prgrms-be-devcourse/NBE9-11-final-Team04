@@ -285,7 +285,7 @@ public class IdeaService {
     }
 
     /** 제안자가 본문 이미지를 아이디어 등록 전에 사전 업로드하고 URL 목록을 반환합니다. */
-    public List<String> uploadContentImages(Long userId, List<MultipartFile> images) {
+    public List<String> uploadContentImages(List<MultipartFile> images) {
         validateImageFiles(images);
         return images.stream()
                 .map(image -> storageClient.upload(image, "ideas/content"))
@@ -388,9 +388,6 @@ public class IdeaService {
 
     /** 마일스톤 개수와 단계 값이 정확히 1, 2, 3인지 검증합니다. */
     private void validateMilestones(CreateIdeaRequest request) {
-        if (request.milestones() == null || request.milestones().size() != REQUIRED_MILESTONE_COUNT) {
-            throw new CustomException(ErrorCode.INVALID_MILESTONE_COUNT);
-        }
 
         Set<Integer> steps = new HashSet<>();
         for (var milestone : request.milestones()) {
