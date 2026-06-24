@@ -132,6 +132,11 @@ public class TossPaymentGateway implements PaymentGateway {
         }
     }
 
+    @Override
+    public void payout(Long preSettlementId, long amount) {
+        throw new CustomException(ErrorCode.PAYMENT_NOT_READY);
+    }
+
     private PaymentConfirmResult mapConfirmResponse(TossPaymentResponse response) {
         if (response == null || response.paymentKey() == null) {
             return PaymentConfirmResult.failure("토스 결제 승인 응답이 비어 있습니다");

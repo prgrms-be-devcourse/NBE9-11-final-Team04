@@ -180,7 +180,7 @@ class FundingPaymentE2ETest {
 
         paymentService.refundPayment(created.payment().paymentId(), sponsorId);
 
-        var payment = paymentService.getPayment(created.payment().paymentId(), sponsorId, Role.SPONSOR);
+        var payment = paymentService.getPayment(created.payment().paymentId(), sponsorId, Role.USER);
         assertThat(payment.status()).isEqualTo(PaymentStatus.REFUNDED);
 
         var funding = fundingRepository.findById(created.fundingId()).orElseThrow();
