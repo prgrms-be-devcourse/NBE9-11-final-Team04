@@ -29,6 +29,18 @@ public class AdminExpertController {
         return baseUrl + "/experts/admin";
     }
 
+    // null 안전하게 Authorization 헤더 추가하는 헬퍼 메서드
+    private RestClient.RequestHeadersSpec<?> withAuth(
+            RestClient.RequestHeadersSpec<?> spec,
+            HttpServletRequest request
+    ) {
+        String token = resolveToken(request);
+        if (token != null) {
+            spec = spec.header("Authorization", token);
+        }
+        return spec;
+    }
+
     private String resolveToken(HttpServletRequest request) {
         String bearer = request.getHeader("Authorization");
         if (StringUtils.hasText(bearer) && bearer.startsWith("Bearer ")) {
@@ -49,12 +61,12 @@ public class AdminExpertController {
             HttpServletRequest request,
             @PageableDefault(size = 10) Pageable pageable
     ) {
-        return restClient.get()
-                .uri(expertAdminBase() + "/suspended?page={page}&size={size}",
-                        pageable.getPageNumber(), pageable.getPageSize())
-                .header("Authorization", resolveToken(request))
-                .retrieve()
-                .toEntity(new ParameterizedTypeReference<ApiResponse<?>>() {});
+        return withAuth(
+                restClient.get()
+                        .uri(expertAdminBase() + "/suspended?page={page}&size={size}",
+                                pageable.getPageNumber(), pageable.getPageSize()),
+                request
+        ).retrieve().toEntity(new ParameterizedTypeReference<ApiResponse<?>>() {});
     }
 
     @GetMapping("/{expertProfileId}/appeals")
@@ -62,11 +74,11 @@ public class AdminExpertController {
             HttpServletRequest request,
             @PathVariable Long expertProfileId
     ) {
-        return restClient.get()
-                .uri(expertAdminBase() + "/{expertProfileId}/appeals", expertProfileId)
-                .header("Authorization", resolveToken(request))
-                .retrieve()
-                .toEntity(new ParameterizedTypeReference<ApiResponse<?>>() {});
+        return withAuth(
+                restClient.get()
+                        .uri(expertAdminBase() + "/{expertProfileId}/appeals", expertProfileId),
+                request
+        ).retrieve().toEntity(new ParameterizedTypeReference<ApiResponse<?>>() {});
     }
 
     @PostMapping("/{expertProfileId}/restore")
@@ -74,11 +86,11 @@ public class AdminExpertController {
             HttpServletRequest request,
             @PathVariable Long expertProfileId
     ) {
-        return restClient.post()
-                .uri(expertAdminBase() + "/{expertProfileId}/restore", expertProfileId)
-                .header("Authorization", resolveToken(request))
-                .retrieve()
-                .toEntity(new ParameterizedTypeReference<ApiResponse<Void>>() {});
+        return withAuth(
+                restClient.post()
+                        .uri(expertAdminBase() + "/{expertProfileId}/restore", expertProfileId),
+                request
+        ).retrieve().toEntity(new ParameterizedTypeReference<ApiResponse<Void>>() {});
     }
 
     @PostMapping("/{expertProfileId}/demote")
@@ -86,10 +98,10 @@ public class AdminExpertController {
             HttpServletRequest request,
             @PathVariable Long expertProfileId
     ) {
-        return restClient.post()
-                .uri(expertAdminBase() + "/{expertProfileId}/demote", expertProfileId)
-                .header("Authorization", resolveToken(request))
-                .retrieve()
-                .toEntity(new ParameterizedTypeReference<ApiResponse<Void>>() {});
+        return withAuth(
+                restClient.post()
+                        .uri(expertAdminBase() + "/{expertProfileId}/demote", expertProfileId),
+                request
+        ).retrieve().toEntity(new ParameterizedTypeReference<ApiResponse<Void>>() {});
     }
 }

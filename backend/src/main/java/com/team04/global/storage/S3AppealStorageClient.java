@@ -17,6 +17,7 @@ import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignReques
 import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.time.Duration;
 import java.util.Locale;
 import java.util.Set;
@@ -25,7 +26,6 @@ import java.util.UUID;
 @Slf4j
 @Component
 @Profile("!local & !test")
-@RequiredArgsConstructor
 public class S3AppealStorageClient implements AppealStorageClient {
 
     private static final String DIRECTORY = "expert/appeal";
@@ -35,12 +35,21 @@ public class S3AppealStorageClient implements AppealStorageClient {
     private static final Duration PRESIGNED_URL_EXPIRY = Duration.ofMinutes(15);
 
     private final S3Client s3Client;
+    private final S3Presigner s3Presigner; // 싱글톤으로 재사용
+    private final String bucket;
 
-    @Value("${cloud.aws.s3.bucket}")
-    private String bucket;
-
-    @Value("${cloud.aws.s3.region:ap-northeast-2}")
-    private String region;
+    public S3AppealStorageClient(
+            S3Client s3Client,
+            @Value("${cloud.aws.s3.bucket}") String bucket,
+            @Value("${cloud.aws.s3.region:ap-northeast-2}") String region
+    ) {
+        this.s3Client = s3Client;
+        this.bucket = bucket;
+        // 생성자에서 한 번만 초기화
+        this.s3Presigner = S3Presigner.builder()
+                .region(Region.of(region))
+                .build();
+    }
 
     @Override
     public String upload(MultipartFile file) {
@@ -49,7 +58,7 @@ public class S3AppealStorageClient implements AppealStorageClient {
         String extension = extractExtension(file.getOriginalFilename());
         String fileKey = DIRECTORY + "/" + UUID.randomUUID() + "." + extension;
 
-        try {
+        try (InputStream inputStream = file.getInputStream()) {
             PutObjectRequest request = PutObjectRequest.builder()
                     .bucket(bucket)
                     .key(fileKey)
@@ -57,8 +66,7 @@ public class S3AppealStorageClient implements AppealStorageClient {
                     .contentLength(file.getSize())
                     .build();
 
-            s3Client.putObject(request,
-                    RequestBody.fromInputStream(file.getInputStream(), file.getSize()));
+            s3Client.putObject(request, RequestBody.fromInputStream(inputStream, file.getSize()));
 
             log.info("[S3AppealStorageClient] 파일 업로드 완료: bucket={}, key={}", bucket, fileKey);
             return fileKey;
@@ -74,22 +82,18 @@ public class S3AppealStorageClient implements AppealStorageClient {
 
     @Override
     public String getAccessUrl(String fileKey) {
-        try (S3Presigner presigner = S3Presigner.builder()
-                .region(Region.of(region))
-                .build()) {
+        // s3Presigner 재사용 (매번 생성하지 않음)
+        GetObjectPresignRequest presignRequest = GetObjectPresignRequest.builder()
+                .signatureDuration(PRESIGNED_URL_EXPIRY)
+                .getObjectRequest(req -> req
+                        .bucket(bucket)
+                        .key(fileKey)
+                        .build())
+                .build();
 
-            GetObjectPresignRequest presignRequest = GetObjectPresignRequest.builder()
-                    .signatureDuration(PRESIGNED_URL_EXPIRY)
-                    .getObjectRequest(req -> req
-                            .bucket(bucket)
-                            .key(fileKey)
-                            .build())
-                    .build();
-
-            PresignedGetObjectRequest presignedRequest = presigner.presignGetObject(presignRequest);
-            log.info("[S3AppealStorageClient] Presigned URL 생성: fileKey={}", fileKey);
-            return presignedRequest.url().toString();
-        }
+        PresignedGetObjectRequest presignedRequest = s3Presigner.presignGetObject(presignRequest);
+        log.info("[S3AppealStorageClient] Presigned URL 생성: fileKey={}", fileKey);
+        return presignedRequest.url().toString();
     }
 
     private void validateFile(MultipartFile file) {

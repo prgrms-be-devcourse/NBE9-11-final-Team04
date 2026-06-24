@@ -46,8 +46,9 @@ public class ExpertAdminController {
     public ResponseEntity<ApiResponse<List<AdminExpertAppealSummaryResponse>>> getAppeals(
             @PathVariable Long expertProfileId
     ) {
-        expertProfileRepository.findById(expertProfileId)
-                .orElseThrow(() -> new CustomException(ErrorCode.EXPERT_NOT_FOUND));
+        if (!expertProfileRepository.existsById(expertProfileId)) {
+            throw new CustomException(ErrorCode.EXPERT_NOT_FOUND);
+        }
 
         List<AdminExpertAppealSummaryResponse> response = expertAppealRepository
                 .findByExpertProfileIdOrderBySubmittedAtDesc(expertProfileId)

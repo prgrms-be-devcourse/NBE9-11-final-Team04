@@ -74,8 +74,11 @@ public class ExpertProfileService {
     // 소명 자료 목록 조회
     @Transactional(readOnly = true)
     public List<ExpertAppealResponse> getAppeals(Long expertProfileId) {
-        expertProfileRepository.findById(expertProfileId)
-                .orElseThrow(() -> new CustomException(ErrorCode.EXPERT_NOT_FOUND));
+
+        // findById → existsById로 변경
+        if (!expertProfileRepository.existsById(expertProfileId)) {
+            throw new CustomException(ErrorCode.EXPERT_NOT_FOUND);
+        }
 
         return expertAppealRepository
                 .findByExpertProfileIdOrderBySubmittedAtDesc(expertProfileId)

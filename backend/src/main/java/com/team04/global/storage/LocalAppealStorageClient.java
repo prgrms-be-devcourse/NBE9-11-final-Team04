@@ -39,7 +39,8 @@ public class LocalAppealStorageClient implements AppealStorageClient {
             Path dirPath = Paths.get(basePath, DIRECTORY).toAbsolutePath().normalize();
             Files.createDirectories(dirPath);
 
-            String fileName = UUID.randomUUID() + "_" + file.getOriginalFilename();
+            String extension = extractExtension(file.getOriginalFilename());
+            String fileName = UUID.randomUUID() + "." + extension;
             Path filePath = dirPath.resolve(fileName);
 
             try (InputStream inputStream = file.getInputStream()) {
