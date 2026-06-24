@@ -35,4 +35,6 @@ public interface IdeaRepository extends JpaRepository<Idea, Long>, IdeaRepositor
                                 @Param("to") LocalDateTime to);
 
     Page<Idea> findByStatusInAndDeletedAtIsNull(Collection<IdeaStatus> statuses, Pageable pageable);
+
+    List<Idea> findByIdInAndDeletedAtIsNull(List<Long> ideaIds);
 }
