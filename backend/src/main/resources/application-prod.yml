@@ -49,6 +49,9 @@ management:
   endpoint:
     health:
       show-details: never
+  health:
+    mail:
+      enabled: false
 
 expert:
   scheduler:
@@ -68,3 +71,12 @@ cloud:
 server:
   servlet:
     context-path: /api
+
+payment:
+  gateway:
+    type: ${PAYMENT_GATEWAY_TYPE:mock}
+  toss:
+    secret-key: ${TOSS_SECRET_KEY:}
+    client-key: ${TOSS_CLIENT_KEY:}
+  webhook:
+    secret: ${PAYMENT_WEBHOOK_SECRET:dev-webhook-secret}

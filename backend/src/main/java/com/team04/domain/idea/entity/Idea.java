@@ -94,6 +94,9 @@ public class Idea extends BaseEntity {
     @Column(nullable = false)
     private Integer trustScore = 0;
 
+    @Column(length = 500)
+    private String rejectReason;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 50)
     private IdeaBadge badge = IdeaBadge.NO_HISTORY;
@@ -251,7 +254,7 @@ public class Idea extends BaseEntity {
     }
 
     /** 현재 아이디어가 수정 가능한 상태인지 검증합니다. */
-    private void validateEditable() {
+    public void validateEditable() {
         if (!this.status.isEditable()) {
             throw new CustomException(ErrorCode.IDEA_STATUS_NOT_EDITABLE);
         }
@@ -279,8 +282,9 @@ public class Idea extends BaseEntity {
         changeStatus(IdeaStatus.OPEN);
     }
 
-    /** 관리자 반려 후 반려 상태로 전이합니다. */
-    public void reject() {
+    /** 관리자 반려 후 반려 사유를 저장하고 반려 상태로 전이합니다. */
+    public void reject(String reason) {
+        this.rejectReason = reason;
         changeStatus(IdeaStatus.REJECTED);
     }
 }

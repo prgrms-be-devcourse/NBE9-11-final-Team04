@@ -45,4 +45,12 @@ public class PaymentWebhookLog extends BaseEntity {
         log.provider = provider;
         return log;
     }
+
+    public void markDone() {
+        this.status = "DONE";
+    }
+
+    public void markFailed() {
+        this.status = "FAILED";
+    }
 }

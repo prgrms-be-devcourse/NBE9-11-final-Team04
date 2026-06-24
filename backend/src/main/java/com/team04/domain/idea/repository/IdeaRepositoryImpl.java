@@ -9,15 +9,17 @@ import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import com.team04.domain.idea.entity.Idea;
 import com.team04.domain.idea.entity.IdeaCategory;
+import com.team04.domain.idea.entity.IdeaStatus;
 import com.team04.domain.idea.entity.QIdea;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Slice;
-import org.springframework.data.domain.SliceImpl;
+import org.springframework.data.domain.*;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /** QueryDSL로 프로젝트 목록 조회와 키워드 검색 쿼리를 구현하는 레포지토리입니다. */
 @RequiredArgsConstructor
@@ -30,9 +32,9 @@ public class IdeaRepositoryImpl implements IdeaRepositoryCustom {
 
     private final JPAQueryFactory queryFactory;
 
-    /** 조건에 맞는 프로젝트를 페이지 크기보다 하나 더 조회해 다음 Slice 존재 여부를 계산합니다. */
+    /** 조건에 맞는 공개 또는 진행 중 프로젝트를 Page로 조회하고 전체 건수를 계산합니다. */
     @Override
-    public Slice<Idea> searchProjects(
+    public Page<Idea> searchProjects(
             IdeaCategory category,
             Boolean closingSoonOnly,
             String keyword,
@@ -45,20 +47,30 @@ public class IdeaRepositoryImpl implements IdeaRepositoryCustom {
                 .where(
                         idea.deletedAt.isNull(),
                         idea.trustScore.goe(MIN_TRUST_SCORE),
+                        idea.status.in(IdeaStatus.OPEN, IdeaStatus.IN_PROGRESS),
                         categoryEq(idea, category),
                         closingSoon(idea, closingSoonOnly),
                         titleContains(idea, keyword)
                 )
                 .orderBy(orderBy(idea, sort), idea.id.desc())
                 .offset(pageable.getOffset())
-                .limit(pageable.getPageSize() + 1L)
+                .limit(pageable.getPageSize())
                 .fetch();
 
-        boolean hasNext = ideas.size() > pageable.getPageSize();
-        if (hasNext) {
-            ideas.remove(pageable.getPageSize());
-        }
-        return new SliceImpl<>(ideas, pageable, hasNext);
+        Long total = queryFactory
+                .select(idea.count())
+                .from(idea)
+                .where(
+                        idea.deletedAt.isNull(),
+                        idea.trustScore.goe(MIN_TRUST_SCORE),
+                        idea.status.in(IdeaStatus.OPEN, IdeaStatus.IN_PROGRESS),
+                        categoryEq(idea, category),
+                        closingSoon(idea, closingSoonOnly),
+                        titleContains(idea, keyword)
+                )
+                .fetchOne();
+
+        return new PageImpl<>(ideas, pageable, total == null ? 0L : total);
     }
 
     /** 신뢰도 80 이상 프로젝트를 가중치 합산 점수 내림차순으로 최대 5개 조회합니다. */
@@ -88,7 +100,8 @@ public class IdeaRepositoryImpl implements IdeaRepositoryCustom {
                 .selectFrom(idea)
                 .where(
                         idea.deletedAt.isNull(),
-                        idea.trustScore.goe(MIN_TRUST_SCORE)
+                        idea.trustScore.goe(MIN_TRUST_SCORE),
+                        idea.status.in(IdeaStatus.OPEN, IdeaStatus.IN_PROGRESS)
                 )
                 .orderBy(achievementScore.add(sponsorScore).add(trustScore).desc(), idea.id.desc())
                 .limit(TOP_IDEA_LIMIT)
@@ -130,9 +143,30 @@ public class IdeaRepositoryImpl implements IdeaRepositoryCustom {
                 .from(idea)
                 .where(
                         idea.deletedAt.isNull(),
+                        idea.status.eq(IdeaStatus.IN_PROGRESS),
                         idea.fundingEndAt.lt(now),
                         idea.currentAmount.lt(idea.goalAmount)
                 )
                 .fetch();
+    }
+
+    /** 모든 IdeaStatus 값에 대해 아이디어 건수를 0 포함 Map으로 반환합니다. */
+    @Override
+    public Map<IdeaStatus, Long> countByStatus() {
+        QIdea idea = QIdea.idea;
+        Map<IdeaStatus, Long> counts = queryFactory
+                .select(idea.status, idea.count())
+                .from(idea)
+                .where(idea.deletedAt.isNull())
+                .groupBy(idea.status)
+                .fetch()
+                .stream()
+                .collect(Collectors.toMap(
+                        tuple -> tuple.get(idea.status),
+                        tuple -> tuple.get(idea.count()) == null ? 0L : tuple.get(idea.count())
+                ));
+
+        return Arrays.stream(IdeaStatus.values())
+                .collect(Collectors.toMap(status -> status, status -> counts.getOrDefault(status, 0L)));
     }
 }
