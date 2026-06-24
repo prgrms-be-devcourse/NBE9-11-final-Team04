@@ -13,7 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-/** 프로젝트 검증 접수와 재제출 API를 제공하는 컨트롤러입니다. */
+/** 프로젝트 검증 접수와 결과 조회 API를 제공하는 컨트롤러입니다. */
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/verifications")
@@ -24,18 +24,10 @@ public class VerificationController {
     /** 검증 요청을 접수하고 즉시 검증 진행 중 응답을 반환합니다. */
     @PostMapping
     public ApiResponse<VerificationResponse> requestVerification(
-            @Valid @RequestBody VerificationRequest request
+            @Valid @RequestBody VerificationRequest request,
+            @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        return ApiResponse.ofSuccess(verificationService.requestVerification(request));
-    }
-
-    /** 보완된 검증 요청을 재제출하고 즉시 검증 진행 중 응답을 반환합니다. */
-    @PostMapping("/{verificationId}/resubmit")
-    public ApiResponse<VerificationResponse> resubmit(
-            @PathVariable Long verificationId,
-            @Valid @RequestBody VerificationRequest request
-    ) {
-        return ApiResponse.ofSuccess(verificationService.resubmit(verificationId, request));
+        return ApiResponse.ofSuccess(verificationService.requestVerification(request, userDetails.getUserId()));
     }
 
     /** 아이디어 검증 결과를 조회합니다. 관리자 또는 본인 아이디어 제안자만 가능합니다. */

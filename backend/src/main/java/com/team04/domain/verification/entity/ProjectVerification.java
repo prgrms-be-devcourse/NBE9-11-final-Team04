@@ -13,9 +13,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
-
-/** 프로젝트 검증 요청의 현재 상태와 보완 일정을 저장하는 엔티티입니다. */
+/** 프로젝트 검증 요청의 현재 상태를 저장하는 엔티티입니다. */
 @Entity
 @Table(name = "project_verification")
 @Getter
@@ -33,13 +31,6 @@ public class ProjectVerification extends BaseEntity {
     @Column(nullable = false, length = 50)
     private VerificationStatus status = VerificationStatus.DRAFT;
 
-    @Column(nullable = false)
-    private Integer resubmissionCount = 0;
-
-    private LocalDateTime revisionDueAt;
-
-    private LocalDateTime waitingUntil;
-
     /** 아이디어 식별자로 신규 검증 요청을 생성합니다. */
     public ProjectVerification(Long ideaId) {
         this.ideaId = ideaId;
@@ -51,32 +42,18 @@ public class ProjectVerification extends BaseEntity {
         this.status = targetStatus;
     }
 
-    /** 보완 요청 상태로 변경하고 보완 마감 시간을 기록합니다. */
-    public void requestRevision(LocalDateTime revisionDueAt) {
-        changeStatus(VerificationStatus.NEEDS_REVISION);
-        this.revisionDueAt = revisionDueAt;
-    }
-
-    /** 재제출 횟수를 증가시키고 AI 검증 상태로 변경합니다. */
-    public void resubmit() {
-        changeStatus(VerificationStatus.AI_VERIFYING);
-        this.resubmissionCount += 1;
-        this.revisionDueAt = null;
-    }
-
     /** 검증 시작 상태로 변경합니다. */
     public void startAiVerification() {
         changeStatus(VerificationStatus.AI_VERIFYING);
     }
 
-    /** 30일 대기 종료 시간을 기록하고 반려 상태로 변경합니다. */
-    public void rejectWithWaiting(LocalDateTime waitingUntil) {
-        changeStatus(VerificationStatus.REJECTED);
-        this.waitingUntil = waitingUntil;
+    /** 참고용 검증 결과 저장이 완료된 상태로 변경합니다. */
+    public void completeAiVerification() {
+        changeStatus(VerificationStatus.AI_PASSED);
     }
 
-    /** 외부 검증 대기 종료 시간을 기록합니다. */
-    public void updateWaitingUntil(LocalDateTime waitingUntil) {
-        this.waitingUntil = waitingUntil;
+    /** OpenAI 호출 실패 등 장애로 관리자 재시도가 필요한 상태로 변경합니다. */
+    public void markPendingAdminReview() {
+        changeStatus(VerificationStatus.PENDING_ADMIN_REVIEW);
     }
 }
