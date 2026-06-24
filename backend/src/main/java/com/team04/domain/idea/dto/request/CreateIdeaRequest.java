@@ -1,7 +1,6 @@
 package com.team04.domain.idea.dto.request;
 
 import com.team04.domain.idea.entity.IdeaCategory;
-import com.team04.domain.idea.entity.IdeaDraft;
 import com.team04.domain.idea.entity.RewardType;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.AssertTrue;

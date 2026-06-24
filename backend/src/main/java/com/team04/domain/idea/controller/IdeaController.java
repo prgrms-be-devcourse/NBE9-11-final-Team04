@@ -14,6 +14,7 @@ import com.team04.domain.idea.service.IdeaService;
 import com.team04.global.security.CustomUserDetails;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.web.PageableDefault;
@@ -42,7 +43,7 @@ public class IdeaController {
 
     /** 카테고리와 마감임박 필터, 정렬 조건으로 프로젝트 목록을 제공합니다. */
     @GetMapping
-    public ApiResponse<Slice<IdeaSummaryResponse>> getProjects(
+    public ApiResponse<Page<IdeaSummaryResponse>> getProjects(
             @RequestParam(required = false) IdeaCategory category,
             @RequestParam(required = false, defaultValue = "false") Boolean closingSoon,
             @RequestParam(required = false) String keyword,
@@ -58,9 +59,9 @@ public class IdeaController {
         return ApiResponse.ofSuccess(ideaService.getTop5Ideas());
     }
 
-    /** 로그인 사용자의 관심 프로젝트 목록을 Slice 페이지네이션으로 제공합니다. */
+    /** 로그인 사용자의 관심 프로젝트 목록을 Page 페이지네이션으로 제공합니다. */
     @GetMapping("/bookmarks")
-    public ApiResponse<Slice<IdeaResponse>> getBookmarks(
+    public ApiResponse<Page<IdeaResponse>> getBookmarks(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PageableDefault(size = 20) Pageable pageable
     ) {
@@ -117,10 +118,9 @@ public class IdeaController {
     /** 로그인 제안자가 아이디어 본문 이미지를 사전 업로드합니다. */
     @PostMapping("/images")
     public ApiResponse<List<String>> uploadContentImages(
-            @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestPart("images") List<MultipartFile> images
     ) {
-        return ApiResponse.ofSuccess(ideaService.uploadContentImages(userDetails.getUserId(), images));
+        return ApiResponse.ofSuccess(ideaService.uploadContentImages(images));
     }
 
     /** 로그인 사용자만 접근 가능한 아이디어 상세 정보를 조회합니다. */
@@ -199,5 +199,13 @@ public class IdeaController {
             @Valid @RequestBody ReportIdeaRequest request
     ) {
         return ApiResponse.ofSuccess(ideaService.reportIdea(ideaId, userDetails.getUserId(), request));
+    }
+
+    /** 로그인 사용자가 등록한 본인 아이디어 목록을 조회합니다. */
+    @GetMapping("/me")
+    public ApiResponse<List<IdeaSummaryResponse>> getMyIdeas(
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        return ApiResponse.ofSuccess(ideaService.getMyIdeas(userDetails.getUserId()));
     }
 }

@@ -2,6 +2,7 @@ package com.team04.domain.idea.dto.response;
 
 import com.team04.domain.idea.entity.Idea;
 import com.team04.domain.milestone.dto.response.MilestoneResponse;
+import com.team04.global.util.ImageUrlConverter;
 
 import java.time.LocalDateTime;
 import java.util.Arrays;
@@ -30,6 +31,7 @@ public record IdeaResponse(
         String imageUrl,
         List<String> imageUrls,
         String status,
+        String rejectReason,
         Integer trustScore,
         String badge,
         LocalDateTime createdAt,
@@ -59,8 +61,9 @@ public record IdeaResponse(
                 idea.getFundingEndAt(),
                 idea.getRewardType().name(),
                 idea.getImageUrl(),
-                parseImageUrls(idea.getImageUrls()),
+                ImageUrlConverter.parse(idea.getImageUrls()),
                 idea.getStatus().name(),
+                idea.getRejectReason(),
                 idea.getTrustScore(),
                 idea.getBadge().name(),
                 idea.getCreatedAt(),
@@ -71,17 +74,5 @@ public record IdeaResponse(
 
     public static IdeaResponse of(Idea idea) {
         return of(idea, List.of());
-    }
-
-    /** 콤마 구분 문자열로 저장된 본문 이미지 URL 목록을 응답용 리스트로 변환합니다. */
-    private static List<String> parseImageUrls(String imageUrls) {
-        if (imageUrls == null || imageUrls.isBlank()) {
-            return List.of();
-        }
-
-        return Arrays.stream(imageUrls.split(","))
-                .map(String::trim)
-                .filter(url -> !url.isBlank())
-                .toList();
     }
 }
