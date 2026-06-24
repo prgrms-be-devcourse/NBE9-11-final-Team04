@@ -1,6 +1,9 @@
 package com.team04.domain.verification.repository;
 
 import com.team04.domain.verification.entity.ProjectVerification;
+import com.team04.domain.verification.entity.VerificationStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.time.LocalDateTime;
@@ -18,4 +21,7 @@ public interface ProjectVerificationRepository extends JpaRepository<ProjectVeri
             com.team04.domain.verification.entity.VerificationStatus status,
             LocalDateTime now
     );
+
+    /** 상태별 프로젝트 검증 요청 목록을 페이지로 조회합니다. */
+    Page<ProjectVerification> findAllByStatus(VerificationStatus status, Pageable pageable);
 }
