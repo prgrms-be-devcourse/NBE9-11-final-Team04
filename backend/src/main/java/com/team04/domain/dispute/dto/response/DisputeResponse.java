@@ -1,5 +1,6 @@
 package com.team04.domain.dispute.dto.response;
 
+import com.team04.domain.dispute.entity.AppealStatus;
 import com.team04.domain.dispute.entity.Dispute;
 import com.team04.domain.dispute.entity.DisputeAppeal;
 import com.team04.domain.dispute.entity.DisputeCategory;
@@ -23,12 +24,20 @@ public record DisputeResponse(
         AppealInfo appeal
 ) {
     public record AppealInfo(
+            AppealStatus status,
+            int appealCount,
             String content,
             String fileUrl,
             LocalDateTime createdAt
     ) {
         public static AppealInfo of(DisputeAppeal appeal) {
-            return new AppealInfo(appeal.getContent(), appeal.getFileUrl(), appeal.getCreatedAt());
+            return new AppealInfo(
+                    appeal.getStatus(),
+                    appeal.getAppealCount(),
+                    appeal.getContent(),
+                    appeal.getFileUrl(),
+                    appeal.getCreatedAt()
+            );
         }
     }
 

@@ -44,6 +44,7 @@ public enum ErrorCode {
     IDEA_STATUS_NOT_EDITABLE(400, "I004", "현재 상태에서는 아이디어를 수정할 수 없습니다"),
     IDEA_STATUS_NOT_DELETABLE(400, "I005", "현재 상태에서는 아이디어를 삭제할 수 없습니다"),
     INVALID_IDEA_STATUS_TRANSITION(400, "I006", "유효하지 않은 아이디어 상태 전이입니다"),
+    IDEA_SUSPENDED(403, "I013", "관리자에 의해 일시 중단된 프로젝트입니다"),
     IDEA_DRAFT_NOT_FOUND(404, "I007", "존재하지 않는 아이디어 임시저장입니다"),
     IDEA_DRAFT_LIMIT_EXCEEDED(409, "I008", "아이디어 임시저장은 최대 50개까지 가능합니다"),
     SELF_REPORT_NOT_ALLOWED(400, "I009", "본인 아이디어는 신고할 수 없습니다"),
@@ -83,6 +84,7 @@ public enum ErrorCode {
     DEPOSIT_NOT_FOUND(404, "F010", "존재하지 않는 보증금입니다"),
     DEPOSIT_AMOUNT_MISMATCH(400, "F010", "보증금 금액이 아이디어에 등록된 금액과 일치하지 않습니다"),
     DEPOSIT_EXCEEDS_LIMIT(400, "F011", "보증금은 목표 펀딩액의 30%를 초과할 수 없습니다"),
+    FUNDING_LOCKED_BY_MILESTONE(409, "F012", "이미 완료된 마일스톤 단계의 후원은 직접 취소할 수 없습니다"),
 
     // 마일스톤
     MILESTONE_NOT_FOUND(404, "M001", "존재하지 않는 마일스톤입니다"),

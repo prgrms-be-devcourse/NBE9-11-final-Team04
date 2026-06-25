@@ -103,6 +103,11 @@ public class Idea extends BaseEntity {
 
     private LocalDateTime deletedAt;
 
+    // 분쟁 처리 중 일시 중단 전 상태를 저장합니다. 소명 수용 시 이 값으로 복원합니다.
+    @Enumerated(EnumType.STRING)
+    @Column(length = 50)
+    private IdeaStatus previousStatus;
+
     /** 신규 아이디어를 심사 대기 기본값과 함께 생성합니다. */
     public Idea(
             Long userId,
@@ -286,5 +291,23 @@ public class Idea extends BaseEntity {
     public void reject(String reason) {
         this.rejectReason = reason;
         changeStatus(IdeaStatus.REJECTED);
+    }
+
+    // 분쟁 신고 처리 중 관리자가 호출합니다. 복원 시 사용할 이전 상태를 저장합니다.
+    /** 관리자 일시 중단 처리합니다. */
+    public void suspend() {
+        this.previousStatus = this.status;
+        changeStatus(IdeaStatus.SUSPENDED);
+    }
+
+    // 소명 수용(DisputeStatus.REJECTED) 시 호출됩니다. previousStatus로 복원합니다.
+    /** 관리자 일시 중단 해제 후 중단 전 상태로 복원합니다. */
+    public void restore() {
+        if (this.status != IdeaStatus.SUSPENDED) {
+            throw new CustomException(ErrorCode.INVALID_IDEA_STATUS_TRANSITION);
+        }
+        IdeaStatus target = this.previousStatus != null ? this.previousStatus : IdeaStatus.OPEN;
+        this.previousStatus = null;
+        changeStatus(target);
     }
 }

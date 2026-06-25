@@ -220,6 +220,8 @@ public class FundingService {
                 .orElseThrow(() -> new CustomException(ErrorCode.FUNDING_NOT_FOUND));
 
         if (funding.getStatus() == FundingStatus.PAID) {
+            validateFundingNotLockedByMilestone(funding);
+
             Payment payment = paymentRepository
                     .findFirstByFundingIdAndStatusOrderByCreatedAtDesc(funding.getId(), PaymentStatus.SUCCESS)
                     .orElseThrow(() -> new CustomException(ErrorCode.PAYMENT_NOT_FOUND));
@@ -305,6 +307,17 @@ public class FundingService {
                         .mapToInt(Milestone::getStep)
                         .max()
                         .orElse(0));
+    }
+
+    private void validateFundingNotLockedByMilestone(Funding funding) {
+        // 현재 진행 단계 후원은 취소 가능하지만, 이미 완료된 단계 후원은 개인 취소를 막는다.
+        int completedStep = milestoneRepository.findMaxStepByIdeaIdAndStatus(
+                funding.getIdeaId(),
+                MilestoneStatus.COMPLETED
+        );
+        if (funding.getMilestoneStep() <= completedStep) {
+            throw new CustomException(ErrorCode.FUNDING_LOCKED_BY_MILESTONE);
+        }
     }
 
     private Idea validateFundableIdea(Long ideaId, Long sponsorId, Long amount) {

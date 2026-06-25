@@ -1,6 +1,7 @@
 package com.team04.domain.milestone.service;
 
 import com.team04.domain.funding.service.FundingService;
+import com.team04.domain.idea.service.IdeaService;
 import com.team04.domain.milestone.dto.request.CompletionReportRequest;
 import com.team04.domain.milestone.dto.response.CompletionReportResponse;
 import com.team04.domain.milestone.dto.response.MilestoneResponse;
@@ -32,6 +33,7 @@ public class MilestoneService {
 
     private final MilestoneRepository milestoneRepository;
     private final CompletionReportRepository completionReportRepository;
+    private final IdeaService ideaService;
     private final SettlementService settlementService;
     private final RefundService refundService;
     private final FundingService fundingService;
@@ -100,6 +102,7 @@ public class MilestoneService {
     public CompletionReportResponse submitCompletionReport(
             Long milestoneId, CompletionReportRequest request, MultipartFile file) {
         Milestone milestone = findMilestone(milestoneId);
+        ideaService.validateNotSuspended(milestone.getIdeaId()); // 분쟁 처리 중 일시 중단된 프로젝트는 완료 보고서 제출 불가
 
         if (milestone.getStatus() != MilestoneStatus.IN_PROGRESS) {
             throw new CustomException(ErrorCode.INVALID_MILESTONE_STATUS_TRANSITION);

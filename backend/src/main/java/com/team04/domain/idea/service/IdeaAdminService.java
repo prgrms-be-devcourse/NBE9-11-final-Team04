@@ -49,6 +49,35 @@ public class IdeaAdminService {
         idea.reject(reason);
     }
 
+    /** 관리자 권한으로 OPEN 또는 IN_PROGRESS 상태의 아이디어를 일시 중단합니다. */
+    @Transactional
+    public void suspendIdea(Long ideaId) {
+        Idea idea = findActiveIdea(ideaId);
+        idea.suspend();
+    }
+
+    // 소명 수용(DisputeStatus.REJECTED) 시 DisputeService에서 호출됩니다.
+    /** 일시 중단된 아이디어를 중단 전 상태로 복원합니다. SUSPENDED 상태가 아니면 무시합니다. */
+    @Transactional
+    public void restoreIdea(Long ideaId) {
+        Idea idea = findActiveIdea(ideaId);
+        if (idea.getStatus() == IdeaStatus.SUSPENDED) {
+            idea.restore();
+        }
+    }
+
+    // 신고 인정(DisputeStatus.RESOLVED) 시 DisputeService에서 호출됩니다.
+    /** 분쟁 신고 인정으로 아이디어를 강제 취소합니다. 이미 종료된 상태면 무시합니다. */
+    @Transactional
+    public void cancelIdeaForDispute(Long ideaId) {
+        Idea idea = findActiveIdea(ideaId);
+        if (idea.getStatus() != IdeaStatus.COMPLETED
+                && idea.getStatus() != IdeaStatus.CANCELLED
+                && idea.getStatus() != IdeaStatus.REJECTED) {
+            idea.changeStatus(IdeaStatus.CANCELLED);
+        }
+    }
+
     /** 전체 아이디어 상태별 건수를 반환합니다. */
     @Transactional(readOnly = true)
     public Map<IdeaStatus, Long> getStatusStats() {
