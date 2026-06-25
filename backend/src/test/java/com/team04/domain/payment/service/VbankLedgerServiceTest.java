@@ -1,6 +1,7 @@
 package com.team04.domain.payment.service;
 
 import com.team04.domain.funding.repository.FundingRepository;
+import com.team04.domain.funding.repository.DepositRepository;
 import com.team04.domain.idea.entity.Idea;
 import com.team04.domain.idea.repository.IdeaRepository;
 import com.team04.domain.idea.service.IdeaService;
@@ -9,21 +10,25 @@ import com.team04.domain.payment.entity.VbankLedger;
 import com.team04.domain.payment.entity.VbankLedgerDirection;
 import com.team04.domain.payment.entity.VbankLedgerType;
 import com.team04.domain.payment.repository.VbankLedgerRepository;
+import com.team04.domain.settlement.repository.PreSettlementRepository;
 import com.team04.global.exception.CustomException;
 import com.team04.global.exception.ErrorCode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.data.domain.Pageable;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -43,6 +48,10 @@ class VbankLedgerServiceTest {
     private IdeaRepository ideaRepository;
     @Mock
     private FundingRepository fundingRepository;
+    @Mock
+    private DepositRepository depositRepository;
+    @Mock
+    private PreSettlementRepository preSettlementRepository;
 
     @Test
     @DisplayName("입금 장부는 기존 잔액에 금액을 더한다")
@@ -50,8 +59,8 @@ class VbankLedgerServiceTest {
         given(vbankLedgerRepository.findByIdempotencyKey("key-1")).willReturn(Optional.empty());
         given(ideaRepository.findByIdForUpdate(1L)).willReturn(Optional.of(mock(Idea.class)));
         given(vbankLedgerRepository.findByIdempotencyKeyForUpdate("key-1")).willReturn(Optional.empty());
-        given(vbankLedgerRepository.findTopByIdeaIdAndAffectsBalanceOrderByIdDesc(1L, true))
-                .willReturn(Optional.of(ledger(1L, 100_000L)));
+        given(vbankLedgerRepository.findLatestByIdeaIdAndAffectsBalanceForUpdate(eq(1L), eq(true), any(Pageable.class)))
+                .willReturn(List.of(ledger(1L, 100_000L)));
         given(vbankLedgerRepository.save(any(VbankLedger.class)))
                 .willAnswer(invocation -> invocation.getArgument(0));
 
@@ -76,8 +85,8 @@ class VbankLedgerServiceTest {
         given(vbankLedgerRepository.findByIdempotencyKey("usage-1")).willReturn(Optional.empty());
         given(ideaRepository.findByIdForUpdate(1L)).willReturn(Optional.of(mock(Idea.class)));
         given(vbankLedgerRepository.findByIdempotencyKeyForUpdate("usage-1")).willReturn(Optional.empty());
-        given(vbankLedgerRepository.findTopByIdeaIdAndAffectsBalanceOrderByIdDesc(1L, true))
-                .willReturn(Optional.of(ledger(1L, 100_000L)));
+        given(vbankLedgerRepository.findLatestByIdeaIdAndAffectsBalanceForUpdate(eq(1L), eq(true), any(Pageable.class)))
+                .willReturn(List.of(ledger(1L, 100_000L)));
         given(vbankLedgerRepository.save(any(VbankLedger.class)))
                 .willAnswer(invocation -> invocation.getArgument(0));
 
@@ -104,8 +113,8 @@ class VbankLedgerServiceTest {
         given(vbankLedgerRepository.findByIdempotencyKey("out-1")).willReturn(Optional.empty());
         given(ideaRepository.findByIdForUpdate(1L)).willReturn(Optional.of(mock(Idea.class)));
         given(vbankLedgerRepository.findByIdempotencyKeyForUpdate("out-1")).willReturn(Optional.empty());
-        given(vbankLedgerRepository.findTopByIdeaIdAndAffectsBalanceOrderByIdDesc(1L, true))
-                .willReturn(Optional.of(ledger(1L, 10_000L)));
+        given(vbankLedgerRepository.findLatestByIdeaIdAndAffectsBalanceForUpdate(eq(1L), eq(true), any(Pageable.class)))
+                .willReturn(List.of(ledger(1L, 10_000L)));
 
         assertThatThrownBy(() -> vbankLedgerService.recordOut(
                 1L,

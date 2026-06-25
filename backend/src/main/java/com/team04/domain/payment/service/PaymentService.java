@@ -593,6 +593,9 @@ public class PaymentService {
             throw new CustomException(ErrorCode.PAYMENT_NOT_READY);
         }
 
+        // 실제 PG 환불을 호출하기 전에 가상계좌 장부 출금 가능 여부를 먼저 검증한다.
+        vbankLedgerService.validateSufficientBalanceForOut(funding.getIdeaId(), payment.getAmount());
+
         // PG 환불 API 호출 후 DB 반영 — 실패 시 상태 변경하지 않음
         PaymentRefundResult refundResult = paymentGateway.refund(
                 payment.getPaymentKey(),

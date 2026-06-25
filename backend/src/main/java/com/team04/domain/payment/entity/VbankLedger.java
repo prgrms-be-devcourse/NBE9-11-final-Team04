@@ -16,6 +16,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
+// 멱등키 unique 제약으로 중복 장부를 막고, 아이디어별 최신순 조회를 위해 (idea_id, id) 인덱스를 둔다.
 @Table(
         name = "vbank_ledgers",
         uniqueConstraints = @UniqueConstraint(name = "uk_vbank_ledgers_idempotency_key", columnNames = "idempotency_key"),

@@ -98,6 +98,9 @@ public class SettlementPaymentService {
             return;
         }
 
+        // 실제 payout 호출 전에 장부 출금 가능 여부를 먼저 확인해 지급 성공 후 장부 실패를 줄인다.
+        vbankLedgerService.validateSufficientBalanceForOut(preSettlement.getIdeaId(), preSettlement.getAmount());
+
         PayoutRequest request = buildPreSettlementPayoutRequest(preSettlement);
         PayoutResult result = paymentPayoutService.payout(request);
 
@@ -122,6 +125,9 @@ public class SettlementPaymentService {
             settlementService.completeSettlementPayout(settlementId, successStatus);
             return;
         }
+
+        // 실제 payout 호출 전에 장부 출금 가능 여부를 먼저 확인해 지급 성공 후 장부 실패를 줄인다.
+        vbankLedgerService.validateSufficientBalanceForOut(settlement.getIdeaId(), settlement.getPayoutAmount());
 
         PayoutRequest request = buildSettlementPayoutRequest(settlement);
         PayoutResult result = paymentPayoutService.payout(request);
@@ -205,6 +211,11 @@ public class SettlementPaymentService {
                     refundId, payment.getId(), payment.getStatus());
             return;
         }
+
+        Funding funding = fundingRepository.findByIdForUpdate(payment.getFundingId())
+                .orElseThrow(() -> new CustomException(ErrorCode.FUNDING_NOT_FOUND));
+        // 실제 PG 환불 전에 장부 출금 가능 여부를 먼저 확인한다.
+        vbankLedgerService.validateSufficientBalanceForOut(funding.getIdeaId(), refund.getAmount());
 
         PaymentRefundResult refundResult = paymentGateway.refund(
                 payment.getPaymentKey(),

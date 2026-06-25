@@ -1,5 +1,8 @@
 package com.team04.domain.payment.service;
 
+import com.team04.domain.funding.entity.Deposit;
+import com.team04.domain.funding.entity.FundingTypes.DepositStatus;
+import com.team04.domain.funding.repository.DepositRepository;
 import com.team04.domain.funding.repository.FundingRepository;
 import com.team04.domain.idea.dto.response.IdeaResponse;
 import com.team04.domain.idea.repository.IdeaRepository;
@@ -9,10 +12,13 @@ import com.team04.domain.payment.entity.VbankLedger;
 import com.team04.domain.payment.entity.VbankLedgerDirection;
 import com.team04.domain.payment.entity.VbankLedgerType;
 import com.team04.domain.payment.repository.VbankLedgerRepository;
+import com.team04.domain.settlement.entity.PreSettlementStatus;
+import com.team04.domain.settlement.repository.PreSettlementRepository;
 import com.team04.domain.user.entity.Role;
 import com.team04.global.exception.CustomException;
 import com.team04.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,6 +33,8 @@ public class VbankLedgerService {
     private final IdeaService ideaService;
     private final IdeaRepository ideaRepository;
     private final FundingRepository fundingRepository;
+    private final DepositRepository depositRepository;
+    private final PreSettlementRepository preSettlementRepository;
 
     @Transactional
     public VbankLedgerResponse recordIn(
@@ -79,6 +87,29 @@ public class VbankLedgerService {
                 .toList();
     }
 
+    /**
+     * 외부 PG/payout 호출 전에 실제 출금 장부 저장 가능 여부를 먼저 확인한다.
+     * 기존 프로젝트처럼 장부가 비어 있으면 현재 상태 기준 시작 잔액을 1회 생성한다.
+     */
+    @Transactional
+    public void validateSufficientBalanceForOut(Long ideaId, Long amount) {
+        validateRecordRequest(
+                ideaId,
+                VbankLedgerType.LEGACY_OPENING_BALANCE,
+                VbankLedgerDirection.OUT,
+                amount,
+                "precheck-" + ideaId
+        );
+        ideaRepository.findByIdForUpdate(ideaId)
+                .orElseThrow(() -> new CustomException(ErrorCode.IDEA_NOT_FOUND));
+        ensureLegacyOpeningBalanceIfNeeded(ideaId);
+
+        long currentBalance = getCurrentBalance(ideaId);
+        if (currentBalance - amount < 0) {
+            throw new CustomException(ErrorCode.VBANK_LEDGER_INSUFFICIENT_BALANCE);
+        }
+    }
+
     private VbankLedgerResponse record(
             Long ideaId,
             VbankLedgerType type,
@@ -102,6 +133,10 @@ public class VbankLedgerService {
         // 같은 ideaId의 장부 기록이 동시에 들어오면 이전 잔액을 중복 조회할 수 있어 아이디어 row를 먼저 잠근다.
         ideaRepository.findByIdForUpdate(ideaId)
                 .orElseThrow(() -> new CustomException(ErrorCode.IDEA_NOT_FOUND));
+        if (direction == VbankLedgerDirection.OUT && affectsBalance) {
+            ensureLegacyOpeningBalanceIfNeeded(ideaId);
+        }
+        // 락 대기 중 다른 트랜잭션이 같은 멱등키 장부를 저장했을 수 있어, 락 조회로 한 번 더 확인한다.
         existing = vbankLedgerRepository.findByIdempotencyKeyForUpdate(idempotencyKey)
                 .map(VbankLedgerResponse::from)
                 .orElse(null);
@@ -117,6 +152,7 @@ public class VbankLedgerService {
                     ? currentBalance + amount
                     : currentBalance - amount;
             if (balanceAfter < 0) {
+                // 부족 출금을 0으로 보정하면 장부 수식이 깨지므로 저장하지 않고 실패시킨다.
                 throw new CustomException(ErrorCode.VBANK_LEDGER_INSUFFICIENT_BALANCE);
             }
         }
@@ -136,6 +172,46 @@ public class VbankLedgerService {
         return VbankLedgerResponse.from(vbankLedgerRepository.save(ledger));
     }
 
+    private void ensureLegacyOpeningBalanceIfNeeded(Long ideaId) {
+        if (findLatestBalanceLedgerForUpdate(ideaId) != null) {
+            return;
+        }
+
+        long openingBalance = calculateLegacyOpeningBalance(ideaId);
+        if (openingBalance <= 0) {
+            return;
+        }
+
+        VbankLedger openingLedger = VbankLedger.create(
+                ideaId,
+                VbankLedgerType.LEGACY_OPENING_BALANCE,
+                VbankLedgerDirection.IN,
+                openingBalance,
+                openingBalance,
+                true,
+                "legacy-opening-" + ideaId,
+                "Idea",
+                ideaId,
+                "기존 데이터 기준 가상계좌 시작 잔액"
+        );
+        vbankLedgerRepository.save(openingLedger);
+    }
+
+    private long calculateLegacyOpeningBalance(Long ideaId) {
+        IdeaResponse idea = ideaService.getIdea(ideaId);
+        long currentFunding = idea.currentAmount() != null ? idea.currentAmount() : 0L;
+        long heldDeposit = depositRepository.findByIdeaId(ideaId)
+                .filter(deposit -> deposit.getStatus() == DepositStatus.HELD)
+                .map(Deposit::getAmount)
+                .orElse(0L);
+        Long completedPreSettlement = preSettlementRepository.sumAmountByIdeaIdAndStatus(
+                ideaId,
+                PreSettlementStatus.COMPLETED
+        );
+        long completedPreSettlementAmount = completedPreSettlement != null ? completedPreSettlement : 0L;
+        return Math.max(currentFunding + heldDeposit - completedPreSettlementAmount, 0L);
+    }
+
     private void validateRecordRequest(
             Long ideaId,
             VbankLedgerType type,
@@ -152,9 +228,18 @@ public class VbankLedgerService {
     }
 
     private long getCurrentBalance(Long ideaId) {
-        return vbankLedgerRepository.findTopByIdeaIdAndAffectsBalanceOrderByIdDesc(ideaId, true)
-                .map(VbankLedger::getBalanceAfter)
-                .orElse(0L);
+        VbankLedger latestLedger = findLatestBalanceLedgerForUpdate(ideaId);
+        return latestLedger != null ? latestLedger.getBalanceAfter() : 0L;
+    }
+
+    private VbankLedger findLatestBalanceLedgerForUpdate(Long ideaId) {
+        return vbankLedgerRepository.findLatestByIdeaIdAndAffectsBalanceForUpdate(
+                        ideaId,
+                        true,
+                        PageRequest.of(0, 1)
+                ).stream()
+                .findFirst()
+                .orElse(null);
     }
 
     private void validateReadable(Long ideaId, Long userId, Role role) {

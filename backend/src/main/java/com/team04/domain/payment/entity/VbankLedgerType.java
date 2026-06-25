@@ -2,6 +2,8 @@ package com.team04.domain.payment.entity;
 
 /** 아이디어별 가상계좌 장부에 기록되는 자금 흐름 유형입니다. */
 public enum VbankLedgerType {
+    /** 기존 데이터에 장부가 없을 때 현재 상태를 기준으로 생성하는 시작 잔액입니다. */
+    LEGACY_OPENING_BALANCE,
     /** 제안자가 보증금을 납부한 기록입니다. */
     DEPOSIT_PAID,
     /** 후원자가 후원금을 납부한 기록입니다. */
