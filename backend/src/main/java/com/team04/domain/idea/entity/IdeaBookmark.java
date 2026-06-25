@@ -1,13 +1,7 @@
 package com.team04.domain.idea.entity;
 
 import com.team04.global.entity.BaseEntity;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
+import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -19,7 +13,11 @@ import lombok.NoArgsConstructor;
         uniqueConstraints = @UniqueConstraint(
                 name = "uk_idea_bookmark_user_idea",
                 columnNames = {"user_id", "idea_id"}
-        )
+        ),
+        indexes = {
+                @Index(name = "idx_idea_bookmark_user_created", columnList = "user_id, created_at"),
+                @Index(name = "idx_idea_bookmark_idea", columnList = "idea_id")
+        }
 )
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
