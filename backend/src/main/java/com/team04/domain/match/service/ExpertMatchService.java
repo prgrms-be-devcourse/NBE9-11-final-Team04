@@ -80,6 +80,10 @@ public class ExpertMatchService {
             throw new CustomException(ErrorCode.EXPERT_NOT_VERIFIED);
         }
 
+        if (expertProfile.getStatus() != ExpertStatus.ACTIVE) {
+            throw new CustomException(ErrorCode.EXPERT_SUSPENDED);
+        }
+
         // 동일한 아이디어-전문가 조합 중복 요청 방어
         if (expertMatchRepository.existsByIdeaIdAndExpertProfile_Id(request.ideaId(), expertProfileId)) {
             throw new CustomException(ErrorCode.MATCH_ALREADY_REQUESTED);

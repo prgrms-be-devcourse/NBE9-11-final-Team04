@@ -64,7 +64,6 @@ public class ExpertController {
 
     /* 전문가 프로필 검증 API */
     @PostMapping("/verify")
-    @PreAuthorize("hasRole('EXPERT')")
     public ResponseEntity<ApiResponse<ExpertVerifyResponse>> verify(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @Valid @RequestBody ExpertVerifyRequest request
@@ -87,7 +86,7 @@ public class ExpertController {
         return ResponseEntity.status(201).body(ApiResponse.ofSuccess(response));
     }
 
-    /* 카테고리별 ACTIVE 상태의 전문가 목록 조회 */
+    /* 카테고리별 ACTIVE 상태의 전문가 목록 조회 API */
     @GetMapping
     public ResponseEntity<ApiResponse<Page<ExpertProfileListResponse>>> getProfiles(
             @RequestParam(required = false) TechStack techStack,
