@@ -47,4 +47,15 @@ class PreSettlementTest {
         assertThatThrownBy(preSettlement::complete)
                 .isInstanceOf(CustomException.class);
     }
+
+    @Test
+    @DisplayName("FAILED 상태에서 REQUESTED로 재처리 대기 전환 성공")
+    void retry_failed_success() {
+        PreSettlement preSettlement = createPreSettlement();
+        preSettlement.fail();
+
+        preSettlement.retry();
+
+        assertThat(preSettlement.getStatus()).isEqualTo(PreSettlementStatus.REQUESTED);
+    }
 }

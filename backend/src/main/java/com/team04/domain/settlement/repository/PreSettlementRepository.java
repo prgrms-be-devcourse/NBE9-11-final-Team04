@@ -12,6 +12,8 @@ public interface PreSettlementRepository extends JpaRepository<PreSettlement, Lo
 
     List<PreSettlement> findByIdeaId(Long ideaId);
 
+    List<PreSettlement> findByStatus(PreSettlementStatus status);
+
     /**
      * 프로젝트의 유효 누적 선정산 금액 조회 (FAILED 제외)
      * Milestone 비관락으로 동시성 보장

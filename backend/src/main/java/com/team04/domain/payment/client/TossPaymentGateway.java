@@ -138,8 +138,8 @@ public class TossPaymentGateway implements PaymentGateway {
     public PayoutResult payout(PayoutRequest request) {
         PaymentProperties.Toss toss = paymentProperties.toss();
         if (!toss.payoutEnabled()) {
-            log.info("[TossPG] 지급대행 비활성 — preSettlementId={}, amount={}",
-                    request.preSettlementId(), request.amount());
+            log.info("[TossPG] 지급대행 비활성 — type={}, targetId={}, amount={}",
+                    request.payoutTargetType(), request.payoutTargetId(), request.amount());
             return PayoutResult.skipped("toss-payout-disabled");
         }
 
@@ -153,8 +153,8 @@ public class TossPaymentGateway implements PaymentGateway {
         }
 
         // 토스 지급대행(/v2/payouts)은 JWE 암호화 연동이 필요합니다 — 추후 구현
-        log.warn("[TossPG] 지급대행 미구현 — preSettlementId={}, destination={}, amount={}",
-                request.preSettlementId(), destination, request.amount());
+        log.warn("[TossPG] 지급대행 미구현 — type={}, targetId={}, destination={}, amount={}",
+                request.payoutTargetType(), request.payoutTargetId(), destination, request.amount());
         return PayoutResult.skipped("toss-payout-not-implemented");
     }
 

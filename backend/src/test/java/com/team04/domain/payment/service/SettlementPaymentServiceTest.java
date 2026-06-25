@@ -8,18 +8,26 @@ import com.team04.domain.idea.repository.IdeaRepository;
 import com.team04.domain.idea.service.IdeaService;
 import com.team04.domain.payment.client.PaymentGateway;
 import com.team04.domain.payment.dto.request.PayoutRequest;
+import com.team04.domain.payment.dto.request.PayoutTargetType;
 import com.team04.domain.payment.dto.response.PaymentRefundResult;
 import com.team04.domain.payment.dto.response.PayoutResult;
 import com.team04.domain.payment.entity.Payment;
 import com.team04.domain.payment.entity.PaymentTypes.PaymentMethod;
+import com.team04.domain.payment.event.PreSettlementPayoutRequestedEvent;
+import com.team04.domain.payment.event.SettlementPayoutRequestedEvent;
 import com.team04.domain.payment.repository.PaymentRepository;
 import com.team04.domain.settlement.entity.PreSettlement;
 import com.team04.domain.settlement.entity.Refund;
 import com.team04.domain.settlement.entity.RefundReason;
+import com.team04.domain.settlement.entity.Settlement;
+import com.team04.domain.settlement.entity.SettlementStatus;
+import com.team04.domain.settlement.entity.SettlementType;
 import com.team04.domain.settlement.repository.PreSettlementRepository;
 import com.team04.domain.settlement.repository.RefundRepository;
+import com.team04.domain.settlement.repository.SettlementRepository;
 import com.team04.domain.settlement.service.PreSettlementService;
 import com.team04.domain.settlement.service.RefundService;
+import com.team04.domain.settlement.service.SettlementService;
 import com.team04.domain.user.entity.Role;
 import com.team04.domain.user.entity.User;
 import com.team04.domain.user.repository.UserRepository;
@@ -27,6 +35,7 @@ import com.team04.global.config.payment.PaymentProperties;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -35,6 +44,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
@@ -50,6 +60,8 @@ class SettlementPaymentServiceTest {
 
     @Mock
     private PaymentGateway paymentGateway;
+    @Mock
+    private PaymentPayoutService paymentPayoutService;
     @Mock
     private PaymentProperties paymentProperties;
     @Mock
@@ -67,9 +79,13 @@ class SettlementPaymentServiceTest {
     @Mock
     private PreSettlementRepository preSettlementRepository;
     @Mock
+    private SettlementRepository settlementRepository;
+    @Mock
     private PreSettlementService preSettlementService;
     @Mock
     private RefundService refundService;
+    @Mock
+    private SettlementService settlementService;
 
     @Test
     @DisplayName("선정산 지급 성공 시 complete 콜백 호출")
@@ -84,13 +100,135 @@ class SettlementPaymentServiceTest {
         given(ideaService.getIdea(10L)).willReturn(sampleIdea(10L, 100L));
         given(userRepository.findById(100L)).willReturn(Optional.of(sampleUser(100L)));
         given(paymentProperties.payout()).willReturn(new PaymentProperties.Payout(true, "088", "000", ""));
-        given(paymentGateway.payout(any(PayoutRequest.class)))
+        given(paymentPayoutService.payout(any(PayoutRequest.class)))
                 .willReturn(PayoutResult.success("mock-payout-1"));
 
         settlementPaymentService.processPreSettlementPayout(1L);
 
         verify(preSettlementService).completePreSettlement(1L);
         verify(preSettlementService, never()).failPreSettlement(anyLong());
+    }
+
+    @Test
+    @DisplayName("최종 정산 지급 성공 시 정산 장부 완료 콜백 호출")
+    void processSettlementPayout_success() {
+        Settlement settlement = Settlement.builder()
+                .ideaId(10L)
+                .type(SettlementType.FINAL)
+                .totalAmount(100_000L)
+                .platformFee(1_000L)
+                .payoutAmount(99_000L)
+                .idempotencyKey("idea-10-FINAL")
+                .build();
+        setField(settlement, "id", 2L);
+
+        given(settlementRepository.findById(2L)).willReturn(Optional.of(settlement));
+        given(ideaService.getIdea(10L)).willReturn(sampleIdea(10L, 100L));
+        given(userRepository.findById(100L)).willReturn(Optional.of(sampleUser(100L)));
+        given(paymentProperties.payout()).willReturn(new PaymentProperties.Payout(true, "088", "000", ""));
+        given(paymentPayoutService.payout(any(PayoutRequest.class)))
+                .willReturn(PayoutResult.success("mock-payout-2"));
+
+        settlementPaymentService.processSettlementPayout(2L, SettlementStatus.COMPLETED);
+
+        ArgumentCaptor<PayoutRequest> requestCaptor = ArgumentCaptor.forClass(PayoutRequest.class);
+        verify(paymentPayoutService).payout(requestCaptor.capture());
+        PayoutRequest request = requestCaptor.getValue();
+        assertThat(request.payoutTargetId()).isEqualTo(2L);
+        assertThat(request.payoutTargetType()).isEqualTo(PayoutTargetType.SETTLEMENT);
+        assertThat(request.amount()).isEqualTo(99_000L);
+        verify(settlementService).completeSettlementPayout(2L, SettlementStatus.COMPLETED);
+        verify(settlementService, never()).failSettlementPayout(anyLong());
+    }
+
+    @Test
+    @DisplayName("보증금 환급 지급 성공 시 보증금 상태를 환급 처리한다")
+    void processSettlementPayout_depositRefund_success() {
+        Settlement settlement = Settlement.builder()
+                .ideaId(10L)
+                .type(SettlementType.FINAL)
+                .totalAmount(100_000L)
+                .platformFee(0L)
+                .payoutAmount(100_000L)
+                .idempotencyKey("idea-10-DEPOSIT-COMPLETED")
+                .build();
+        setField(settlement, "id", 3L);
+
+        given(settlementRepository.findById(3L)).willReturn(Optional.of(settlement));
+        given(ideaService.getIdea(10L)).willReturn(sampleIdea(10L, 100L));
+        given(userRepository.findById(100L)).willReturn(Optional.of(sampleUser(100L)));
+        given(paymentProperties.payout()).willReturn(new PaymentProperties.Payout(true, "088", "000", ""));
+        given(paymentPayoutService.payout(any(PayoutRequest.class)))
+                .willReturn(PayoutResult.success("mock-payout-3"));
+
+        settlementPaymentService.processSettlementPayout(3L, SettlementStatus.DEPOSIT_REFUNDED);
+
+        verify(settlementService).completeSettlementPayout(3L, SettlementStatus.DEPOSIT_REFUNDED);
+    }
+
+    @Test
+    @DisplayName("정산 지급 실패 시 정산 장부 실패 콜백 호출")
+    void processSettlementPayout_failure() {
+        Settlement settlement = Settlement.builder()
+                .ideaId(10L)
+                .type(SettlementType.FINAL)
+                .totalAmount(100_000L)
+                .platformFee(1_000L)
+                .payoutAmount(99_000L)
+                .idempotencyKey("idea-10-FINAL")
+                .build();
+        setField(settlement, "id", 2L);
+
+        given(settlementRepository.findById(2L)).willReturn(Optional.of(settlement));
+        given(ideaService.getIdea(10L)).willReturn(sampleIdea(10L, 100L));
+        given(userRepository.findById(100L)).willReturn(Optional.of(sampleUser(100L)));
+        given(paymentProperties.payout()).willReturn(new PaymentProperties.Payout(true, "088", "000", ""));
+        given(paymentPayoutService.payout(any(PayoutRequest.class)))
+                .willReturn(PayoutResult.failure("mock-payout-failed"));
+
+        settlementPaymentService.processSettlementPayout(2L, SettlementStatus.COMPLETED);
+
+        verify(settlementService).failSettlementPayout(2L);
+        verify(settlementService, never()).completeSettlementPayout(anyLong(), any());
+    }
+
+    @Test
+    @DisplayName("선정산 지급 이벤트 처리 중 예외 발생 시 FAILED 전환")
+    void onPreSettlementPayoutRequested_exception_marksFailed() {
+        PreSettlement preSettlement = PreSettlement.builder()
+                .ideaId(10L)
+                .amount(50_000L)
+                .build();
+        setField(preSettlement, "id", 1L);
+
+        given(preSettlementRepository.findById(1L)).willReturn(Optional.of(preSettlement));
+        given(ideaService.getIdea(10L)).willThrow(new RuntimeException("unexpected"));
+
+        settlementPaymentService.onPreSettlementPayoutRequested(new PreSettlementPayoutRequestedEvent(1L));
+
+        verify(preSettlementService).failPreSettlement(1L);
+    }
+
+    @Test
+    @DisplayName("정산 지급 이벤트 처리 중 예외 발생 시 FAILED 전환")
+    void onSettlementPayoutRequested_exception_marksFailed() {
+        Settlement settlement = Settlement.builder()
+                .ideaId(10L)
+                .type(SettlementType.FINAL)
+                .totalAmount(100_000L)
+                .platformFee(1_000L)
+                .payoutAmount(99_000L)
+                .idempotencyKey("idea-10-FINAL")
+                .build();
+        setField(settlement, "id", 2L);
+
+        given(settlementRepository.findById(2L)).willReturn(Optional.of(settlement));
+        given(ideaService.getIdea(10L)).willThrow(new RuntimeException("unexpected"));
+
+        settlementPaymentService.onSettlementPayoutRequested(
+                new SettlementPayoutRequestedEvent(2L, SettlementStatus.COMPLETED));
+
+        verify(settlementService).failSettlementPayout(2L);
     }
 
     @Test

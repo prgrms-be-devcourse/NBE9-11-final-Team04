@@ -7,6 +7,7 @@ import com.team04.domain.idea.repository.IdeaRepository;
 import com.team04.domain.idea.service.IdeaService;
 import com.team04.domain.payment.client.PaymentGateway;
 import com.team04.domain.payment.event.PreSettlementPayoutRequestedEvent;
+import com.team04.domain.payment.event.SettlementPayoutRequestedEvent;
 import com.team04.domain.payment.dto.request.PayoutRequest;
 import com.team04.domain.payment.dto.response.PaymentRefundResult;
 import com.team04.domain.payment.dto.response.PayoutResult;
@@ -18,10 +19,14 @@ import com.team04.domain.settlement.entity.PreSettlementStatus;
 import com.team04.domain.settlement.entity.Refund;
 import com.team04.domain.settlement.entity.RefundReason;
 import com.team04.domain.settlement.entity.RefundStatus;
+import com.team04.domain.settlement.entity.Settlement;
+import com.team04.domain.settlement.entity.SettlementStatus;
 import com.team04.domain.settlement.repository.PreSettlementRepository;
 import com.team04.domain.settlement.repository.RefundRepository;
+import com.team04.domain.settlement.repository.SettlementRepository;
 import com.team04.domain.settlement.service.PreSettlementService;
 import com.team04.domain.settlement.service.RefundService;
+import com.team04.domain.settlement.service.SettlementService;
 import com.team04.domain.user.entity.User;
 import com.team04.domain.user.repository.UserRepository;
 import com.team04.global.config.payment.PaymentProperties;
@@ -46,6 +51,7 @@ import java.util.List;
 public class SettlementPaymentService {
 
     private final PaymentGateway paymentGateway;
+    private final PaymentPayoutService paymentPayoutService;
     private final PaymentProperties paymentProperties;
     private final PaymentRepository paymentRepository;
     private final FundingRepository fundingRepository;
@@ -54,8 +60,10 @@ public class SettlementPaymentService {
     private final UserRepository userRepository;
     private final RefundRepository refundRepository;
     private final PreSettlementRepository preSettlementRepository;
+    private final SettlementRepository settlementRepository;
     private final PreSettlementService preSettlementService;
     private final RefundService refundService;
+    private final SettlementService settlementService;
 
     @EventListener
     public void onPreSettlementPayoutRequested(PreSettlementPayoutRequestedEvent event) {
@@ -64,6 +72,20 @@ public class SettlementPaymentService {
         } catch (Exception e) {
             log.error("선정산 지급 처리 실패 - preSettlementId: {}, error: {}",
                     event.preSettlementId(), e.getMessage(), e);
+            // 지급 처리 중 예외가 나면 REQUESTED에 방치되지 않도록 FAILED로 전환해 스케줄러 재시도 대상에 올린다.
+            failPreSettlementAfterUnexpectedError(event.preSettlementId());
+        }
+    }
+
+    @EventListener
+    public void onSettlementPayoutRequested(SettlementPayoutRequestedEvent event) {
+        try {
+            processSettlementPayout(event.settlementId(), event.successStatus());
+        } catch (Exception e) {
+            log.error("정산 지급 처리 실패 - settlementId: {}, error: {}",
+                    event.settlementId(), e.getMessage(), e);
+            // 지급 처리 중 예외가 나면 PENDING에 방치되지 않도록 FAILED로 전환해 스케줄러 재시도 대상에 올린다.
+            failSettlementAfterUnexpectedError(event.settlementId());
         }
     }
 
@@ -74,8 +96,8 @@ public class SettlementPaymentService {
             return;
         }
 
-        PayoutRequest request = buildPayoutRequest(preSettlement);
-        PayoutResult result = paymentGateway.payout(request);
+        PayoutRequest request = buildPreSettlementPayoutRequest(preSettlement);
+        PayoutResult result = paymentPayoutService.payout(request);
 
         if (result.success() && shouldAutoCompletePayout(result)) {
             preSettlementService.completePreSettlement(preSettlementId);
@@ -88,9 +110,74 @@ public class SettlementPaymentService {
         }
     }
 
+    /** 최종 정산/보증금 환급 PENDING 건에 대해 지급대행을 요청하고 결과에 따라 상태를 전환 */
+    public void processSettlementPayout(Long settlementId, SettlementStatus successStatus) {
+        Settlement settlement = settlementRepository.findById(settlementId).orElse(null);
+        if (settlement == null || settlement.getStatus() != SettlementStatus.PENDING) {
+            return;
+        }
+        if (settlement.getPayoutAmount() <= 0) {
+            settlementService.completeSettlementPayout(settlementId, successStatus);
+            return;
+        }
+
+        PayoutRequest request = buildSettlementPayoutRequest(settlement);
+        PayoutResult result = paymentPayoutService.payout(request);
+
+        if (result.success() && shouldAutoCompletePayout(result)) {
+            settlementService.completeSettlementPayout(settlementId, successStatus);
+            return;
+        }
+        if (!result.success()) {
+            log.error("정산 지급 실패 settlementId={}, message={}",
+                    settlementId, result.failureMessage());
+            settlementService.failSettlementPayout(settlementId);
+        }
+    }
+
     @Transactional(readOnly = true)
     public List<Refund> findPendingRefunds() {
         return refundRepository.findByStatus(RefundStatus.PENDING);
+    }
+
+    @Transactional(readOnly = true)
+    public List<PreSettlement> findFailedPreSettlements() {
+        return preSettlementRepository.findByStatus(PreSettlementStatus.FAILED);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Settlement> findFailedSettlements() {
+        return settlementRepository.findByStatus(SettlementStatus.FAILED);
+    }
+
+    public void retryPreSettlementPayout(Long preSettlementId) {
+        // FAILED 상태는 payout 처리 대상이 아니므로 REQUESTED로 되돌린 뒤 재처리한다.
+        preSettlementService.retryPreSettlementPayout(preSettlementId);
+        processPreSettlementPayout(preSettlementId);
+    }
+
+    public void retrySettlementPayout(Long settlementId, SettlementStatus successStatus) {
+        // FAILED 상태는 payout 처리 대상이 아니므로 PENDING으로 되돌린 뒤 원래 성공 상태로 재처리한다.
+        settlementService.retrySettlementPayout(settlementId);
+        processSettlementPayout(settlementId, successStatus);
+    }
+
+    private void failPreSettlementAfterUnexpectedError(Long preSettlementId) {
+        try {
+            preSettlementService.failPreSettlement(preSettlementId);
+        } catch (Exception failException) {
+            log.error("선정산 실패 상태 전환 실패 - preSettlementId: {}, error: {}",
+                    preSettlementId, failException.getMessage(), failException);
+        }
+    }
+
+    private void failSettlementAfterUnexpectedError(Long settlementId) {
+        try {
+            settlementService.failSettlementPayout(settlementId);
+        } catch (Exception failException) {
+            log.error("정산 실패 상태 전환 실패 - settlementId: {}, error: {}",
+                    settlementId, failException.getMessage(), failException);
+        }
     }
 
     /** PENDING 환불 건을 PG 환불 후 Payment/Funding 동기화 및 Refund complete */
@@ -133,16 +220,32 @@ public class SettlementPaymentService {
         refundService.completeRefund(refundId);
     }
 
-    private PayoutRequest buildPayoutRequest(PreSettlement preSettlement) {
+    private PayoutRequest buildPreSettlementPayoutRequest(PreSettlement preSettlement) {
         IdeaResponse idea = ideaService.getIdea(preSettlement.getIdeaId());
         User proposer = userRepository.findById(idea.userId())
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
         PaymentProperties.Payout payoutConfig = paymentProperties.payout();
-        return new PayoutRequest(
+        return PayoutRequest.preSettlement(
                 preSettlement.getId(),
                 preSettlement.getIdeaId(),
                 preSettlement.getAmount(),
+                proposer.getName(),
+                payoutConfig.bankCode(),
+                payoutConfig.accountNumber()
+        );
+    }
+
+    private PayoutRequest buildSettlementPayoutRequest(Settlement settlement) {
+        IdeaResponse idea = ideaService.getIdea(settlement.getIdeaId());
+        User proposer = userRepository.findById(idea.userId())
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        PaymentProperties.Payout payoutConfig = paymentProperties.payout();
+        return PayoutRequest.settlement(
+                settlement.getId(),
+                settlement.getIdeaId(),
+                settlement.getPayoutAmount(),
                 proposer.getName(),
                 payoutConfig.bankCode(),
                 payoutConfig.accountNumber()

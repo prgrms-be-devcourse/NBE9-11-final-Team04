@@ -98,4 +98,3 @@ admin:
   internal:
     base-url: ${ADMIN_INTERNAL_BASE_URL}
 
-

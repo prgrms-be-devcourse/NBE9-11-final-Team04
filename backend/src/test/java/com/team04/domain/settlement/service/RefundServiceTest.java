@@ -61,13 +61,13 @@ class RefundServiceTest {
     private RefundService refundService;
 
     @Test
-    @DisplayName("정당한 사유 중단 시 환불 대상이 없어도 보증금을 환급한다")
-    void createCancelRefunds_noRefundTarget_releaseDeposit() {
+    @DisplayName("정당한 사유 중단 시 보증금 상태 변경은 지급 성공 콜백에 위임한다")
+    void createCancelRefunds_noRefundTarget_deferDepositRelease() {
         given(paymentRepository.findPaymentsAndSponsorIdsToRefund(1L)).willReturn(List.of());
 
         refundService.createCancelRefunds(1L, true);
 
-        verify(fundingService).releaseDeposit(1L);
+        verify(fundingService, never()).releaseDeposit(1L);
         verify(fundingService, never()).forfeitDeposit(1L);
     }
 

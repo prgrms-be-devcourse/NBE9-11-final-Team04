@@ -123,6 +123,18 @@ public class PreSettlementService {
     }
 
     /**
+     * 지급 실패 건을 재처리 대기 상태로 되돌립니다.
+     * 스케줄러가 다시 payout을 호출하기 전에 사용합니다.
+     */
+    @Transactional
+    public PreSettlementResponse retryPreSettlementPayout(Long preSettlementId) {
+        PreSettlement preSettlement = preSettlementRepository.findById(preSettlementId)
+                .orElseThrow(() -> new CustomException(ErrorCode.PRE_SETTLEMENT_NOT_FOUND));
+        preSettlement.retry();
+        return PreSettlementResponse.from(preSettlement);
+    }
+
+    /**
      * 아이디어별 선정산 내역 조회
      * 관리자는 모두 조회 가능, 제안자는 본인 프로젝트만 조회 가능
      */
