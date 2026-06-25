@@ -415,6 +415,8 @@ public class SettlementService {
                 || successStatus == SettlementStatus.PARTIALLY_REFUNDED) {
             fundingService.releaseDeposit(settlement.getIdeaId());
         }
+    }
+
     private void recordSettlementMemo(Long ideaId, String suffix, String memo) {
         // 관리자 강제 환불 사유를 이미 존재하는 정산 장부에도 남긴다.
         settlementRepository.findByIdempotencyKey("idea-" + ideaId + "-" + suffix)
