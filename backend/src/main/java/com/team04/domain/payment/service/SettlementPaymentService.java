@@ -72,6 +72,8 @@ public class SettlementPaymentService {
         } catch (Exception e) {
             log.error("선정산 지급 처리 실패 - preSettlementId: {}, error: {}",
                     event.preSettlementId(), e.getMessage(), e);
+            // 지급 처리 중 예외가 나면 REQUESTED에 방치되지 않도록 FAILED로 전환해 스케줄러 재시도 대상에 올린다.
+            failPreSettlementAfterUnexpectedError(event.preSettlementId());
         }
     }
 
@@ -82,6 +84,8 @@ public class SettlementPaymentService {
         } catch (Exception e) {
             log.error("정산 지급 처리 실패 - settlementId: {}, error: {}",
                     event.settlementId(), e.getMessage(), e);
+            // 지급 처리 중 예외가 나면 PENDING에 방치되지 않도록 FAILED로 전환해 스케줄러 재시도 대상에 올린다.
+            failSettlementAfterUnexpectedError(event.settlementId());
         }
     }
 
@@ -156,6 +160,24 @@ public class SettlementPaymentService {
         // FAILED 상태는 payout 처리 대상이 아니므로 PENDING으로 되돌린 뒤 원래 성공 상태로 재처리한다.
         settlementService.retrySettlementPayout(settlementId);
         processSettlementPayout(settlementId, successStatus);
+    }
+
+    private void failPreSettlementAfterUnexpectedError(Long preSettlementId) {
+        try {
+            preSettlementService.failPreSettlement(preSettlementId);
+        } catch (Exception failException) {
+            log.error("선정산 실패 상태 전환 실패 - preSettlementId: {}, error: {}",
+                    preSettlementId, failException.getMessage(), failException);
+        }
+    }
+
+    private void failSettlementAfterUnexpectedError(Long settlementId) {
+        try {
+            settlementService.failSettlementPayout(settlementId);
+        } catch (Exception failException) {
+            log.error("정산 실패 상태 전환 실패 - settlementId: {}, error: {}",
+                    settlementId, failException.getMessage(), failException);
+        }
     }
 
     /** PENDING 환불 건을 PG 환불 후 Payment/Funding 동기화 및 Refund complete */

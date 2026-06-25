@@ -13,6 +13,8 @@ import com.team04.domain.payment.dto.response.PaymentRefundResult;
 import com.team04.domain.payment.dto.response.PayoutResult;
 import com.team04.domain.payment.entity.Payment;
 import com.team04.domain.payment.entity.PaymentTypes.PaymentMethod;
+import com.team04.domain.payment.event.PreSettlementPayoutRequestedEvent;
+import com.team04.domain.payment.event.SettlementPayoutRequestedEvent;
 import com.team04.domain.payment.repository.PaymentRepository;
 import com.team04.domain.settlement.entity.PreSettlement;
 import com.team04.domain.settlement.entity.Refund;
@@ -188,6 +190,45 @@ class SettlementPaymentServiceTest {
 
         verify(settlementService).failSettlementPayout(2L);
         verify(settlementService, never()).completeSettlementPayout(anyLong(), any());
+    }
+
+    @Test
+    @DisplayName("선정산 지급 이벤트 처리 중 예외 발생 시 FAILED 전환")
+    void onPreSettlementPayoutRequested_exception_marksFailed() {
+        PreSettlement preSettlement = PreSettlement.builder()
+                .ideaId(10L)
+                .amount(50_000L)
+                .build();
+        setField(preSettlement, "id", 1L);
+
+        given(preSettlementRepository.findById(1L)).willReturn(Optional.of(preSettlement));
+        given(ideaService.getIdea(10L)).willThrow(new RuntimeException("unexpected"));
+
+        settlementPaymentService.onPreSettlementPayoutRequested(new PreSettlementPayoutRequestedEvent(1L));
+
+        verify(preSettlementService).failPreSettlement(1L);
+    }
+
+    @Test
+    @DisplayName("정산 지급 이벤트 처리 중 예외 발생 시 FAILED 전환")
+    void onSettlementPayoutRequested_exception_marksFailed() {
+        Settlement settlement = Settlement.builder()
+                .ideaId(10L)
+                .type(SettlementType.FINAL)
+                .totalAmount(100_000L)
+                .platformFee(1_000L)
+                .payoutAmount(99_000L)
+                .idempotencyKey("idea-10-FINAL")
+                .build();
+        setField(settlement, "id", 2L);
+
+        given(settlementRepository.findById(2L)).willReturn(Optional.of(settlement));
+        given(ideaService.getIdea(10L)).willThrow(new RuntimeException("unexpected"));
+
+        settlementPaymentService.onSettlementPayoutRequested(
+                new SettlementPayoutRequestedEvent(2L, SettlementStatus.COMPLETED));
+
+        verify(settlementService).failSettlementPayout(2L);
     }
 
     @Test
