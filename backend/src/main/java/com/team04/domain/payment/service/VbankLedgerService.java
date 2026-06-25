@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -73,7 +74,7 @@ public class VbankLedgerService {
     @Transactional(readOnly = true)
     public List<VbankLedgerResponse> getLedgers(Long ideaId, Long userId, Role role) {
         validateReadable(ideaId, userId, role);
-        return vbankLedgerRepository.findByIdeaIdOrderByCreatedAtDesc(ideaId).stream()
+        return vbankLedgerRepository.findByIdeaIdOrderByIdDesc(ideaId).stream()
                 .map(VbankLedgerResponse::from)
                 .toList();
     }
@@ -89,6 +90,8 @@ public class VbankLedgerService {
             Long referenceId,
             String memo
     ) {
+        validateRecordRequest(ideaId, type, direction, amount, idempotencyKey);
+
         VbankLedgerResponse existing = vbankLedgerRepository.findByIdempotencyKey(idempotencyKey)
                 .map(VbankLedgerResponse::from)
                 .orElse(null);
@@ -99,7 +102,7 @@ public class VbankLedgerService {
         // 같은 ideaId의 장부 기록이 동시에 들어오면 이전 잔액을 중복 조회할 수 있어 아이디어 row를 먼저 잠근다.
         ideaRepository.findByIdForUpdate(ideaId)
                 .orElseThrow(() -> new CustomException(ErrorCode.IDEA_NOT_FOUND));
-        existing = vbankLedgerRepository.findByIdempotencyKey(idempotencyKey)
+        existing = vbankLedgerRepository.findByIdempotencyKeyForUpdate(idempotencyKey)
                 .map(VbankLedgerResponse::from)
                 .orElse(null);
         if (existing != null) {
@@ -112,7 +115,10 @@ public class VbankLedgerService {
             // 실제 입출금 성격의 기록만 프로젝트 가상계좌 잔액에 반영한다.
             balanceAfter = direction == VbankLedgerDirection.IN
                     ? currentBalance + amount
-                    : Math.max(currentBalance - amount, 0);
+                    : currentBalance - amount;
+            if (balanceAfter < 0) {
+                throw new CustomException(ErrorCode.VBANK_LEDGER_INSUFFICIENT_BALANCE);
+            }
         }
 
         VbankLedger ledger = VbankLedger.create(
@@ -130,6 +136,21 @@ public class VbankLedgerService {
         return VbankLedgerResponse.from(vbankLedgerRepository.save(ledger));
     }
 
+    private void validateRecordRequest(
+            Long ideaId,
+            VbankLedgerType type,
+            VbankLedgerDirection direction,
+            Long amount,
+            String idempotencyKey
+    ) {
+        if (ideaId == null || type == null || direction == null || idempotencyKey == null || idempotencyKey.isBlank()) {
+            throw new IllegalArgumentException("가상계좌 장부 필수 값이 누락되었습니다");
+        }
+        if (amount == null || amount < 0) {
+            throw new IllegalArgumentException("장부 금액은 0 이상이어야 합니다");
+        }
+    }
+
     private long getCurrentBalance(Long ideaId) {
         return vbankLedgerRepository.findTopByIdeaIdAndAffectsBalanceOrderByIdDesc(ideaId, true)
                 .map(VbankLedger::getBalanceAfter)
@@ -137,12 +158,15 @@ public class VbankLedgerService {
     }
 
     private void validateReadable(Long ideaId, Long userId, Role role) {
+        if (userId == null || role == null) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED);
+        }
         if (role == Role.ADMIN) {
             return;
         }
 
         IdeaResponse idea = ideaService.getIdea(ideaId);
-        if (idea.userId().equals(userId)) {
+        if (Objects.equals(idea.userId(), userId)) {
             return;
         }
 

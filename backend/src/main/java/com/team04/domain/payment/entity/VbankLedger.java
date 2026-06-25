@@ -8,13 +8,19 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "vbank_ledgers")
+@Table(
+        name = "vbank_ledgers",
+        uniqueConstraints = @UniqueConstraint(name = "uk_vbank_ledgers_idempotency_key", columnNames = "idempotency_key"),
+        indexes = @Index(name = "idx_vbank_ledgers_idea_id_id", columnList = "idea_id, id")
+)
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class VbankLedger extends BaseEntity {
@@ -23,7 +29,7 @@ public class VbankLedger extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
+    @Column(name = "idea_id", nullable = false)
     private Long ideaId;
 
     @Enumerated(EnumType.STRING)
@@ -37,18 +43,19 @@ public class VbankLedger extends BaseEntity {
     @Column(nullable = false)
     private Long amount;
 
-    @Column(nullable = false)
+    @Column(name = "balance_after", nullable = false)
     private Long balanceAfter;
 
-    @Column(nullable = false)
+    @Column(name = "affects_balance", nullable = false)
     private Boolean affectsBalance;
 
-    @Column(nullable = false, unique = true)
+    @Column(name = "idempotency_key", nullable = false, length = 128)
     private String idempotencyKey;
 
-    @Column(length = 64)
+    @Column(name = "reference_type", length = 64)
     private String referenceType;
 
+    @Column(name = "reference_id")
     private Long referenceId;
 
     @Column(columnDefinition = "TEXT")

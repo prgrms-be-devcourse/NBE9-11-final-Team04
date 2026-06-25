@@ -2,6 +2,8 @@ package com.team04.domain.payment.controller;
 
 import com.team04.domain.payment.dto.response.VbankLedgerResponse;
 import com.team04.domain.payment.service.VbankLedgerService;
+import com.team04.global.exception.CustomException;
+import com.team04.global.exception.ErrorCode;
 import com.team04.global.response.ApiResponse;
 import com.team04.global.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
@@ -32,6 +34,9 @@ public class VbankLedgerController {
             @PathVariable Long ideaId,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
+        if (userDetails == null) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED);
+        }
         return ApiResponse.ofSuccess(vbankLedgerService.getLedgers(
                 ideaId,
                 userDetails.getUserId(),
