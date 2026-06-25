@@ -23,7 +23,10 @@ const navItems: NavItem[] = [
   { path: '/mypage/ideas',         label: '내 아이디어', icon: '💡', roles: ['USER'] },
   { path: '/mypage/matches',       label: '매칭 목록',  icon: '🤝', roles: ['EXPERT'] },
   { path: '/mypage/payments',      label: '결제 내역',  icon: '💰', roles: ['USER'] },
+  { path: '/mypage/refunds',       label: '환불 내역',  icon: '↩️', roles: ['USER'] },
   { path: '/mypage/notifications', label: '알림',       icon: '🔔' },
+  { path: '/mypage/disputes',          label: '신고 내역',  icon: '🚨', exact: true },
+  { path: '/mypage/disputes/received', label: '받은 신고',  icon: '📨' },
 ]
 
 const settingItems: NavItem[] = [

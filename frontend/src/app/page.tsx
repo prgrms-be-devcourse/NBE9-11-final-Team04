@@ -36,7 +36,8 @@ const SCORE_ITEMS = [
 
 const STATUS_VARIANT: Record<IdeaStatus, 'blue' | 'green' | 'orange' | 'red' | 'gray'> = {
   AI_PENDING: 'gray', EXPERT_PENDING: 'orange', ADMIN_PENDING: 'orange',
-  OPEN: 'blue', IN_PROGRESS: 'green', COMPLETED: 'green', CANCELLED: 'red',
+  OPEN: 'blue', IN_PROGRESS: 'green', COMPLETED: 'green', CANCELLED: 'red',REJECTED: "red", 
+  CANCELLATION_REQUESTED: "orange"
 }
 
 const inner: React.CSSProperties = { maxWidth: '1100px', margin: '0 auto', padding: '0 24px' }
@@ -290,7 +291,7 @@ export default function HomePage() {
                       <ProgressBar value={calcAchievementRate(idea.currentAmount, idea.goalAmount)} />
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'var(--fg-muted)', marginTop: '8px' }}>
                         <span style={{ fontWeight: 700, color: 'var(--brand)' }}>{formatCurrency(idea.currentAmount)}</span>
-                        <span>{idea.supporterCount}명 후원</span>
+                        <span>{idea.sponsorCount}명 후원</span>
                       </div>
                     </div>
                   </div>

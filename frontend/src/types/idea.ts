@@ -8,7 +8,7 @@ export interface IdeaSummary {
   oneLineIntro: string
   goalAmount: number
   currentAmount: number
-  supporterCount: number
+  sponsorCount: number
   fundingStartAt: string
   fundingEndAt: string
   status: IdeaStatus
@@ -28,8 +28,9 @@ export interface IdeaDetail {
   competitor: string
   teamIntro: string
   goalAmount: number
+  depositAmount: number
   currentAmount: number
-  supporterCount: number
+  sponsorCount: number
   fundingStartAt: string
   fundingEndAt: string
   rewardType: RewardType
@@ -58,6 +59,7 @@ export interface CreateIdeaRequest {
   competitor: string
   teamIntro: string
   goalAmount: number
+  depositAmount: number
   fundingStartAt: string
   fundingEndAt: string
   rewardType: RewardType

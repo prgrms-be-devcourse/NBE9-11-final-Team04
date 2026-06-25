@@ -2,13 +2,17 @@
 
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
-import { useQuery } from '@tanstack/react-query'
+import { useState } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { ideasApi } from '@/api/ideas'
 import { matchesApi } from '@/api/matches'
+import { expertsApi } from '@/api/experts'
 import { useAuthStore } from '@/store/authStore'
+import { useSse } from '@/hooks/useSse'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { ProgressBar } from '@/components/ui/ProgressBar'
 import { Badge } from '@/components/ui/Badge'
+import type { FundingProgressEvent } from '@/types/funding'
 import {
   IDEA_CATEGORY_LABELS,
   IDEA_STATUS_LABELS,
@@ -22,6 +26,13 @@ import { formatCurrency, formatDate, calcAchievementRate, getDaysRemaining } fro
 const CATEGORY_ICONS: Record<IdeaCategory, string> = {
   TECH: '💻', LIFE: '🛍️', HEALTH: '🏥', EDUCATION: '🎓', ENVIRONMENT: '🌿', CULTURE: '🎨', ETC: '📦',
 }
+
+const TECH_STACK_LABELS: Record<string, string> = {
+  TECH: '기술', LIFE: '생활', HEALTH: '건강/의료',
+  EDUCATION: '교육', ENVIRONMENT: '환경', CULTURE: '문화/예술', ETC: '기타',
+}
+
+const TECH_STACKS = Object.keys(TECH_STACK_LABELS)
 
 const STATUS_VARIANT: Record<IdeaStatus, 'blue' | 'green' | 'orange' | 'red' | 'gray'> = {
   AI_PENDING: 'gray', EXPERT_PENDING: 'orange', ADMIN_PENDING: 'orange',
@@ -104,6 +115,9 @@ export default function IdeaDetailPage() {
   const params = useParams()
   const ideaId = Number(params.ideaId)
   const user = useAuthStore((s) => s.user)
+  const [liveProgress, setLiveProgress] = useState<FundingProgressEvent | null>(null)
+  const [techStackFilter, setTechStackFilter] = useState<string>('')
+  const [requestedIds, setRequestedIds] = useState<Set<number>>(new Set())
 
   const { data: idea, isLoading } = useQuery({
     queryKey: ['ideas', ideaId],
@@ -119,6 +133,17 @@ export default function IdeaDetailPage() {
   })
 
   const isExpert = user?.role === 'EXPERT'
+  const queryClient = useQueryClient()
+
+  useSse<FundingProgressEvent>({
+    url: `/fundings/${ideaId}/sse`,
+    enabled: !!ideaId,
+    onMessage: (data) => {
+      setLiveProgress(data)
+      queryClient.invalidateQueries({ queryKey: ['ideas', ideaId] })
+    },
+  })
+
   const { data: myMatches } = useQuery({
     queryKey: ['matches'],
     queryFn: matchesApi.getMyMatches,
@@ -128,6 +153,29 @@ export default function IdeaDetailPage() {
   const alreadyReviewed = acceptedMatch
     ? (typeof window !== 'undefined' && !!localStorage.getItem(`reviewed_match_${acceptedMatch.matchId}`))
     : false
+
+  const isOwnerExpertPending = !!user && user.id === idea?.userId && idea?.status === 'EXPERT_PENDING'
+
+  const { data: expertList } = useQuery({
+    queryKey: ['experts', techStackFilter],
+    queryFn: () => expertsApi.getList(techStackFilter || undefined),
+    enabled: isOwnerExpertPending,
+  })
+
+  const matchMutation = useMutation({
+    mutationFn: (expertProfileId: number) => expertsApi.requestMatch(expertProfileId, ideaId),
+    onSuccess: (_, expertProfileId) => {
+      setRequestedIds((prev) => new Set(prev).add(expertProfileId))
+    },
+    onError: (err: unknown) => {
+      const msg = (err as { message?: string })?.message ?? ''
+      if (msg.includes('MATCH_ALREADY_REQUESTED') || msg.includes('이미')) {
+        alert('이미 매칭 요청한 전문가입니다.')
+      } else {
+        alert('매칭 요청 중 오류가 발생했습니다.')
+      }
+    },
+  })
 
   if (isLoading) return <LoadingSpinner />
   if (!idea) {
@@ -140,10 +188,17 @@ export default function IdeaDetailPage() {
   }
 
   const score = trustScore?.trustScore ?? idea.trustScore ?? 0
-  const rate = calcAchievementRate(idea.currentAmount, idea.goalAmount)
+  const currentAmount = liveProgress?.currentAmount ?? idea.currentAmount
+  const goalAmount = liveProgress?.goalAmount ?? idea.goalAmount
+  const supporterCount = liveProgress?.sponsorCount ?? idea.sponsorCount
+  const rate = liveProgress?.achievementRate ?? calcAchievementRate(currentAmount, goalAmount)
   const daysLeft = getDaysRemaining(idea.fundingEndAt)
   const isOwner = user?.id === idea.userId
   const isFunding = idea.status === 'OPEN' || idea.status === 'IN_PROGRESS'
+  const isUpcoming = idea.status === 'OPEN' && new Date() < new Date(idea.fundingStartAt)
+  const daysUntilStart = isUpcoming
+    ? Math.ceil((new Date(idea.fundingStartAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+    : 0
 
   const sections = [
     { icon: '❓', title: '문제 정의',    value: idea.problemDefinition },
@@ -175,8 +230,8 @@ export default function IdeaDetailPage() {
         }}>
           {CATEGORY_ICONS[idea.category]} {IDEA_CATEGORY_LABELS[idea.category]}
         </span>
-        <Badge variant={STATUS_VARIANT[idea.status as IdeaStatus]}>
-          {IDEA_STATUS_LABELS[idea.status as IdeaStatus]}
+        <Badge variant={isUpcoming ? 'orange' : STATUS_VARIANT[idea.status as IdeaStatus]}>
+          {isUpcoming ? '펀딩 오픈 예정' : IDEA_STATUS_LABELS[idea.status as IdeaStatus]}
         </Badge>
       </div>
 
@@ -196,38 +251,56 @@ export default function IdeaDetailPage() {
 
           {/* 펀딩 현황 (OPEN / IN_PROGRESS만) */}
           {isFunding && (
-            <div style={{
-              background: '#fff',
-              border: '1.5px solid var(--brand)',
-              borderRadius: '12px',
-              padding: '24px 28px',
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '12px' }}>
-                <div>
-                  <div style={{ fontSize: '32px', fontWeight: 800, color: 'var(--brand)', lineHeight: 1 }}>{rate}%</div>
-                  <div style={{ fontSize: '13px', color: 'var(--fg-muted)', marginTop: '2px' }}>달성률</div>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: '20px', fontWeight: 700, color: 'var(--fg)' }}>{formatCurrency(idea.currentAmount)}</div>
-                  <div style={{ fontSize: '13px', color: 'var(--fg-muted)' }}>목표 {formatCurrency(idea.goalAmount)}</div>
+            isUpcoming ? (
+              <div style={{
+                background: '#fffbeb',
+                border: '1.5px solid #fcd34d',
+                borderRadius: '12px',
+                padding: '24px 28px',
+                textAlign: 'center',
+              }}>
+                <div style={{ fontSize: '13px', color: '#92400e', fontWeight: 600, marginBottom: '8px' }}>⏳ 펀딩 오픈 예정</div>
+                <div style={{ fontSize: '32px', fontWeight: 800, color: '#d97706', lineHeight: 1 }}>D-{daysUntilStart}</div>
+                <div style={{ fontSize: '13px', color: '#92400e', marginTop: '6px' }}>
+                  {formatDate(idea.fundingStartAt)} 오픈 · 목표 {formatCurrency(idea.goalAmount)}
                 </div>
               </div>
-
-              <ProgressBar value={rate} showLabel={false} size="lg" />
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0', marginTop: '16px', borderTop: '1px solid var(--border)', paddingTop: '16px' }}>
-                {[
-                  { label: '후원자', value: `${idea.supporterCount}명` },
-                  { label: '남은 기간', value: daysLeft > 0 ? `D-${daysLeft}` : '마감' },
-                  { label: '펀딩 마감', value: formatDate(idea.fundingEndAt) },
-                ].map((item) => (
-                  <div key={item.label} style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: '16px', fontWeight: 700, color: 'var(--fg)' }}>{item.value}</div>
-                    <div style={{ fontSize: '12px', color: 'var(--fg-muted)', marginTop: '2px' }}>{item.label}</div>
+            ) : (
+              <div style={{
+                background: '#fff',
+                border: '1.5px solid var(--brand)',
+                borderRadius: '12px',
+                padding: '24px 28px',
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '12px' }}>
+                  <div>
+                    <div style={{ fontSize: '32px', fontWeight: 800, color: 'var(--brand)', lineHeight: 1 }}>{rate}%</div>
+                    <div style={{ fontSize: '13px', color: 'var(--fg-muted)', marginTop: '2px' }}>
+                      달성률{liveProgress && <span style={{ color: '#10b981', marginLeft: '6px', fontSize: '11px' }}>● LIVE</span>}
+                    </div>
                   </div>
-                ))}
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '20px', fontWeight: 700, color: 'var(--fg)' }}>{formatCurrency(currentAmount)}</div>
+                    <div style={{ fontSize: '13px', color: 'var(--fg-muted)' }}>목표 {formatCurrency(goalAmount)}</div>
+                  </div>
+                </div>
+
+                <ProgressBar value={rate} showLabel={false} size="lg" />
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0', marginTop: '16px', borderTop: '1px solid var(--border)', paddingTop: '16px' }}>
+                  {[
+                    { label: '후원자', value: `${supporterCount}명` },
+                    { label: '남은 기간', value: daysLeft > 0 ? `D-${daysLeft}` : '마감' },
+                    { label: '펀딩 마감', value: formatDate(idea.fundingEndAt) },
+                  ].map((item) => (
+                    <div key={item.label} style={{ textAlign: 'center' }}>
+                      <div style={{ fontSize: '16px', fontWeight: 700, color: 'var(--fg)' }}>{item.value}</div>
+                      <div style={{ fontSize: '12px', color: 'var(--fg-muted)', marginTop: '2px' }}>{item.label}</div>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
+            )
           )}
 
           {/* 아이디어 설명 섹션들 */}
@@ -238,6 +311,124 @@ export default function IdeaDetailPage() {
               </p>
             </SectionCard>
           ))}
+
+          {/* 전문가 매칭 요청 섹션 (소유자 + EXPERT_PENDING 상태일 때만) */}
+          {isOwner && idea.status === 'EXPERT_PENDING' && (
+            <div style={{
+              background: '#fff',
+              border: '1.5px solid #f59e0b',
+              borderRadius: '12px',
+              padding: '24px 28px',
+            }}>
+              <h2 style={{
+                fontSize: '16px', fontWeight: 700, color: 'var(--fg)',
+                marginBottom: '6px',
+                display: 'flex', alignItems: 'center', gap: '8px',
+              }}>
+                🎓 전문가 매칭 요청
+              </h2>
+              <p style={{ fontSize: '13px', color: 'var(--fg-muted)', marginBottom: '16px' }}>
+                아이디어를 검증할 전문가를 선택해 매칭을 요청하세요. 전문가가 수락하면 검증이 시작됩니다.
+              </p>
+
+              {/* TechStack 필터 */}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '16px' }}>
+                <button
+                  onClick={() => setTechStackFilter('')}
+                  style={{
+                    padding: '5px 12px', borderRadius: '99px', fontSize: '13px', cursor: 'pointer',
+                    border: `1.5px solid ${!techStackFilter ? 'var(--brand)' : 'var(--border)'}`,
+                    background: !techStackFilter ? 'var(--brand-tint)' : '#fff',
+                    color: !techStackFilter ? 'var(--brand-dark)' : 'var(--fg-muted)',
+                    fontWeight: !techStackFilter ? 700 : 400,
+                  }}
+                >
+                  전체
+                </button>
+                {TECH_STACKS.map((ts) => (
+                  <button
+                    key={ts}
+                    onClick={() => setTechStackFilter(ts)}
+                    style={{
+                      padding: '5px 12px', borderRadius: '99px', fontSize: '13px', cursor: 'pointer',
+                      border: `1.5px solid ${techStackFilter === ts ? 'var(--brand)' : 'var(--border)'}`,
+                      background: techStackFilter === ts ? 'var(--brand-tint)' : '#fff',
+                      color: techStackFilter === ts ? 'var(--brand-dark)' : 'var(--fg-muted)',
+                      fontWeight: techStackFilter === ts ? 700 : 400,
+                    }}
+                  >
+                    {TECH_STACK_LABELS[ts]}
+                  </button>
+                ))}
+              </div>
+
+              {/* 전문가 목록 */}
+              {!expertList || expertList.content.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '24px 0', color: 'var(--fg-muted)', fontSize: '14px' }}>
+                  해당 분야의 전문가가 없습니다.
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {expertList.content.map((expert) => {
+                    const requested = requestedIds.has(expert.expertProfileId)
+                    return (
+                      <div
+                        key={expert.expertProfileId}
+                        style={{
+                          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                          padding: '14px 16px',
+                          border: '1px solid var(--border)',
+                          borderRadius: '10px',
+                          background: requested ? '#f0fdf4' : '#fafafa',
+                        }}
+                      >
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ fontSize: '15px', fontWeight: 700, color: 'var(--fg)' }}>
+                              {expert.nickname || expert.name}
+                            </span>
+                            <span style={{
+                              fontSize: '11px', fontWeight: 600,
+                              padding: '2px 8px', borderRadius: '99px',
+                              background: 'var(--brand-tint)', color: 'var(--brand-dark)',
+                            }}>
+                              {TECH_STACK_LABELS[expert.techStack] ?? expert.techStack}
+                            </span>
+                          </div>
+                          {expert.career && (
+                            <span style={{ fontSize: '13px', color: 'var(--fg-muted)' }}>
+                              {expert.career}
+                            </span>
+                          )}
+                        </div>
+                        {requested ? (
+                          <div style={{
+                            padding: '7px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: 600,
+                            background: '#d1fae5', color: '#065f46',
+                          }}>
+                            ✅ 요청 완료
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => matchMutation.mutate(expert.expertProfileId)}
+                            disabled={matchMutation.isPending}
+                            style={{
+                              padding: '7px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: 600,
+                              background: 'var(--brand)', color: '#fff',
+                              border: 'none', cursor: matchMutation.isPending ? 'not-allowed' : 'pointer',
+                              opacity: matchMutation.isPending ? 0.6 : 1,
+                            }}
+                          >
+                            매칭 요청
+                          </button>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* 등록일 */}
           <div style={{ fontSize: '13px', color: 'var(--fg-muted)', textAlign: 'right', paddingTop: '4px' }}>
@@ -289,7 +480,7 @@ export default function IdeaDetailPage() {
 
           {/* CTA 버튼들 */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {idea.status === 'OPEN' && (
+            {idea.status === 'OPEN' && !isUpcoming && (
               <Link href={`/fundings/idea/${idea.ideaId}`} style={{
                 display: 'block', textAlign: 'center',
                 padding: '14px', fontSize: '16px', fontWeight: 700,
@@ -299,7 +490,17 @@ export default function IdeaDetailPage() {
                 💰 후원하기
               </Link>
             )}
-            {isOwner && (
+            {isUpcoming && (
+              <div style={{
+                display: 'block', textAlign: 'center',
+                padding: '14px', fontSize: '15px', fontWeight: 700,
+                background: '#fef3c7', color: '#92400e',
+                borderRadius: '10px', border: '1.5px solid #fcd34d',
+              }}>
+                ⏳ D-{daysUntilStart} 후 오픈
+              </div>
+            )}
+            {isOwner && !['OPEN', 'IN_PROGRESS', 'COMPLETED'].includes(idea.status) && (
               <Link href={`/ideas/${idea.ideaId}/edit`} style={{
                 display: 'block', textAlign: 'center',
                 padding: '12px', fontSize: '14px', fontWeight: 600,

@@ -1,6 +1,6 @@
 'use client'
 
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { paymentsApi } from '@/api/payments'
 import { Badge } from '@/components/ui/Badge'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
@@ -15,10 +15,18 @@ const PAYMENT_VARIANT: Record<PaymentStatus, 'green' | 'orange' | 'red' | 'gray'
 }
 
 export default function PaymentsPage() {
+  const queryClient = useQueryClient()
+
   const { data, isLoading, error } = useQuery({
     queryKey: ['payments', 'me'],
     queryFn: () => paymentsApi.getMyPayments(),
     retry: false,
+  })
+
+  const refundMutation = useMutation({
+    mutationFn: (paymentId: number) => paymentsApi.refund(paymentId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['payments', 'me'] }),
+    onError: () => alert('환불 처리 중 오류가 발생했습니다.'),
   })
 
   if (isLoading) return <LoadingSpinner />
@@ -81,6 +89,26 @@ export default function PaymentsPage() {
               <Badge variant={PAYMENT_VARIANT[p.status as PaymentStatus]}>
                 {PAYMENT_STATUS_LABELS[p.status as PaymentStatus]}
               </Badge>
+              {p.status === 'SUCCESS' && (
+                <button
+                  onClick={() => refundMutation.mutate(p.paymentId)}
+                  disabled={refundMutation.isPending}
+                  style={{
+                    border: '1.5px solid #fca5a5',
+                    color: '#dc2626',
+                    background: '#fff',
+                    padding: '6px 14px',
+                    borderRadius: '8px',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    cursor: refundMutation.isPending ? 'not-allowed' : 'pointer',
+                    opacity: refundMutation.isPending ? 0.6 : 1,
+                    flexShrink: 0,
+                  }}
+                >
+                  환불 신청
+                </button>
+              )}
             </div>
           ))}
         </div>

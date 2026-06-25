@@ -15,8 +15,11 @@ export interface FundingDetail extends Funding {
   fundingEndAt?: string
 }
 
+export type PaymentMethod = 'CARD' | 'VIRTUAL_ACCOUNT'
+
 export interface SponsorRequest {
   amount: number
+  paymentMethod: PaymentMethod
 }
 
 export interface Milestone {
@@ -29,9 +32,52 @@ export interface Milestone {
 }
 
 export interface FundingProgressEvent {
-  fundingId: number
-  currentAmount: number
+  ideaId: number
   goalAmount: number
+  currentAmount: number
   achievementRate: number
-  supporterCount: number
+  sponsorCount: number
+}
+
+export interface VbankInfo {
+  bankCode: string
+  accountNumber: string
+  dueDate: string
+}
+
+export interface PaymentResult {
+  paymentId: number
+  fundingId: number
+  orderId: string
+  amount: number
+  status: string
+  method: string
+  approvedAt: string | null
+  createdAt: string
+  clientKey: string | null
+  redirectUrl: string | null
+  vbank: VbankInfo | null
+}
+
+export interface CreateFundingResponse {
+  fundingId: number
+  ideaId: number
+  sponsorId: number
+  milestoneStep: number
+  amount: number
+  rewardType: string
+  fundingStatus: string
+  createdAt: string
+  payment: PaymentResult
+}
+
+export interface DepositResponse {
+  depositId: number | null
+  ideaId: number
+  userId: number
+  amount: number
+  status: string
+  paidAt: string | null
+  releasedAt: string | null
+  payment: PaymentResult
 }
