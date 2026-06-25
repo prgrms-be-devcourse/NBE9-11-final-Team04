@@ -1,16 +1,59 @@
-# React + Vite
+# SeedLink Frontend (Next.js)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+신뢰 기반 크라우드펀딩 플랫폼 **SeedLink** 프론트엔드
 
-Currently, two official plugins are available:
+## 기술 스택
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **Next.js 16** (App Router)
+- React 19 + TypeScript
+- Tailwind CSS v4
+- React Query · Zustand · Axios
 
-## React Compiler
+## 시작하기
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```bash
+npm install
+npm run dev
+```
 
-## Expanding the ESLint configuration
+http://localhost:3000
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### 환경 변수
+
+| 파일 | 변수 | 설명 |
+|------|------|------|
+| `.env` | `NEXT_PUBLIC_API_BASE_URL` | 운영 API (`https://api.seedlink.com`) |
+| `.env.development` | `NEXT_PUBLIC_API_BASE_URL=/api` | 로컬 프록시 (→ `localhost:8080`) |
+
+## 주요 라우트
+
+| 경로 | 설명 |
+|------|------|
+| `/login`, `/signup` | 인증 |
+| `/ideas` | 아이디어 목록 |
+| `/ideas/[id]` | 아이디어 상세 |
+| `/fundings/idea/[id]` | 펀딩 + SSE |
+| `/mypage` | 프로필 |
+| `/mypage/payments` | 결제 내역 |
+| `/mypage/notifications` | 알림 (SSE) |
+| `/admin` | 관리자 |
+
+## 폴더 구조
+
+```
+src/
+├── app/           # Next.js App Router 페이지
+├── api/           # Axios API 모듈
+├── components/    # UI + Layout
+├── hooks/         # SSE, 알림
+├── store/         # Zustand
+├── types/         # TypeScript 타입
+└── utils/
+```
+
+## 빌드
+
+```bash
+npm run build
+npm start
+```

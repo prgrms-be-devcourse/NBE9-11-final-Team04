@@ -1,0 +1,100 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-brand:        #00b0e1;
+  --color-brand-dark:   #007dc5;
+  --color-brand-deeper: #186995;
+  --color-brand-tint:   #e8f9fd;
+  --color-brand-light:  #eefbfe;
+
+  --color-fg:           #222222;
+  --color-fg-2:         #515b5e;
+  --color-fg-muted:     #758185;
+  --color-fg-subtle:    #98a3a7;
+
+  --color-bg:           #ffffff;
+  --color-bg-alt:       #f7f7f7;
+
+  --color-border:       #e0e5e6;
+  --color-border-light: #e8ecee;
+  --color-border-input: #c6d0d2;
+
+  --color-success:      #27ae60;
+  --color-warning:      #f39c12;
+  --color-error:        #f65c5c;
+
+  --color-primary-50:   #eefbfe;
+  --color-primary-100:  #e8f9fd;
+  --color-primary-500:  #00b0e1;
+  --color-primary-600:  #007dc5;
+  --color-primary-700:  #186995;
+  --color-accent-500:   #0d9488;
+  --color-accent-600:   #0f766e;
+
+  --font-sans: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+:root {
+  --brand:         #00b0e1;
+  --brand-dark:    #007dc5;
+  --brand-deeper:  #186995;
+  --brand-tint:    #e8f9fd;
+  --brand-light:   #eefbfe;
+
+  --bg:            #ffffff;
+  --bg-alt:        #f7f7f7;
+
+  --fg:            #222222;
+  --fg-2:          #515b5e;
+  --fg-muted:      #758185;
+  --fg-subtle:     #98a3a7;
+
+  --border:        #e0e5e6;
+  --border-light:  #e8ecee;
+  --border-input:  #c6d0d2;
+
+  --error:         #f65c5c;
+  --success:       #27ae60;
+  --warning:       #f39c12;
+
+  --content-width: 1320px;
+  --nav-height:    60px;
+  --unb-height:    0px;
+
+  --radius-sm:     4px;
+  --radius-md:     8px;
+  --radius-lg:     12px;
+  --radius-xl:     20px;
+  --radius-2xl:    32px;
+}
+
+@layer base {
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    font-size: 16px;
+    font-weight: 400;
+    color: var(--fg);
+    background: var(--bg);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  a { text-decoration: none; color: inherit; }
+  ul, ol { list-style: none; }
+  img { max-width: 100%; height: auto; display: block; }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.5; transform: scale(1.3); }
+}
