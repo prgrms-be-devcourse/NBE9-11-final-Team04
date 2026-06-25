@@ -64,6 +64,7 @@ public class SecurityConfig {
                         .requestMatchers("/ideas/**").hasRole("USER")
                         .requestMatchers("/workspaces/**").authenticated()
                         .requestMatchers(HttpMethod.GET, "/experts/{expertId}").authenticated()
+                        .requestMatchers("/experts/verify").authenticated()
                         .requestMatchers(HttpMethod.POST, "/matches/experts/{expertProfileId}").hasRole("USER")
                         .requestMatchers(HttpMethod.GET, "/experts").authenticated()
                         .requestMatchers("/experts/admin/**").hasRole("ADMIN")
