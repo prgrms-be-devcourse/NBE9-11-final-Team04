@@ -43,4 +43,14 @@ public interface FundingRepository extends JpaRepository<Funding, Long> {
             "WHERE f.ideaId = :ideaId AND f.sponsorId = :sponsorId " +
             "AND p.status != com.team04.domain.payment.entity.PaymentTypes.PaymentStatus.REFUNDED")
     boolean existsByIdeaIdAndSponsorId(@Param("ideaId") Long ideaId, @Param("sponsorId") Long sponsorId);
+
+    /**
+     * 결제 성공(PAID + SUCCESS) 후원자 여부 확인 — 워크스페이스 참여자 검증용
+     */
+    @Query("SELECT COUNT(f) > 0 FROM Funding f " +
+            "JOIN Payment p ON p.fundingId = f.id " +
+            "WHERE f.ideaId = :ideaId AND f.sponsorId = :sponsorId " +
+            "AND f.status = com.team04.domain.funding.entity.FundingTypes.FundingStatus.PAID " +
+            "AND p.status = com.team04.domain.payment.entity.PaymentTypes.PaymentStatus.SUCCESS")
+    boolean existsPaidSponsorByIdeaIdAndSponsorId(@Param("ideaId") Long ideaId, @Param("sponsorId") Long sponsorId);
 }

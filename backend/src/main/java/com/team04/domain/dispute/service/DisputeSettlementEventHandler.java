@@ -1,6 +1,5 @@
 package com.team04.domain.dispute.service;
 
-import com.team04.domain.settlement.service.RefundService;
 import com.team04.domain.settlement.service.SettlementService;
 import com.team04.global.event.DisputeResolvedEvent;
 import lombok.RequiredArgsConstructor;
@@ -13,12 +12,10 @@ import org.springframework.transaction.event.TransactionalEventListener;
 public class DisputeSettlementEventHandler {
 
     private final SettlementService settlementService;
-    private final RefundService refundService;
 
     @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
     public void onDisputeResolved(DisputeResolvedEvent event) {
-        settlementService.createCancelRefundSettlement(event.ideaId());
-        settlementService.createDepositForfeitSettlement(event.ideaId());
-        refundService.createCancelRefunds(event.ideaId(), false);
+        // 분쟁 해결로 프로젝트 환불이 확정되면 정산 장부와 환불 장부를 하나의 흐름으로 생성한다.
+        settlementService.forceRefund(event.ideaId());
     }
 }

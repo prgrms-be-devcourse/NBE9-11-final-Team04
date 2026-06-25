@@ -84,6 +84,7 @@ public enum ErrorCode {
     DEPOSIT_NOT_FOUND(404, "F010", "존재하지 않는 보증금입니다"),
     DEPOSIT_AMOUNT_MISMATCH(400, "F010", "보증금 금액이 아이디어에 등록된 금액과 일치하지 않습니다"),
     DEPOSIT_EXCEEDS_LIMIT(400, "F011", "보증금은 목표 펀딩액의 30%를 초과할 수 없습니다"),
+    FUNDING_LOCKED_BY_MILESTONE(409, "F012", "이미 완료된 마일스톤 단계의 후원은 직접 취소할 수 없습니다"),
 
     // 마일스톤
     MILESTONE_NOT_FOUND(404, "M001", "존재하지 않는 마일스톤입니다"),
@@ -91,6 +92,8 @@ public enum ErrorCode {
     INVALID_MILESTONE_COUNT(400, "M003", "현재 상태에서 해당 상태로 전이할 수 없습니다"),
     INVALID_MILESTONE_STEP(400, "M004", "유효하지 않은 마일스톤 단계입니다"),
     INVALID_MILESTONE_STATUS_TRANSITION(400, "M005", "현재 상태에서 해당 상태로 전이할 수 없습니다"),
+    COMPLETION_REPORT_NOT_FOUND(404, "M006", "존재하지 않는 완료/소명 보고서입니다"),
+    COMPLETION_REPORT_MISMATCH(400, "M007", "요청한 마일스톤의 완료/소명 보고서가 아닙니다"),
 
     // 결제
     PAYMENT_NOT_FOUND(404, "P001", "존재하지 않는 결제입니다"),

@@ -46,6 +46,15 @@ public class MilestoneController {
         return ApiResponse.ofSuccess(milestoneService.getReports(milestoneId));
     }
 
+    /** 완료/소명 보고서 단건을 조회합니다. 로그인한 사용자만 접근 가능합니다. */
+    @GetMapping("/{milestoneId}/reports/{reportId}")
+    @PreAuthorize("isAuthenticated()")
+    public ApiResponse<CompletionReportResponse> getReport(
+            @PathVariable Long milestoneId,
+            @PathVariable Long reportId) {
+        return ApiResponse.ofSuccess(milestoneService.getReport(milestoneId, reportId));
+    }
+
     /**
      * 마일스톤 완료 보고서를 제출합니다. 제안자만 가능합니다.
      * 파일 첨부는 선택 사항입니다.

@@ -66,9 +66,26 @@ public class Refund extends BaseEntity {
      * PENDING 상태에서만 가능합니다.
      */
     public void complete() {
+        if (this.status == RefundStatus.COMPLETED) {
+            return;
+        }
         if (this.status != RefundStatus.PENDING) {
             throw new CustomException(ErrorCode.REFUND_ALREADY_COMPLETED);
         }
         this.status = RefundStatus.COMPLETED;
+    }
+
+    /**
+     * 환불 실패 처리합니다.
+     * PENDING 상태에서만 가능합니다.
+     */
+    public void fail() {
+        if (this.status == RefundStatus.FAILED) {
+            return;
+        }
+        if (this.status != RefundStatus.PENDING) {
+            throw new CustomException(ErrorCode.REFUND_ALREADY_COMPLETED);
+        }
+        this.status = RefundStatus.FAILED;
     }
 }

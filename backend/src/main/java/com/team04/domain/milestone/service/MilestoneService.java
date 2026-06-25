@@ -60,6 +60,23 @@ public class MilestoneService {
     }
 
     /**
+     * 완료/소명 보고서 단건 조회
+     * 로그인한 사용자 누구나 가능
+     */
+    @Transactional(readOnly = true)
+    public CompletionReportResponse getReport(Long milestoneId, Long reportId) {
+        if (!milestoneRepository.existsById(milestoneId)) {
+            throw new CustomException(ErrorCode.MILESTONE_NOT_FOUND);
+        }
+        CompletionReport report = completionReportRepository.findById(reportId)
+                .orElseThrow(() -> new CustomException(ErrorCode.COMPLETION_REPORT_NOT_FOUND));
+        if (!report.getMilestoneId().equals(milestoneId)) {
+            throw new CustomException(ErrorCode.COMPLETION_REPORT_MISMATCH);
+        }
+        return CompletionReportResponse.from(report);
+    }
+
+    /**
      * 완료/소명 보고서 목록 조회
      * milestoneId 기준으로 해당 마일스톤의 보고서 전체를 최신순으로 반환
      */

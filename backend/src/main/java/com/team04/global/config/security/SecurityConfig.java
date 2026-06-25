@@ -46,6 +46,10 @@ public class SecurityConfig {
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers("/actuator/health").permitAll() // 헬스체크
                         .requestMatchers("/payments/webhooks/**").permitAll()
+                        .requestMatchers(HttpMethod.PATCH, "/pre-settlements/*/complete").permitAll()
+                        .requestMatchers(HttpMethod.PATCH, "/pre-settlements/*/fail").permitAll()
+                        .requestMatchers(HttpMethod.PATCH, "/refunds/*/complete").permitAll()
+                        .requestMatchers(HttpMethod.PATCH, "/refunds/*/fail").permitAll()
                         .requestMatchers(HttpMethod.GET, "/payments/config").permitAll()
                         .requestMatchers(HttpMethod.GET, "/fundings").permitAll()
                         .requestMatchers(HttpMethod.GET, "/fundings/{fundingId}").permitAll()
@@ -58,6 +62,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, "/ideas/{ideaId}/bookmark").authenticated()
                         .requestMatchers(HttpMethod.POST, "/ideas/{ideaId}/reports").authenticated()
                         .requestMatchers("/ideas/**").hasRole("USER")
+                        .requestMatchers("/workspaces/**").authenticated()
                         .requestMatchers(HttpMethod.GET, "/experts/{expertId}").authenticated()
                         .requestMatchers(HttpMethod.POST, "/matches/experts/{expertProfileId}").hasRole("USER")
                         .requestMatchers(HttpMethod.GET, "/experts").authenticated()

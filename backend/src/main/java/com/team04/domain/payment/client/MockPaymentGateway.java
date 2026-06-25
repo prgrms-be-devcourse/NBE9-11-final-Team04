@@ -1,9 +1,11 @@
 package com.team04.domain.payment.client;
 
+import com.team04.domain.payment.dto.request.PayoutRequest;
 import com.team04.domain.payment.dto.response.PaymentConfirmResult;
 import com.team04.domain.payment.dto.response.PaymentRefundResult;
 import com.team04.domain.payment.dto.response.PaymentSessionResult;
 import com.team04.domain.payment.dto.response.PaymentVerifyResult;
+import com.team04.domain.payment.dto.response.PayoutResult;
 import com.team04.domain.payment.dto.response.VirtualAccountIssueResult;
 import com.team04.domain.payment.entity.PaymentTypes.PaymentMethod;
 import lombok.extern.slf4j.Slf4j;
@@ -74,7 +76,9 @@ public class MockPaymentGateway implements PaymentGateway {
     }
 
     @Override
-    public void payout(Long preSettlementId, long amount) {
-        log.info("[MockPG] 선정산 지급 요청 preSettlementId={}, amount={}", preSettlementId, amount);
+    public PayoutResult payout(PayoutRequest request) {
+        log.info("[MockPG] 선정산 지급 preSettlementId={}, ideaId={}, amount={}",
+                request.preSettlementId(), request.ideaId(), request.amount());
+        return PayoutResult.success("mock-payout-" + request.preSettlementId());
     }
 }
