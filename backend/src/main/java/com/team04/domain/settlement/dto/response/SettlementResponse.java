@@ -14,6 +14,7 @@ public record SettlementResponse(
         Long platformFee,
         Long payoutAmount,
         SettlementStatus status,
+        String memo,
         LocalDateTime createdAt
 ) {
     public static SettlementResponse from(Settlement settlement) {
@@ -25,6 +26,7 @@ public record SettlementResponse(
                 settlement.getPlatformFee(),
                 settlement.getPayoutAmount(),
                 settlement.getStatus(),
+                settlement.getMemo(),
                 settlement.getCreatedAt()
         );
     }
