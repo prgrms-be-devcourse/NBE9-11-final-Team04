@@ -2,8 +2,10 @@ package com.team04.domain.settlement.controller;
 
 import com.team04.domain.funding.dto.response.DepositResponse;
 import com.team04.domain.funding.service.FundingService;
+import com.team04.domain.settlement.dto.request.ForceRefundRequest;
 import com.team04.domain.settlement.service.SettlementService;
 import com.team04.global.response.ApiResponse;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -45,8 +47,11 @@ public class AdminSettlementController {
      * 후원금 잔액 환불 장부 + 보증금 몰수 장부 + 후원자 환불 레코드를 한 트랜잭션으로 생성합니다.
      */
     @PatchMapping("/ideas/{ideaId}/force-refund")
-    public ApiResponse<Void> forceRefund(@PathVariable Long ideaId) {
-        settlementService.forceRefund(ideaId);
+    public ApiResponse<Void> forceRefund(
+            @PathVariable Long ideaId,
+            @Valid @RequestBody ForceRefundRequest request
+    ) {
+        settlementService.forceRefund(ideaId, request.reason());
         return ApiResponse.ofSuccessWithoutBody();
     }
 }
