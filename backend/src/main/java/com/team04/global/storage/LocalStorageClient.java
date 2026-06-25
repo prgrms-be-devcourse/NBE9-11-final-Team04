@@ -61,4 +61,21 @@ public class LocalStorageClient implements StorageClient {
             throw new CustomException(ErrorCode.FILE_UPLOAD_FAILED);
         }
     }
+
+    /** 로컬 업로드 보상 처리에서 호출되며, 삭제 실패는 경고 로그만 남기고 전파하지 않습니다. */
+    @Override
+    public void delete(String url) {
+        try {
+            if (url == null || url.isBlank() || !url.startsWith(baseUrl + "/")) {
+                throw new IllegalArgumentException("삭제할 파일 URL이 로컬 저장소 URL이 아닙니다.");
+            }
+
+            String relativePath = url.substring((baseUrl + "/").length());
+            Path filePath = Paths.get(basePath, relativePath).toAbsolutePath().normalize();
+            Files.deleteIfExists(filePath);
+            log.info("[LocalStorageClient] 파일 삭제 완료: {}", filePath);
+        } catch (RuntimeException | IOException e) {
+            log.warn("[LocalStorageClient] 파일 삭제 실패: url={}, message={}", url, e.getMessage());
+        }
+    }
 }
