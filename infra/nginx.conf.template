@@ -2,7 +2,7 @@ server {
     listen 80;
     server_name _;
 
-    root /home/ubuntu/seedlink/frontend/dist;
+    root /home/ubuntu/seedlink/frontend/out;
     index index.html;
 
     # React Router 지원
