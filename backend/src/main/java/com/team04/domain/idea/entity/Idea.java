@@ -3,14 +3,7 @@ package com.team04.domain.idea.entity;
 import com.team04.global.entity.BaseEntity;
 import com.team04.global.exception.CustomException;
 import com.team04.global.exception.ErrorCode;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -19,7 +12,14 @@ import java.time.LocalDateTime;
 
 /** 아이디어 기본 정보, 심사 상태, 펀딩 수치를 저장하는 엔티티입니다. */
 @Entity
-@Table(name = "idea")
+@Table(
+        name = "idea",
+        indexes = {
+                @Index(name = "idx_idea_status_deleted_trust_created", columnList = "status, deleted_at, trust_score, created_at"),
+                @Index(name = "idx_idea_user_deleted_created", columnList = "user_id, deleted_at, created_at"),
+                @Index(name = "idx_idea_funding_end_status_deleted", columnList = "funding_end_at, status, deleted_at")
+        }
+)
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Idea extends BaseEntity {
@@ -184,6 +184,7 @@ public class Idea extends BaseEntity {
         this.goalAmount = goalAmount;
         this.fundingStartAt = fundingStartAt;
         this.fundingEndAt = fundingEndAt;
+        this.rewardType = rewardType;
         this.imageUrl = imageUrl;
     }
 

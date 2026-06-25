@@ -18,7 +18,6 @@ import com.team04.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -35,7 +34,7 @@ public class VerificationService {
     private final ApplicationEventPublisher eventPublisher;
 
     /** 검증 요청을 접수하기 전 요청자가 아이디어 제안자인지 확인합니다. */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional
     public VerificationResponse requestVerification(VerificationRequest request, Long requesterId) {
         Idea idea = ideaRepository.findByIdAndDeletedAtIsNull(request.ideaId())
                 .orElseThrow(() -> new CustomException(ErrorCode.IDEA_NOT_FOUND));
