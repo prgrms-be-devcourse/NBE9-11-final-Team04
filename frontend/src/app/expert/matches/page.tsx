@@ -2,11 +2,12 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { useQueries, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueries, useMutation, useQueryClient } from '@tanstack/react-query'
 import { matchesApi } from '@/api/matches'
 import { ideasApi } from '@/api/ideas'
 import { ProtectedRoute } from '@/components/layout/AppShell'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
+import { ReviewModal } from '@/components/views/ReviewModal'
 import { IDEA_CATEGORY_LABELS, type IdeaCategory } from '@/types/enums'
 import { formatDate } from '@/utils/format'
 
@@ -25,6 +26,17 @@ const STATUS_COLOR: Record<string, string> = {
 const CATEGORIES: Array<IdeaCategory | 'ALL'> = [
   'ALL', 'TECH', 'LIFE', 'HEALTH', 'EDUCATION', 'ENVIRONMENT', 'CULTURE', 'ETC',
 ]
+
+const STATUS_TABS: Array<'ALL' | 'PENDING' | 'ACCEPTED' | 'REJECTED'> = [
+  'ALL', 'PENDING', 'ACCEPTED', 'REJECTED',
+]
+
+const STATUS_TAB_LABEL: Record<string, string> = {
+  ALL: '전체',
+  PENDING: '대기 중',
+  ACCEPTED: '수락함',
+  REJECTED: '거절함',
+}
 
 function RejectModal({ onConfirm, onCancel }: { onConfirm: (reason: string) => void; onCancel: () => void }) {
   const [reason, setReason] = useState('')
@@ -82,15 +94,17 @@ function RejectModal({ onConfirm, onCancel }: { onConfirm: (reason: string) => v
 export default function ExpertMatchesPage() {
   const queryClient = useQueryClient()
   const [categoryFilter, setCategoryFilter] = useState<IdeaCategory | 'ALL'>('ALL')
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDING' | 'ACCEPTED' | 'REJECTED'>('ALL')
   const [rejectTarget, setRejectTarget] = useState<number | null>(null)
+  const [reviewTarget, setReviewTarget] = useState<{ matchId: number; ideaTitle: string } | null>(null)
 
   const isReviewed = (matchId: number) => {
     try { return !!localStorage.getItem(`reviewed_match_${matchId}`) } catch { return false }
   }
 
-  const { data: matches, isLoading: matchesLoading } = useQueries({
-    queries: [{ queryKey: ['matches'], queryFn: matchesApi.getMyMatches }],
-    combine: (results) => results[0],
+  const { data: matches, isLoading: matchesLoading } = useQuery({
+    queryKey: ['matches'],
+    queryFn: matchesApi.getMyMatches,
   })
 
   const ideaIds = [...new Set((matches ?? []).map((m) => m.ideaId))]
@@ -122,19 +136,58 @@ export default function ExpertMatchesPage() {
     setRejectTarget(null)
   }
 
+  const handleReviewClose = () => {
+    setReviewTarget(null)
+    queryClient.invalidateQueries({ queryKey: ['matches'] })
+  }
+
   const isLoading = matchesLoading || ideaQueries.some((q) => q.isLoading && q.fetchStatus !== 'idle')
 
   const filtered = (matches ?? []).filter((m) => {
-    if (categoryFilter === 'ALL') return true
-    return ideaMap[m.ideaId]?.category === categoryFilter
+    if (statusFilter !== 'ALL' && m.status !== statusFilter) return false
+    if (categoryFilter !== 'ALL' && ideaMap[m.ideaId]?.category !== categoryFilter) return false
+    return true
   })
+
+  const pendingCount = (matches ?? []).filter((m) => m.status === 'PENDING').length
 
   return (
     <ProtectedRoute roles={['EXPERT']}>
       <div style={{ maxWidth: '800px', margin: '0 auto', padding: '32px 24px' }}>
-        <h1 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--fg)', marginBottom: '24px' }}>
-          매칭 요청 목록
-        </h1>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
+          <h1 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--fg)' }}>
+            매칭 요청 목록
+            {pendingCount > 0 && (
+              <span style={{
+                marginLeft: '10px', padding: '2px 10px',
+                borderRadius: '99px', fontSize: '13px', fontWeight: 700,
+                background: '#fef3c7', color: '#d97706',
+              }}>
+                {pendingCount}건 대기
+              </span>
+            )}
+          </h1>
+        </div>
+
+        {/* 상태 탭 */}
+        <div style={{ display: 'flex', gap: '4px', marginBottom: '16px', borderBottom: '1px solid var(--border)', paddingBottom: '0' }}>
+          {STATUS_TABS.map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setStatusFilter(tab)}
+              style={{
+                padding: '8px 16px', fontSize: '14px', fontWeight: 600,
+                border: 'none', background: 'none', cursor: 'pointer',
+                color: statusFilter === tab ? 'var(--brand)' : 'var(--fg-muted)',
+                borderBottom: `2px solid ${statusFilter === tab ? 'var(--brand)' : 'transparent'}`,
+                marginBottom: '-1px',
+                transition: 'all 0.15s',
+              }}
+            >
+              {STATUS_TAB_LABEL[tab]}
+            </button>
+          ))}
+        </div>
 
         {/* 카테고리 필터 */}
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '24px' }}>
@@ -162,14 +215,15 @@ export default function ExpertMatchesPage() {
             padding: '60px', textAlign: 'center', background: 'var(--bg-alt)',
             borderRadius: '12px', color: 'var(--fg-muted)', fontSize: '15px',
           }}>
-            {categoryFilter === 'ALL'
+            {(matches ?? []).length === 0
               ? '받은 매칭 요청이 없습니다.'
-              : `${IDEA_CATEGORY_LABELS[categoryFilter as IdeaCategory]} 카테고리 요청이 없습니다.`}
+              : '조건에 맞는 요청이 없습니다.'}
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             {filtered.map((match) => {
               const idea = ideaMap[match.ideaId]
+              const reviewed = isReviewed(match.matchId)
               return (
                 <div key={match.matchId} style={{
                   background: '#fff', border: '1px solid var(--border)',
@@ -200,6 +254,9 @@ export default function ExpertMatchesPage() {
                           </span>
                         )}
                         <span>요청일 {formatDate(match.requestedAt)}</span>
+                        {match.respondedAt && (
+                          <span>응답일 {formatDate(match.respondedAt)}</span>
+                        )}
                       </div>
                     </div>
                     <span style={{
@@ -252,7 +309,7 @@ export default function ExpertMatchesPage() {
                   )}
 
                   {match.status === 'ACCEPTED' && (
-                    isReviewed(match.matchId) ? (
+                    reviewed ? (
                       <div style={{
                         padding: '10px 14px', borderRadius: '8px',
                         background: '#f0fdf4', border: '1px solid #bbf7d0',
@@ -261,18 +318,20 @@ export default function ExpertMatchesPage() {
                         ✅ 검증서 제출 완료
                       </div>
                     ) : (
-                      <Link
-                        href={`/expert/matches/${match.matchId}/review`}
+                      <button
+                        onClick={() => setReviewTarget({
+                          matchId: match.matchId,
+                          ideaTitle: idea?.title ?? `아이디어 #${match.ideaId}`,
+                        })}
                         style={{
                           alignSelf: 'flex-start', padding: '10px 24px',
                           borderRadius: '8px', border: 'none',
                           background: '#059669', color: '#fff',
-                          fontWeight: 700, fontSize: '14px', textDecoration: 'none',
-                          display: 'inline-block',
+                          fontWeight: 700, fontSize: '14px', cursor: 'pointer',
                         }}
                       >
                         📋 검증서 작성
-                      </Link>
+                      </button>
                     )
                   )}
                 </div>
@@ -286,6 +345,14 @@ export default function ExpertMatchesPage() {
         <RejectModal
           onConfirm={(reason) => handleReject(rejectTarget, reason)}
           onCancel={() => setRejectTarget(null)}
+        />
+      )}
+
+      {reviewTarget !== null && (
+        <ReviewModal
+          matchId={reviewTarget.matchId}
+          ideaTitle={reviewTarget.ideaTitle}
+          onClose={handleReviewClose}
         />
       )}
     </ProtectedRoute>

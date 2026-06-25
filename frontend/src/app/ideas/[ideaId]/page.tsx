@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import { ideasApi } from '@/api/ideas'
+import { matchesApi } from '@/api/matches'
 import { useAuthStore } from '@/store/authStore'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { ProgressBar } from '@/components/ui/ProgressBar'
@@ -25,6 +26,7 @@ const CATEGORY_ICONS: Record<IdeaCategory, string> = {
 const STATUS_VARIANT: Record<IdeaStatus, 'blue' | 'green' | 'orange' | 'red' | 'gray'> = {
   AI_PENDING: 'gray', EXPERT_PENDING: 'orange', ADMIN_PENDING: 'orange',
   OPEN: 'blue', IN_PROGRESS: 'green', COMPLETED: 'green', CANCELLED: 'red',
+  REJECTED: 'red', CANCELLATION_REQUESTED: 'orange',
 }
 
 const REWARD_ICONS: Record<RewardType, string> = {
@@ -115,6 +117,17 @@ export default function IdeaDetailPage() {
     enabled: !!ideaId,
     retry: false,
   })
+
+  const isExpert = user?.role === 'EXPERT'
+  const { data: myMatches } = useQuery({
+    queryKey: ['matches'],
+    queryFn: matchesApi.getMyMatches,
+    enabled: isExpert,
+  })
+  const acceptedMatch = myMatches?.find((m) => m.ideaId === ideaId && m.status === 'ACCEPTED')
+  const alreadyReviewed = acceptedMatch
+    ? (typeof window !== 'undefined' && !!localStorage.getItem(`reviewed_match_${acceptedMatch.matchId}`))
+    : false
 
   if (isLoading) return <LoadingSpinner />
   if (!idea) {
@@ -297,7 +310,27 @@ export default function IdeaDetailPage() {
                 ✏️ 수정하기
               </Link>
             )}
-            {user && !isOwner && (
+            {isExpert && acceptedMatch && (
+              alreadyReviewed ? (
+                <div style={{
+                  padding: '12px', borderRadius: '10px',
+                  background: '#f0fdf4', border: '1px solid #bbf7d0',
+                  textAlign: 'center', fontSize: '14px', fontWeight: 600, color: '#059669',
+                }}>
+                  ✅ 검증서 제출 완료
+                </div>
+              ) : (
+                <Link href={`/expert/matches/${acceptedMatch.matchId}/review`} style={{
+                  display: 'block', textAlign: 'center',
+                  padding: '12px', fontSize: '14px', fontWeight: 700,
+                  background: '#059669', color: '#fff',
+                  borderRadius: '10px', textDecoration: 'none',
+                }}>
+                  📋 검증서 작성
+                </Link>
+              )
+            )}
+            {user && !isOwner && !isExpert && (
               <Link href={`/disputes/new?ideaId=${idea.ideaId}`} style={{
                 display: 'block', textAlign: 'center',
                 padding: '10px', fontSize: '13px', fontWeight: 600,
