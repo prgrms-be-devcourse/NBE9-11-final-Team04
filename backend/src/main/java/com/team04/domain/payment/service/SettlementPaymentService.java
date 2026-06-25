@@ -6,6 +6,7 @@ import com.team04.domain.idea.dto.response.IdeaResponse;
 import com.team04.domain.idea.repository.IdeaRepository;
 import com.team04.domain.idea.service.IdeaService;
 import com.team04.domain.payment.client.PaymentGateway;
+import com.team04.domain.payment.event.PreSettlementPayoutRequestedEvent;
 import com.team04.domain.payment.dto.request.PayoutRequest;
 import com.team04.domain.payment.dto.response.PaymentRefundResult;
 import com.team04.domain.payment.dto.response.PayoutResult;
@@ -28,7 +29,7 @@ import com.team04.global.exception.CustomException;
 import com.team04.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.annotation.Lazy;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -53,10 +54,18 @@ public class SettlementPaymentService {
     private final UserRepository userRepository;
     private final RefundRepository refundRepository;
     private final PreSettlementRepository preSettlementRepository;
-    @Lazy
     private final PreSettlementService preSettlementService;
-    @Lazy
     private final RefundService refundService;
+
+    @EventListener
+    public void onPreSettlementPayoutRequested(PreSettlementPayoutRequestedEvent event) {
+        try {
+            processPreSettlementPayout(event.preSettlementId());
+        } catch (Exception e) {
+            log.error("선정산 지급 처리 실패 - preSettlementId: {}, error: {}",
+                    event.preSettlementId(), e.getMessage(), e);
+        }
+    }
 
     /** 선정산 REQUESTED 건에 대해 지급대행을 요청하고 결과에 따라 complete/fail 처리 */
     public void processPreSettlementPayout(Long preSettlementId) {

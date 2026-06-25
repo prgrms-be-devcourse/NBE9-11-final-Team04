@@ -4,7 +4,7 @@ import com.team04.domain.idea.dto.response.IdeaResponse;
 import com.team04.domain.idea.service.IdeaService;
 import com.team04.domain.milestone.entity.MilestoneStatus;
 import com.team04.domain.milestone.repository.MilestoneRepository;
-import com.team04.domain.payment.service.SettlementPaymentService;
+import com.team04.domain.payment.event.PreSettlementPayoutRequestedEvent;
 import com.team04.domain.settlement.dto.request.PreSettlementRequest;
 import com.team04.domain.settlement.dto.response.PreSettlementResponse;
 import com.team04.domain.settlement.entity.PreSettlement;
@@ -15,6 +15,7 @@ import com.team04.global.exception.CustomException;
 import com.team04.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Recover;
@@ -34,7 +35,7 @@ public class PreSettlementService {
     private final PreSettlementRepository preSettlementRepository;
     private final MilestoneRepository milestoneRepository;
     private final IdeaService ideaService;
-    private final SettlementPaymentService settlementPaymentService;
+    private final ApplicationEventPublisher eventPublisher;
 
     /**
      * 선정산 신청
@@ -79,11 +80,7 @@ public class PreSettlementService {
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
-                try {
-                    settlementPaymentService.processPreSettlementPayout(saved.getId());
-                } catch (Exception e) {
-                    log.error("선정산 지급 처리 실패 - preSettlementId: {}, error: {}", saved.getId(), e.getMessage(), e);
-                }
+                eventPublisher.publishEvent(new PreSettlementPayoutRequestedEvent(saved.getId()));
             }
         });
 
