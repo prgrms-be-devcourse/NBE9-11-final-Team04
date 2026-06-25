@@ -4,7 +4,9 @@ import com.team04.domain.idea.dto.response.IdeaResponse;
 import com.team04.domain.idea.service.IdeaService;
 import com.team04.domain.milestone.entity.MilestoneStatus;
 import com.team04.domain.milestone.repository.MilestoneRepository;
+import com.team04.domain.payment.entity.VbankLedgerType;
 import com.team04.domain.payment.event.PreSettlementPayoutRequestedEvent;
+import com.team04.domain.payment.service.VbankLedgerService;
 import com.team04.domain.settlement.dto.request.PreSettlementRequest;
 import com.team04.domain.settlement.dto.response.PreSettlementResponse;
 import com.team04.domain.settlement.entity.PreSettlement;
@@ -36,6 +38,7 @@ public class PreSettlementService {
     private final MilestoneRepository milestoneRepository;
     private final IdeaService ideaService;
     private final ApplicationEventPublisher eventPublisher;
+    private final VbankLedgerService vbankLedgerService;
 
     /**
      * 선정산 신청
@@ -106,6 +109,16 @@ public class PreSettlementService {
         PreSettlement preSettlement = preSettlementRepository.findById(preSettlementId)
                 .orElseThrow(() -> new CustomException(ErrorCode.PRE_SETTLEMENT_NOT_FOUND));
         preSettlement.complete();
+        // 선정산 지급 성공이 확정된 뒤 실제 출금 내역을 아이디어 가상계좌 장부에 남긴다.
+        vbankLedgerService.recordOut(
+                preSettlement.getIdeaId(),
+                VbankLedgerType.PRE_SETTLEMENT_PAID,
+                preSettlement.getAmount(),
+                "pre-settlement-" + preSettlement.getId() + "-PAID",
+                "PreSettlement",
+                preSettlement.getId(),
+                "선정산 지급"
+        );
         return PreSettlementResponse.from(preSettlement);
     }
 

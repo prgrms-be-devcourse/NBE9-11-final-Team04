@@ -24,6 +24,7 @@ import com.team04.domain.payment.entity.Payment;
 import com.team04.domain.payment.entity.PaymentTypes.PaymentMethod;
 import com.team04.domain.payment.entity.PaymentTypes.PaymentStatus;
 import com.team04.domain.payment.entity.PaymentWebhookLog;
+import com.team04.domain.payment.entity.VbankLedgerType;
 import com.team04.domain.payment.entity.VirtualAccount;
 import com.team04.domain.payment.entity.VbankDeposit;
 import com.team04.domain.payment.repository.PaymentRepository;
@@ -66,6 +67,7 @@ public class PaymentService {
     private final ObjectProvider<PaymentService> selfProvider;
     private final PaymentProperties paymentProperties;
     private final IdeaVbankPoolService ideaVbankPoolService;
+    private final VbankLedgerService vbankLedgerService;
 
     // ── 결제 생성 ──────────────────────────────────────────────────────────
 
@@ -325,6 +327,16 @@ public class PaymentService {
 
         payment.complete(paymentKey);
         funding.markAsPaid();
+        // 후원 결제 성공 금액은 아이디어 가상계좌의 실제 입금으로 장부에 남긴다.
+        vbankLedgerService.recordIn(
+                funding.getIdeaId(),
+                VbankLedgerType.FUNDING_PAID,
+                payment.getAmount(),
+                "payment-" + payment.getId() + "-FUNDING-PAID",
+                "Payment",
+                payment.getId(),
+                "후원금 입금"
+        );
         publishFundingPaidEvent(payment.getFundingId());
         return payment;
     }
@@ -357,7 +369,17 @@ public class PaymentService {
         }
         Idea idea = ideaRepository.findById(ideaId)
                 .orElseThrow(() -> new CustomException(ErrorCode.IDEA_NOT_FOUND));
-        depositRepository.save(Deposit.createHeld(ideaId, idea.getUserId(), payment.getAmount(), payment.getId()));
+        Deposit deposit = depositRepository.save(Deposit.createHeld(ideaId, idea.getUserId(), payment.getAmount(), payment.getId()));
+        // 보증금 결제 성공 금액은 아이디어 가상계좌의 실제 입금으로 장부에 남긴다.
+        vbankLedgerService.recordIn(
+                ideaId,
+                VbankLedgerType.DEPOSIT_PAID,
+                payment.getAmount(),
+                "payment-" + payment.getId() + "-DEPOSIT-PAID",
+                "Deposit",
+                deposit.getId(),
+                "보증금 입금"
+        );
     }
 
     // ── 가상계좌 ───────────────────────────────────────────────────────────
@@ -488,6 +510,16 @@ public class PaymentService {
         validateFundingPayable(funding, amount);
 
         funding.markAsPaid();
+        // 가상계좌 후원 입금 웹훅 성공 시에도 카드 결제와 동일하게 실제 입금 장부를 남긴다.
+        vbankLedgerService.recordIn(
+                funding.getIdeaId(),
+                VbankLedgerType.FUNDING_PAID,
+                payment.getAmount(),
+                "payment-" + payment.getId() + "-FUNDING-PAID",
+                "Payment",
+                payment.getId(),
+                "후원금 입금"
+        );
         publishFundingPaidEvent(payment.getFundingId());
         return true;
     }
@@ -577,6 +609,16 @@ public class PaymentService {
 
         ideaRepository.findByIdForUpdate(funding.getIdeaId())
                 .ifPresent(idea -> idea.subtractFundingAmount(funding.getAmount()));
+        // 후원자 직접 취소 환불은 실제 출금으로 보아 가상계좌 장부 잔액에서 차감한다.
+        vbankLedgerService.recordOut(
+                funding.getIdeaId(),
+                VbankLedgerType.SPONSOR_REFUND_PAID,
+                payment.getAmount(),
+                "payment-" + payment.getId() + "-SPONSOR-REFUND",
+                "Payment",
+                payment.getId(),
+                "후원자 직접 취소 환불"
+        );
     }
 
     // 결제 실패 처리 — PG 오류·가상계좌 만료 시 호출
@@ -588,6 +630,8 @@ public class PaymentService {
             return;
         }
         payment.fail();
+        vbankDepositRepository.findByPaymentId(paymentId)
+                .ifPresent(VbankDeposit::markCanceled);
         if (payment.getFundingId() != null) {
             cancelFundingIfPending(payment.getFundingId());
         }

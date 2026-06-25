@@ -3,6 +3,7 @@ package com.team04.domain.settlement.service;
 import com.team04.domain.funding.service.FundingService;
 import com.team04.domain.idea.dto.response.IdeaResponse;
 import com.team04.domain.idea.service.IdeaService;
+import com.team04.domain.payment.service.VbankLedgerService;
 import com.team04.domain.settlement.entity.PreSettlementStatus;
 import com.team04.domain.settlement.entity.Settlement;
 import com.team04.domain.settlement.repository.PreSettlementRepository;
@@ -42,6 +43,9 @@ class SettlementServiceTest {
 
     @Mock
     private FundingService fundingService;
+
+    @Mock
+    private VbankLedgerService vbankLedgerService;
 
     @InjectMocks
     private SettlementService settlementService;

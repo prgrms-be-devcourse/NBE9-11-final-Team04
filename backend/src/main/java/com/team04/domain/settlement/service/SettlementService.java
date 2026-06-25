@@ -3,7 +3,9 @@ package com.team04.domain.settlement.service;
 import com.team04.domain.funding.service.FundingService;
 import com.team04.domain.idea.dto.response.IdeaResponse;
 import com.team04.domain.idea.service.IdeaService;
+import com.team04.domain.payment.entity.VbankLedgerType;
 import com.team04.domain.payment.event.SettlementPayoutRequestedEvent;
+import com.team04.domain.payment.service.VbankLedgerService;
 import com.team04.domain.settlement.dto.response.SettlementResponse;
 import com.team04.domain.settlement.entity.PreSettlementStatus;
 import com.team04.domain.settlement.entity.Settlement;
@@ -35,6 +37,7 @@ public class SettlementService {
     private final RefundService refundService;
     private final FundingService fundingService;
     private final ApplicationEventPublisher eventPublisher;
+    private final VbankLedgerService vbankLedgerService;
 
     /**
      * 프로젝트별 정산 이력 전체 조회
@@ -187,6 +190,33 @@ public class SettlementService {
     }
 
     /**
+     * 관리자 보증금 환급 판정 장부 생성.
+     * 직접 Deposit 상태를 바꾸지 않고 지급 성공 콜백에서 REFUNDED로 전환하여 장부와 실제 지급 흐름을 맞춘다.
+     */
+    @Transactional
+    public SettlementResponse createAdminDepositRefundSettlement(Long ideaId) {
+        String idempotencyKey = "idea-" + ideaId + "-DEPOSIT-ADMIN-RELEASE";
+
+        if (settlementRepository.findByIdempotencyKey(idempotencyKey).isPresent()) {
+            throw new CustomException(ErrorCode.SETTLEMENT_DUPLICATE);
+        }
+
+        long depositAmount = ideaService.getIdea(ideaId).depositAmount();
+
+        Settlement settlement = Settlement.builder()
+                .ideaId(ideaId)
+                .type(SettlementType.FINAL)
+                .totalAmount(depositAmount)
+                .platformFee(0L)
+                .payoutAmount(depositAmount)
+                .idempotencyKey(idempotencyKey)
+                .memo("관리자 보증금 환급 판정")
+                .build();
+
+        return saveAndRequestPayout(settlement, SettlementStatus.DEPOSIT_REFUNDED);
+    }
+
+    /**
      * 제안자 보증금 환급 장부 생성 (정당한 사유 중단 시)
      * MilestoneService.refundMilestone()에서 호출
      *
@@ -327,7 +357,29 @@ public class SettlementService {
                 .build();
 
         settlement.forfeit();
-        return SettlementResponse.from(settlementRepository.save(settlement));
+        Settlement saved = settlementRepository.save(settlement);
+        // 보증금 몰수는 외부 지급이 없으므로 잔액 차감 없이 후원자 공개용 장부로만 남긴다.
+        vbankLedgerService.recordDisclosureOut(
+                ideaId,
+                VbankLedgerType.DEPOSIT_FORFEITED,
+                depositAmount,
+                "settlement-" + saved.getId() + "-DEPOSIT-FORFEITED",
+                "Settlement",
+                saved.getId(),
+                "보증금 몰수 판정"
+        );
+        return SettlementResponse.from(saved);
+    }
+
+    /**
+     * 관리자 보증금 몰수 판정.
+     * 몰수는 외부 지급이 없으므로 정산/가상계좌 공개 장부를 남긴 뒤 Deposit 상태를 즉시 FORFEITED로 전환한다.
+     */
+    @Transactional
+    public SettlementResponse forfeitDepositByAdmin(Long ideaId) {
+        SettlementResponse response = createDepositForfeitSettlement(ideaId, "관리자 보증금 몰수 판정");
+        fundingService.forfeitDeposit(ideaId);
+        return response;
     }
 
     /**
@@ -365,6 +417,7 @@ public class SettlementService {
         Settlement settlement = settlementRepository.findById(settlementId)
                 .orElseThrow(() -> new CustomException(ErrorCode.SETTLEMENT_NOT_FOUND));
         settlement.completeAs(successStatus);
+        recordSettlementPayoutLedger(settlement, successStatus);
         // 보증금 환급은 지급 성공이 확인된 뒤에만 Deposit 상태를 REFUNDED로 전환한다.
         releaseDepositIfNeeded(settlement, successStatus);
         return SettlementResponse.from(settlement);
@@ -415,6 +468,32 @@ public class SettlementService {
                 || successStatus == SettlementStatus.PARTIALLY_REFUNDED) {
             fundingService.releaseDeposit(settlement.getIdeaId());
         }
+    }
+
+    private void recordSettlementPayoutLedger(Settlement settlement, SettlementStatus successStatus) {
+        if (settlement.getPayoutAmount() <= 0) {
+            return;
+        }
+
+        VbankLedgerType type = switch (successStatus) {
+            case COMPLETED -> VbankLedgerType.FINAL_SETTLEMENT_PAID;
+            case DEPOSIT_REFUNDED, PARTIALLY_REFUNDED -> VbankLedgerType.DEPOSIT_REFUNDED;
+            default -> null;
+        };
+        if (type == null) {
+            return;
+        }
+
+        // 최종 정산금 또는 보증금 환급 지급 성공 후 실제 출금 내역을 가상계좌 장부에 반영한다.
+        vbankLedgerService.recordOut(
+                settlement.getIdeaId(),
+                type,
+                settlement.getPayoutAmount(),
+                "settlement-" + settlement.getId() + "-" + successStatus,
+                "Settlement",
+                settlement.getId(),
+                successStatus == SettlementStatus.COMPLETED ? "최종 정산 지급" : "보증금 환급 지급"
+        );
     }
 
     private void recordSettlementMemo(Long ideaId, String suffix, String memo) {
