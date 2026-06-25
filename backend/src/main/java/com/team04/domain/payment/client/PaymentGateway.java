@@ -24,16 +24,12 @@ public interface PaymentGateway {
     /** PG 결제 취소(환불) API */
     PaymentRefundResult refund(String paymentKey, String orderId, long amount, String cancelReason);
 
-    /**
-     * 선정산 지급 요청 (dev 호환).
-     * 정산 도메인 PR에서 {@link #payout(PayoutRequest)}로 확장합니다.
-     */
-    void payout(Long preSettlementId, long amount);
+    /** 선정산 지급대행 요청 */
+    PayoutResult payout(PayoutRequest request);
 
-    /** 확장 지급대행 — 계좌 정보 포함. 기본 구현은 {@link #payout(Long, long)}에 위임합니다. */
-    default PayoutResult payout(PayoutRequest request) {
-        payout(request.preSettlementId(), request.amount());
-        return PayoutResult.success("payout-" + request.preSettlementId());
+    /** dev 호환 — {@link #payout(PayoutRequest)}에 위임 */
+    default void payout(Long preSettlementId, long amount) {
+        payout(new PayoutRequest(preSettlementId, null, amount, null, null, null));
     }
 
     /** true면 create 시 가상계좌를 즉시 발급(Mock). false면 confirm 이후 발급(Toss). */

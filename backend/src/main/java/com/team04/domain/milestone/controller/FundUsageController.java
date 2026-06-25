@@ -36,8 +36,7 @@ public class FundUsageController {
 
     /**
      * 자금 사용 내역을 조회합니다.
-     * 관리자, 제안자(본인 프로젝트만), 후원자 조회 가능합니다.
-     * TODO: 후원자는 해당 프로젝트에 후원한 후원자만 조회 가능하도록 변경 필요
+     * 관리자, 제안자(본인 프로젝트만), 결제 성공 후원자 조회 가능합니다.
      */
     @GetMapping("/{ideaId}")
     public ApiResponse<List<FundUsageResponse>> getFundUsages(

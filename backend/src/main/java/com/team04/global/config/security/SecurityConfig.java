@@ -62,6 +62,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, "/ideas/{ideaId}/bookmark").authenticated()
                         .requestMatchers(HttpMethod.POST, "/ideas/{ideaId}/reports").authenticated()
                         .requestMatchers("/ideas/**").hasRole("USER")
+                        .requestMatchers("/workspaces/**").authenticated()
                         .requestMatchers(HttpMethod.GET, "/experts/{expertId}").authenticated()
                         .requestMatchers(HttpMethod.POST, "/matches/experts/{expertProfileId}").hasRole("USER")
                         .requestMatchers(HttpMethod.GET, "/experts").authenticated()
