@@ -30,7 +30,7 @@ public class VerificationAdminController {
     }
 
     /** 관리자가 검증 장애 건을 수동으로 재시도합니다. */
-    @PatchMapping("/{verificationId}/retry")
+    @PutMapping ("/{verificationId}/retry")
     public ApiResponse<Void> retry(
             @PathVariable Long verificationId,
             @Valid @RequestBody VerificationRequest request

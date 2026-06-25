@@ -11,4 +11,12 @@ public interface StorageClient {
      * @return 저장된 파일 URL
      */
     String upload(MultipartFile file, String directory);
+
+    /**
+     * 저장소에 업로드된 파일을 삭제합니다.
+     * 삭제 실패는 비즈니스 흐름을 막지 않도록 구현체에서 경고 로그로만 처리합니다.
+     *
+     * @param url 삭제할 파일 접근 URL
+     */
+    void delete(String url);
 }
