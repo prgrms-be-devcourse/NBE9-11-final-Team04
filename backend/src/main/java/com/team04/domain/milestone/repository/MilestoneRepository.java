@@ -31,6 +31,12 @@ public interface MilestoneRepository extends JpaRepository<Milestone, Long> {
 
     Optional<Milestone> findByIdeaIdAndStatus(Long ideaId, MilestoneStatus status);
 
+    /** 단계별 락 판단용 — 완료된 마일스톤 중 가장 높은 단계를 조회한다. */
+    @Query("SELECT COALESCE(MAX(m.step), 0) FROM Milestone m WHERE m.ideaId = :ideaId AND m.status = :status")
+    int findMaxStepByIdeaIdAndStatus(
+            @Param("ideaId") Long ideaId,
+            @Param("status") MilestoneStatus status);
+
     /** 선정산 동시성 제어를 위한 비관락 조회 */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT m FROM Milestone m WHERE m.id = :id")

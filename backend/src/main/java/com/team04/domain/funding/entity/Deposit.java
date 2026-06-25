@@ -63,6 +63,9 @@ public class Deposit extends BaseEntity {
     }
 
     public void release() {
+        if (this.status == FundingTypes.DepositStatus.REFUNDED) {
+            return;
+        }
         if (this.status != FundingTypes.DepositStatus.HELD) {
             throw new CustomException(ErrorCode.PAYMENT_NOT_READY);
         }
@@ -71,6 +74,9 @@ public class Deposit extends BaseEntity {
     }
 
     public void forfeit() {
+        if (this.status == FundingTypes.DepositStatus.FORFEITED) {
+            return;
+        }
         if (this.status != FundingTypes.DepositStatus.HELD) {
             throw new CustomException(ErrorCode.PAYMENT_NOT_READY);
         }
