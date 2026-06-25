@@ -265,6 +265,11 @@ public class SettlementService {
      */
     @Transactional
     public SettlementResponse createCancelRefundSettlement(Long ideaId) {
+        return createCancelRefundSettlement(ideaId, null);
+    }
+
+    @Transactional
+    public SettlementResponse createCancelRefundSettlement(Long ideaId, String memo) {
         String idempotencyKey = "idea-" + ideaId + "-REFUND-CANCELLED";
 
         if (settlementRepository.findByIdempotencyKey(idempotencyKey).isPresent()) {
@@ -285,6 +290,7 @@ public class SettlementService {
                 .platformFee(0L)
                 .payoutAmount(fundingBalance)
                 .idempotencyKey(idempotencyKey)
+                .memo(memo)
                 .build();
 
         settlement.refund();
@@ -297,6 +303,11 @@ public class SettlementService {
      */
     @Transactional
     public SettlementResponse createDepositForfeitSettlement(Long ideaId) {
+        return createDepositForfeitSettlement(ideaId, null);
+    }
+
+    @Transactional
+    public SettlementResponse createDepositForfeitSettlement(Long ideaId, String memo) {
         String idempotencyKey = "idea-" + ideaId + "-DEPOSIT-FORFEITED";
 
         if (settlementRepository.findByIdempotencyKey(idempotencyKey).isPresent()) {
@@ -312,6 +323,7 @@ public class SettlementService {
                 .platformFee(0L)
                 .payoutAmount(depositAmount)
                 .idempotencyKey(idempotencyKey)
+                .memo(memo)
                 .build();
 
         settlement.forfeit();
@@ -326,11 +338,20 @@ public class SettlementService {
      */
     @Transactional
     public void forceRefund(Long ideaId) {
+        forceRefund(ideaId, null);
+    }
+
+    @Transactional
+    public void forceRefund(Long ideaId, String reason) {
         if (!settlementExists(ideaId, "REFUND-CANCELLED")) {
-            createCancelRefundSettlement(ideaId);
+            createCancelRefundSettlement(ideaId, reason);
+        } else {
+            recordSettlementMemo(ideaId, "REFUND-CANCELLED", reason);
         }
         if (!settlementExists(ideaId, "DEPOSIT-FORFEITED")) {
-            createDepositForfeitSettlement(ideaId);
+            createDepositForfeitSettlement(ideaId, reason);
+        } else {
+            recordSettlementMemo(ideaId, "DEPOSIT-FORFEITED", reason);
         }
         refundService.createCancelRefunds(ideaId, false);
     }
@@ -394,5 +415,9 @@ public class SettlementService {
                 || successStatus == SettlementStatus.PARTIALLY_REFUNDED) {
             fundingService.releaseDeposit(settlement.getIdeaId());
         }
+    private void recordSettlementMemo(Long ideaId, String suffix, String memo) {
+        // 관리자 강제 환불 사유를 이미 존재하는 정산 장부에도 남긴다.
+        settlementRepository.findByIdempotencyKey("idea-" + ideaId + "-" + suffix)
+                .ifPresent(settlement -> settlement.recordMemo(memo));
     }
 }

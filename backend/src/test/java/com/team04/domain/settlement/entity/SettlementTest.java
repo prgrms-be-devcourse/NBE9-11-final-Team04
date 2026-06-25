@@ -69,6 +69,13 @@ class SettlementTest {
         settlement.retryPayout();
 
         assertThat(settlement.getStatus()).isEqualTo(SettlementStatus.PENDING);
+    @DisplayName("정산 장부 메모 기록 성공")
+    void recordMemo_success() {
+        Settlement settlement = createSettlement();
+
+        settlement.recordMemo("관리자 강제 환불 사유");
+
+        assertThat(settlement.getMemo()).isEqualTo("관리자 강제 환불 사유");
     }
 
     @Test

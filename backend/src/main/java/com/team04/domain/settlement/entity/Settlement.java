@@ -42,10 +42,13 @@ public class Settlement extends BaseEntity {
     @Column(nullable = false, unique = true)
     private String idempotencyKey;
 
+    @Column(columnDefinition = "TEXT")
+    private String memo;
+
     @Builder
     private Settlement(Long ideaId, SettlementType type,
                        Long totalAmount, Long platformFee, Long payoutAmount,
-                       String idempotencyKey) {
+                       String idempotencyKey, String memo) {
         if (platformFee + payoutAmount > totalAmount) {
             throw new IllegalArgumentException("platformFee와 payoutAmount의 합은 totalAmount를 초과할 수 없습니다");
         }
@@ -56,6 +59,14 @@ public class Settlement extends BaseEntity {
         this.payoutAmount = payoutAmount;
         this.status = SettlementStatus.PENDING;
         this.idempotencyKey = idempotencyKey;
+        this.memo = memo;
+    }
+
+    public void recordMemo(String memo) {
+        if (memo == null || memo.isBlank()) {
+            return;
+        }
+        this.memo = memo;
     }
 
     public void complete() {
