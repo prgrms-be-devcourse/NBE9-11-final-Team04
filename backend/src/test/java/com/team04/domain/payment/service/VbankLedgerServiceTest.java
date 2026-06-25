@@ -1,6 +1,8 @@
 package com.team04.domain.payment.service;
 
 import com.team04.domain.funding.repository.FundingRepository;
+import com.team04.domain.idea.entity.Idea;
+import com.team04.domain.idea.repository.IdeaRepository;
 import com.team04.domain.idea.service.IdeaService;
 import com.team04.domain.payment.dto.response.VbankLedgerResponse;
 import com.team04.domain.payment.entity.VbankLedger;
@@ -20,6 +22,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
@@ -33,12 +36,15 @@ class VbankLedgerServiceTest {
     @Mock
     private IdeaService ideaService;
     @Mock
+    private IdeaRepository ideaRepository;
+    @Mock
     private FundingRepository fundingRepository;
 
     @Test
     @DisplayName("입금 장부는 기존 잔액에 금액을 더한다")
     void recordIn_addsBalance() {
-        given(vbankLedgerRepository.existsByIdempotencyKey("key-1")).willReturn(false);
+        given(vbankLedgerRepository.findByIdempotencyKey("key-1")).willReturn(Optional.empty());
+        given(ideaRepository.findByIdForUpdate(1L)).willReturn(Optional.of(mock(Idea.class)));
         given(vbankLedgerRepository.findTopByIdeaIdAndAffectsBalanceOrderByIdDesc(1L, true))
                 .willReturn(Optional.of(ledger(1L, 100_000L)));
         given(vbankLedgerRepository.save(any(VbankLedger.class)))
@@ -62,7 +68,8 @@ class VbankLedgerServiceTest {
     @Test
     @DisplayName("잔액에 영향을 주지 않는 공개용 출금 기록은 잔액을 유지한다")
     void recordDisclosureOut_keepsBalance() {
-        given(vbankLedgerRepository.existsByIdempotencyKey("usage-1")).willReturn(false);
+        given(vbankLedgerRepository.findByIdempotencyKey("usage-1")).willReturn(Optional.empty());
+        given(ideaRepository.findByIdForUpdate(1L)).willReturn(Optional.of(mock(Idea.class)));
         given(vbankLedgerRepository.findTopByIdeaIdAndAffectsBalanceOrderByIdDesc(1L, true))
                 .willReturn(Optional.of(ledger(1L, 100_000L)));
         given(vbankLedgerRepository.save(any(VbankLedger.class)))

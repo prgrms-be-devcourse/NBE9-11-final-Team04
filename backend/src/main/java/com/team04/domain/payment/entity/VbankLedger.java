@@ -66,6 +66,18 @@ public class VbankLedger extends BaseEntity {
             Long referenceId,
             String memo
     ) {
+        if (ideaId == null) {
+            throw new IllegalArgumentException("아이디어 ID는 필수입니다");
+        }
+        if (type == null) {
+            throw new IllegalArgumentException("장부 유형은 필수입니다");
+        }
+        if (direction == null) {
+            throw new IllegalArgumentException("입출금 방향은 필수입니다");
+        }
+        if (idempotencyKey == null || idempotencyKey.isBlank()) {
+            throw new IllegalArgumentException("멱등성 키는 필수입니다");
+        }
         if (amount == null || amount < 0) {
             throw new IllegalArgumentException("장부 금액은 0 이상이어야 합니다");
         }

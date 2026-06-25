@@ -2,6 +2,7 @@ package com.team04.domain.payment.service;
 
 import com.team04.domain.funding.repository.FundingRepository;
 import com.team04.domain.idea.dto.response.IdeaResponse;
+import com.team04.domain.idea.repository.IdeaRepository;
 import com.team04.domain.idea.service.IdeaService;
 import com.team04.domain.payment.dto.response.VbankLedgerResponse;
 import com.team04.domain.payment.entity.VbankLedger;
@@ -23,6 +24,7 @@ public class VbankLedgerService {
 
     private final VbankLedgerRepository vbankLedgerRepository;
     private final IdeaService ideaService;
+    private final IdeaRepository ideaRepository;
     private final FundingRepository fundingRepository;
 
     @Transactional
@@ -87,10 +89,21 @@ public class VbankLedgerService {
             Long referenceId,
             String memo
     ) {
-        if (vbankLedgerRepository.existsByIdempotencyKey(idempotencyKey)) {
-            return vbankLedgerRepository.findByIdempotencyKey(idempotencyKey)
-                    .map(VbankLedgerResponse::from)
-                    .orElse(null);
+        VbankLedgerResponse existing = vbankLedgerRepository.findByIdempotencyKey(idempotencyKey)
+                .map(VbankLedgerResponse::from)
+                .orElse(null);
+        if (existing != null) {
+            return existing;
+        }
+
+        // 같은 ideaId의 장부 기록이 동시에 들어오면 이전 잔액을 중복 조회할 수 있어 아이디어 row를 먼저 잠근다.
+        ideaRepository.findByIdForUpdate(ideaId)
+                .orElseThrow(() -> new CustomException(ErrorCode.IDEA_NOT_FOUND));
+        existing = vbankLedgerRepository.findByIdempotencyKey(idempotencyKey)
+                .map(VbankLedgerResponse::from)
+                .orElse(null);
+        if (existing != null) {
+            return existing;
         }
 
         long currentBalance = getCurrentBalance(ideaId);
