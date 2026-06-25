@@ -1,19 +1,25 @@
 package com.team04.domain.expert.service;
 
 import com.team04.domain.expert.dto.request.ExpertProfileRequest;
+import com.team04.domain.expert.dto.response.ExpertAppealResponse;
 import com.team04.domain.expert.dto.response.ExpertProfileListResponse;
 import com.team04.domain.expert.dto.response.ExpertProfileResponse;
 import com.team04.domain.expert.entity.ExpertProfile;
+import com.team04.domain.expert.entity.ExpertStatus;
 import com.team04.domain.expert.entity.TechStack;
+import com.team04.domain.expert.repository.ExpertAppealRepository;
 import com.team04.domain.expert.repository.ExpertProfileRepository;
 import com.team04.domain.user.repository.UserRepository;
 import com.team04.global.exception.CustomException;
 import com.team04.global.exception.ErrorCode;
+import com.team04.global.storage.AppealStorageClient;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 
 @Service
@@ -22,6 +28,8 @@ public class ExpertProfileService {
 
     private final ExpertProfileRepository expertProfileRepository;
     private final UserRepository userRepository;
+    private final ExpertAppealRepository expertAppealRepository;
+    private final AppealStorageClient appealStorageClient;
 
     @Transactional
     public ExpertProfileResponse registerProfile(Long userId, ExpertProfileRequest request) {
@@ -54,5 +62,28 @@ public class ExpertProfileService {
     public Page<ExpertProfileListResponse> getProfiles(TechStack techStack, Pageable pageable) {
         return expertProfileRepository.findActiveProfiles(techStack, pageable)
                 .map(ExpertProfileListResponse::from);
+    }
+
+    // 상태별 전문가 목록 조회
+    @Transactional(readOnly = true)
+    public Page<ExpertProfileResponse> getProfilesByStatus(ExpertStatus status, Pageable pageable) {
+        return expertProfileRepository.findProfilesByStatus(status, pageable)
+                .map(ExpertProfileResponse::from);
+    }
+
+    // 소명 자료 목록 조회
+    @Transactional(readOnly = true)
+    public List<ExpertAppealResponse> getAppeals(Long expertProfileId) {
+
+        // findById → existsById로 변경
+        if (!expertProfileRepository.existsById(expertProfileId)) {
+            throw new CustomException(ErrorCode.EXPERT_NOT_FOUND);
+        }
+
+        return expertAppealRepository
+                .findByExpertProfileIdOrderBySubmittedAtDesc(expertProfileId)
+                .stream()
+                .map(appeal -> ExpertAppealResponse.from(appeal, 0, appealStorageClient))
+                .toList();
     }
 }

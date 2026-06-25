@@ -1,6 +1,7 @@
 package com.team04.domain.expert.service;
 
 import com.team04.domain.expert.entity.ExpertProfile;
+import com.team04.domain.expert.entity.ExpertStatus;
 import com.team04.domain.expert.repository.ExpertProfileRepository;
 import com.team04.domain.notification.entity.NotificationType;
 import com.team04.domain.user.entity.Role;
@@ -61,5 +62,27 @@ public class ExpertVerificationService {
                 "자격증 유효성 확인을 위해 7일 이내 자격증 확인증을 재제출해 주세요. 미제출 시 계정이 격리됩니다.",
                 expertProfileId
         ));
+    }
+
+    @Transactional
+    public void restoreProfile(Long expertProfileId) {
+        ExpertProfile profile = expertProfileRepository.findById(expertProfileId)
+                .orElseThrow(() -> new CustomException(ErrorCode.EXPERT_NOT_FOUND));
+
+        if (profile.getStatus() != ExpertStatus.SUSPENDED) {
+            throw new CustomException(ErrorCode.EXPERT_NOT_SUSPENDED);
+        }
+
+        profile.restore();
+
+        eventPublisher.publishEvent(new NotificationEvent(
+                profile.getUser().getId(),
+                NotificationType.EXPERT_RESTORED,
+                "전문가 계정 복구 완료",
+                "소명 자료 검토 결과 계정이 복구되었습니다.",
+                profile.getId()
+        ));
+
+        log.info("[ExpertVerificationService] 계정 복구 완료: expertProfileId={}", expertProfileId);
     }
 }

@@ -1,11 +1,9 @@
 package com.team04.domain.settlement.controller;
 
-import com.team04.domain.settlement.dto.request.RefundRequest;
 import com.team04.domain.settlement.dto.response.RefundResponse;
 import com.team04.domain.settlement.service.RefundService;
 import com.team04.global.response.ApiResponse;
 import com.team04.global.security.CustomUserDetails;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -20,20 +18,6 @@ import java.util.List;
 public class RefundController {
 
     private final RefundService refundService;
-
-    /**
-     * 분쟁 환불 생성 (관리자 전용)
-     * GOAL_NOT_MET, CANCELLED는 내부 자동 생성 — 이 API는 DISPUTE 케이스만 처리
-     * sponsorId와 환불 금액은 payment 정보에서 내부 조회 (오입력/과다 환불 방지)
-     */
-    @PostMapping("/dispute")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<RefundResponse>> createDisputeRefund(
-            @Valid @RequestBody RefundRequest request
-    ) {
-        RefundResponse response = refundService.createDisputeRefund(request.paymentId());
-        return ResponseEntity.ok(ApiResponse.ofSuccess(response));
-    }
 
     /**
      * 환불 완료 처리 (관리자 전용)

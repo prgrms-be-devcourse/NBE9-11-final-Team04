@@ -6,7 +6,9 @@ import com.team04.domain.dispute.dto.response.DisputeResponse;
 import com.team04.domain.dispute.entity.*;
 import com.team04.domain.dispute.repository.DisputeAppealRepository;
 import com.team04.domain.dispute.repository.DisputeRepository;
+import com.team04.domain.idea.service.IdeaAdminService;
 import com.team04.domain.notification.entity.NotificationType;
+import com.team04.global.storage.StorageClient;
 import com.team04.domain.user.entity.Role;
 import com.team04.domain.user.entity.User;
 import com.team04.domain.user.repository.UserRepository;
@@ -43,6 +45,8 @@ class DisputeServiceTest {
     @Mock private UserRepository userRepository;
     @Mock private DisputeParticipantValidator participantValidator;
     @Mock private ApplicationEventPublisher eventPublisher;
+    @Mock private StorageClient storageClient;
+    @Mock private IdeaAdminService ideaAdminService;
 
     @InjectMocks
     private DisputeService disputeService;

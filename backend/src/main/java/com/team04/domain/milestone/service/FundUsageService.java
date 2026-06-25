@@ -37,6 +37,7 @@ public class FundUsageService {
      */
     @Transactional
     public FundUsageResponse addFundUsage(Long ideaId, FundUsageRequest request, Long userId) {
+        ideaService.validateNotSuspended(ideaId); // 분쟁 처리 중 일시 중단된 프로젝트는 자금 사용 내역 입력 불가
         IdeaResponse idea = ideaService.getIdea(ideaId);
         if (!idea.userId().equals(userId)) {
             throw new CustomException(ErrorCode.FORBIDDEN);

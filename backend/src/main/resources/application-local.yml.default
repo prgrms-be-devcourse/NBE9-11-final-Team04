@@ -56,3 +56,10 @@ expert:
     reverify-cron: "0 0 0 * * MON"   # 로컬: 매주 월요일 자정 00:00:00 가동
     national-cron: "0 0 0 1 1,7 *"   # 로컬: 매년 1월 1일, 7월 1일 자정 00:00:00 가동
     demote-cron: "0 0 0 * * *"       # 로컬: 매일 자정 00:00:00 가동
+
+admin:
+  internal:
+    # ⚠️ [입력 필요] 내부 호출용 base URL
+    # 로컬: http://localhost:8080
+    # 운영: 배포 서버 URL 입력
+    base-url: http://localhost:8080

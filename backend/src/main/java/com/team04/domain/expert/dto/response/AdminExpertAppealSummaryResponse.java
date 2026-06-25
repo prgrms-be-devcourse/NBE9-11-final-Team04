@@ -6,18 +6,15 @@ import com.team04.global.storage.AppealStorageClient;
 
 import java.time.LocalDateTime;
 
-public record ExpertAppealResponse(
+public record AdminExpertAppealSummaryResponse(
         Long appealId,
-        Long expertProfileId,
-        String fileUrl,
         String content,
-        LocalDateTime submittedAt,
+        String fileUrl,
         AppealStatus status,
-        int appealCount
+        LocalDateTime submittedAt
 ) {
-    public static ExpertAppealResponse from(
+    public static AdminExpertAppealSummaryResponse from(
             ExpertAppeal appeal,
-            int appealCount,
             AppealStorageClient appealStorageClient
     ) {
         String fileUrl = null;
@@ -25,14 +22,12 @@ public record ExpertAppealResponse(
             fileUrl = appealStorageClient.getAccessUrl(appeal.getFileUrl());
         }
 
-        return new ExpertAppealResponse(
+        return new AdminExpertAppealSummaryResponse(
                 appeal.getId(),
-                appeal.getExpertProfile().getId(),
-                fileUrl,
                 appeal.getContent(),
-                appeal.getSubmittedAt(),
+                fileUrl,
                 appeal.getStatus(),
-                appealCount
+                appeal.getSubmittedAt()
         );
     }
 }

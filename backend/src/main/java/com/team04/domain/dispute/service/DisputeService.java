@@ -9,11 +9,13 @@ import com.team04.domain.dispute.dto.response.DisputeStatsResponse;
 import com.team04.domain.dispute.entity.*;
 import com.team04.domain.dispute.repository.DisputeAppealRepository;
 import com.team04.domain.dispute.repository.DisputeRepository;
+import com.team04.domain.idea.service.IdeaAdminService;
+import com.team04.domain.notification.entity.NotificationPriority;
 import com.team04.domain.notification.entity.NotificationType;
 import com.team04.domain.user.entity.Role;
 import com.team04.domain.user.entity.User;
 import com.team04.domain.user.repository.UserRepository;
-import com.team04.domain.notification.entity.NotificationPriority;
+import com.team04.global.event.DisputeResolvedEvent;
 import com.team04.global.event.NotificationEvent;
 import com.team04.global.event.ReportNotificationEvent;
 import com.team04.global.exception.CustomException;
@@ -40,6 +42,7 @@ public class DisputeService {
     private final DisputeParticipantValidator participantValidator;
     private final ApplicationEventPublisher eventPublisher;
     private final StorageClient storageClient;
+    private final IdeaAdminService ideaAdminService;
 
     private static final List<DisputeStatus> ACTIVE_STATUSES = List.of(DisputeStatus.RECEIVED, DisputeStatus.PENDING);
     private static final String APPEAL_STORAGE_DIR = "dispute/appeal";
@@ -75,6 +78,14 @@ public class DisputeService {
                 NotificationType.REPORT_RECEIVED,
                 "[신고] " + request.title(),
                 request.category().name() + " | " + request.reason(),
+                saved.getId()
+        ));
+
+        eventPublisher.publishEvent(new NotificationEvent(
+                request.reportedUserId(),
+                NotificationType.DISPUTE_REPORTED,
+                "[신고 접수] " + request.title(),
+                "회원님을 대상으로 신고가 접수되었습니다. 7일 이내 소명 자료를 제출해 주세요.",
                 saved.getId()
         ));
 
@@ -145,8 +156,35 @@ public class DisputeService {
         Dispute dispute = disputeRepository.findByIdWithDetails(disputeId)
                 .orElseThrow(() -> new CustomException(ErrorCode.DISPUTE_NOT_FOUND));
         dispute.updateStatus(request.status());
+        syncAppealStatus(disputeId, request.status());
+        syncIdeaStatus(dispute, request.status());
         publishDisputeStatusNotifications(dispute, request.status());
+        if (request.status() == DisputeStatus.RESOLVED && dispute.getTargetType() == TargetType.IDEA) {
+            eventPublisher.publishEvent(new DisputeResolvedEvent(dispute.getTargetId()));
+        }
         return DisputeResponse.of(dispute);
+    }
+
+    private void syncAppealStatus(Long disputeId, DisputeStatus newStatus) {
+        if (newStatus == DisputeStatus.RECEIVED || newStatus == DisputeStatus.RESOLVED) {
+            disputeAppealRepository.findByDisputeId(disputeId)
+                    .ifPresent(DisputeAppeal::reject);
+        } else if (newStatus == DisputeStatus.REJECTED) {
+            disputeAppealRepository.findByDisputeId(disputeId)
+                    .ifPresent(DisputeAppeal::approve);
+        }
+    }
+
+    private void syncIdeaStatus(Dispute dispute, DisputeStatus newStatus) {
+        if (dispute.getTargetType() != TargetType.IDEA) return;
+        Long ideaId = dispute.getTargetId();
+        if (newStatus == DisputeStatus.REJECTED) {
+            // 소명 수용 → 일시 중단된 프로젝트 복원
+            ideaAdminService.restoreIdea(ideaId);
+        } else if (newStatus == DisputeStatus.RESOLVED) {
+            // 신고 인정 → 프로젝트 강제 취소
+            ideaAdminService.cancelIdeaForDispute(ideaId);
+        }
     }
 
     private void publishDisputeStatusNotifications(Dispute dispute, DisputeStatus newStatus) {
