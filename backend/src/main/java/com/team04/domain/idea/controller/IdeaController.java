@@ -1,15 +1,9 @@
 package com.team04.domain.idea.controller;
 
-import com.team04.domain.idea.dto.request.IdeaDraftRequest;
-import com.team04.domain.idea.dto.response.IdeaDraftResponse;
-import com.team04.domain.idea.dto.response.IdeaSummaryResponse;
+import com.team04.domain.idea.dto.request.*;
+import com.team04.domain.idea.dto.response.*;
 import com.team04.domain.idea.entity.IdeaCategory;
 import com.team04.global.response.ApiResponse;
-import com.team04.domain.idea.dto.request.CreateIdeaRequest;
-import com.team04.domain.idea.dto.request.ReportIdeaRequest;
-import com.team04.domain.idea.dto.request.UpdateIdeaRequest;
-import com.team04.domain.idea.dto.response.IdeaResponse;
-import com.team04.domain.idea.dto.response.ReportIdeaResponse;
 import com.team04.domain.idea.service.IdeaService;
 import com.team04.global.security.CustomUserDetails;
 import jakarta.validation.Valid;
@@ -149,6 +143,27 @@ public class IdeaController {
             @RequestPart("image") MultipartFile image
     ) {
         return ApiResponse.ofSuccess(ideaService.uploadIdeaImage(ideaId, userDetails.getUserId(), image));
+    }
+
+    /** 로그인 제안자가 관리자 최종 승인 전 정산 및 환불 계좌를 등록하거나 수정합니다. */
+    @PutMapping("/{ideaId}/settlement-account")
+    public ApiResponse<IdeaSettlementAccountResponse> upsertSettlementAccount(
+            @PathVariable Long ideaId,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @Valid @RequestBody IdeaSettlementAccountRequest request
+    ) {
+        return ApiResponse.ofSuccess(
+                ideaService.upsertSettlementAccount(ideaId, userDetails.getUserId(), request)
+        );
+    }
+
+    /** 로그인 제안자가 본인 아이디어의 정산 및 환불 계좌 정보를 조회합니다. */
+    @GetMapping("/{ideaId}/settlement-account")
+    public ApiResponse<IdeaSettlementAccountResponse> getSettlementAccount(
+            @PathVariable Long ideaId,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        return ApiResponse.ofSuccess(ideaService.getSettlementAccount(ideaId, userDetails.getUserId()));
     }
 
     /** 로그인 사용자가 본인의 심사 대기 아이디어를 소프트 삭제합니다. */
