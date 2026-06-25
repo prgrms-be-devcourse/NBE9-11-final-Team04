@@ -29,6 +29,10 @@ server:
 
 payment:
   payout:
+    auto-complete: true
+    bank-code: "088"
+    account-number: "000000000000"
+    destination-seller-id: ""
     retry:
       max-attempts: 3
       delay-ms: 1000
