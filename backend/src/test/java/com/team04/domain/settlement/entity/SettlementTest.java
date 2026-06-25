@@ -65,10 +65,12 @@ class SettlementTest {
     void retryPayout_failed_success() {
         Settlement settlement = createSettlement();
         settlement.fail();
-
         settlement.retryPayout();
 
         assertThat(settlement.getStatus()).isEqualTo(SettlementStatus.PENDING);
+    }
+
+    @Test
     @DisplayName("정산 장부 메모 기록 성공")
     void recordMemo_success() {
         Settlement settlement = createSettlement();
