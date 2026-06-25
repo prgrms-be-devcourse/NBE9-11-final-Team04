@@ -10,9 +10,11 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import java.io.IOException;
+import java.net.URI;
 import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
@@ -61,6 +63,35 @@ public class S3StorageClient implements StorageClient {
             log.error("[S3StorageClient] S3 업로드 실패: {}", e.getMessage());
             throw new CustomException(ErrorCode.FILE_UPLOAD_FAILED);
         }
+    }
+
+    /** 업로드 보상 트랜잭션에서 호출되며, S3 삭제 실패는 경고 로그만 남기고 전파하지 않습니다. */
+    @Override
+    public void delete(String url) {
+        try {
+            String key = extractKey(url);
+            s3Client.deleteObject(DeleteObjectRequest.builder()
+                    .bucket(bucket)
+                    .key(key)
+                    .build());
+            log.info("[S3StorageClient] 파일 삭제 완료: bucket={}, key={}", bucket, key);
+        } catch (RuntimeException e) {
+            log.warn("[S3StorageClient] 파일 삭제 실패: url={}, message={}", url, e.getMessage());
+        }
+    }
+
+    /** 공개 URL에서 S3 object key를 추출합니다. */
+    private String extractKey(String url) {
+        if (url == null || url.isBlank()) {
+            throw new IllegalArgumentException("삭제할 파일 URL이 비어 있습니다.");
+        }
+
+        String path = URI.create(url).getPath();
+        if (path == null || path.length() <= 1) {
+            throw new IllegalArgumentException("삭제할 파일 key를 추출할 수 없습니다.");
+        }
+
+        return path.substring(1);
     }
 
     /** 이미지 파일 존재 여부, 크기, 확장자 허용 목록을 검증합니다. */

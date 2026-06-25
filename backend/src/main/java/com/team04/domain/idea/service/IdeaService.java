@@ -4,11 +4,12 @@ import com.team04.domain.dispute.dto.request.CreateDisputeRequest;
 import com.team04.domain.dispute.entity.DisputeCategory;
 import com.team04.domain.dispute.entity.TargetType;
 import com.team04.domain.dispute.service.DisputeService;
-import com.team04.domain.idea.dto.request.IdeaDraftRequest;
+import com.team04.domain.idea.dto.request.*;
 import com.team04.domain.idea.dto.response.*;
 import com.team04.domain.idea.entity.*;
 import com.team04.domain.idea.repository.IdeaBookmarkRepository;
 import com.team04.domain.idea.repository.IdeaDraftRepository;
+import com.team04.domain.idea.repository.IdeaSettlementAccountRepository;
 import com.team04.domain.milestone.dto.response.MilestoneResponse;
 import com.team04.domain.milestone.entity.Milestone;
 import com.team04.domain.milestone.repository.MilestoneRepository;
@@ -18,9 +19,6 @@ import com.team04.domain.verification.repository.ProjectVerificationRepository;
 import com.team04.domain.verification.service.VerificationService;
 import com.team04.global.exception.CustomException;
 import com.team04.global.exception.ErrorCode;
-import com.team04.domain.idea.dto.request.CreateIdeaRequest;
-import com.team04.domain.idea.dto.request.ReportIdeaRequest;
-import com.team04.domain.idea.dto.request.UpdateIdeaRequest;
 import com.team04.domain.idea.repository.IdeaRepository;
 import com.team04.global.storage.StorageClient;
 import com.team04.global.util.ImageUrlConverter;
@@ -56,6 +54,7 @@ public class IdeaService {
     private final StorageClient storageClient;
     private final VerificationService verificationService;
     private final ProjectVerificationRepository projectVerificationRepository;
+    private final IdeaSettlementAccountRepository ideaSettlementAccountRepository;
 
     /** 아이디어를 등록하고 마일스톤을 함께 저장합니다. */
     @Transactional
@@ -303,6 +302,8 @@ public class IdeaService {
     public IdeaResponse updateIdea(Long ideaId, Long userId, UpdateIdeaRequest request) {
         Idea idea = findActiveIdea(ideaId);
         idea.validateOwner(userId);
+        // 수정 흐름에서도 엔티티 변경 전에 상태를 명시 검증해 승인 이후 수정을 차단합니다.
+        idea.validateEditable();
         idea.update(
                 request.title(),
                 request.category(),
@@ -332,6 +333,7 @@ public class IdeaService {
     }
 
     /** 작성자 본인이고 심사 대기 상태인 경우에만 대표 이미지를 업로드하고 URL을 저장합니다. */
+    @Transactional
     public IdeaResponse uploadIdeaImage(Long ideaId, Long userId, MultipartFile image) {
         validateImageFile(image);
         Idea idea = findActiveIdea(ideaId);
@@ -340,17 +342,59 @@ public class IdeaService {
 
         String imageUrl = storageClient.upload(image, "ideas/thumbnail");
 
-        // S3 업로드 성공 후 DB 저장이 실패하면 업로드된 파일이 고아 파일로 남을 수 있습니다.
-        return updateIdeaImageUrl(ideaId, userId, imageUrl);
+        try {
+            // 업로드와 DB 저장을 단일 서비스 흐름으로 묶고, 저장 실패 시 업로드 파일을 보상 삭제합니다.
+            idea.updateImageUrl(imageUrl);
+            ideaRepository.flush();
+            return IdeaResponse.of(idea);
+        } catch (RuntimeException e) {
+            storageClient.delete(imageUrl);
+            throw e;
+        }
     }
 
-    /** 대표 이미지 URL 저장은 별도 트랜잭션에서 재조회 후 처리합니다. */
+    /** 제안자가 관리자 최종 승인 전에 정산 및 환불에 사용할 계좌 정보를 등록하거나 수정합니다. */
     @Transactional
-    public IdeaResponse updateIdeaImageUrl(Long ideaId, Long userId, String imageUrl) {
+    public IdeaSettlementAccountResponse upsertSettlementAccount(
+            Long ideaId,
+            Long userId,
+            IdeaSettlementAccountRequest request
+    ) {
         Idea idea = findActiveIdea(ideaId);
         idea.validateOwner(userId);
-        idea.updateImageUrl(imageUrl);
-        return IdeaResponse.of(idea);
+        validateSettlementAccountEditable(idea);
+
+        IdeaSettlementAccount account = ideaSettlementAccountRepository.findByIdeaId(ideaId)
+                .map(existingAccount -> {
+                    existingAccount.update(
+                            request.bankName(),
+                            request.accountNumber(),
+                            request.accountHolderName()
+                    );
+                    return existingAccount;
+                })
+                .orElseGet(() -> ideaSettlementAccountRepository.save(
+                        IdeaSettlementAccount.create(
+                                ideaId,
+                                request.bankName(),
+                                request.accountNumber(),
+                                request.accountHolderName()
+                        )
+                ));
+
+        return IdeaSettlementAccountResponse.of(account);
+    }
+
+    /** 제안자 본인이 등록한 정산 및 환불 계좌 정보를 조회합니다. */
+    @Transactional(readOnly = true)
+    public IdeaSettlementAccountResponse getSettlementAccount(Long ideaId, Long userId) {
+        Idea idea = findActiveIdea(ideaId);
+        idea.validateOwner(userId);
+
+        IdeaSettlementAccount account = ideaSettlementAccountRepository.findByIdeaId(ideaId)
+                .orElseThrow(() -> new CustomException(ErrorCode.SETTLEMENT_ACCOUNT_NOT_REGISTERED));
+
+        return IdeaSettlementAccountResponse.of(account);
     }
 
     /** 작성자 본인이고 심사 대기 상태인 경우에만 아이디어를 소프트 삭제합니다. */
@@ -406,6 +450,14 @@ public class IdeaService {
         if (image == null || image.isEmpty()) {
             throw new CustomException(ErrorCode.INVALID_INPUT);
         }
+    }
+
+    /** 관리자 최종 승인 전까지만 제안자 계좌 등록/수정을 허용합니다. */
+    private void validateSettlementAccountEditable(Idea idea) {
+        if (idea.getStatus() == IdeaStatus.OPEN) {
+            throw new CustomException(ErrorCode.IDEA_STATUS_NOT_EDITABLE);
+        }
+        idea.validateEditable();
     }
 
     /** 임시저장을 조회하고 작성자 본인 접근인지 검증합니다. */
