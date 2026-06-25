@@ -49,3 +49,7 @@ openai:
     api-key: test-api-key
     model: gpt-4o-mini
     timeout-seconds: 300
+
+admin:
+  internal:
+    base-url: http://localhost:8080

@@ -103,6 +103,7 @@ jobs:
             OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
             MAIL_USERNAME=${{ secrets.MAIL_USERNAME }}
             MAIL_PASSWORD=${{ secrets.MAIL_PASSWORD }}
+            ADMIN_INTERNAL_BASE_URL=${{ secrets.ADMIN_INTERNAL_BASE_URL }}
             EOF
             cat infra/payment.env >> .env
 

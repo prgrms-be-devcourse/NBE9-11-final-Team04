@@ -128,4 +128,11 @@ public class ExpertProfile {
         this.status = ExpertStatus.DEMOTED;
     }
 
+    // 격리된 전문가 권한 복구
+    public void restore() {
+        this.status = ExpertStatus.ACTIVE;
+        this.suspendedAt = null;
+        this.appealCount = 0;
+    }
+
 }
