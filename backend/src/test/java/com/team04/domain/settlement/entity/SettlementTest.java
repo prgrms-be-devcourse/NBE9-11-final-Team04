@@ -53,6 +53,25 @@ class SettlementTest {
     }
 
     @Test
+    @DisplayName("PENDING 상태에서 FAILED로 전이 성공")
+    void fail_success() {
+        Settlement settlement = createSettlement();
+        settlement.fail();
+        assertThat(settlement.getStatus()).isEqualTo(SettlementStatus.FAILED);
+    }
+
+    @Test
+    @DisplayName("FAILED 상태에서 PENDING으로 재처리 대기 전환 성공")
+    void retryPayout_failed_success() {
+        Settlement settlement = createSettlement();
+        settlement.fail();
+
+        settlement.retryPayout();
+
+        assertThat(settlement.getStatus()).isEqualTo(SettlementStatus.PENDING);
+    }
+
+    @Test
     @DisplayName("COMPLETED 상태에서 전이 시 예외 발생")
     void complete_alreadyCompleted() {
         Settlement settlement = createSettlement();

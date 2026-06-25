@@ -80,7 +80,7 @@ public class RefundService {
      * 가상계좌 잔액 계산:
      *   SUM(payment SUCCESS) + 보증금 - SUM(pre_settlement COMPLETED)
      *
-     * Deposit 상태 변경은 FundingService.forfeitDeposit() / releaseDeposit()으로 처리
+     * 보증금 몰수는 즉시 처리하고, 보증금 환급 상태는 지급 성공 콜백에서 처리
      */
     @Transactional
     public void createCancelRefunds(Long ideaId, boolean isJustified) {
@@ -234,7 +234,7 @@ public class RefundService {
 
     private void updateDepositStatus(Long ideaId, boolean isJustified) {
         if (isJustified) {
-            fundingService.releaseDeposit(ideaId);
+            // 정당한 사유 중단의 보증금 환급 상태는 보증금 환급 지급 성공 콜백에서 전환한다.
             return;
         }
         fundingService.forfeitDeposit(ideaId);

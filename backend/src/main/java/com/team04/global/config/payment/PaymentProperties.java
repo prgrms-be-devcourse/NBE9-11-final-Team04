@@ -50,8 +50,8 @@ public record PaymentProperties(
     }
 
     /**
-     * 선정산 지급대행 최소 연동 설정.
-     * autoComplete=true이면 PG skipped 응답 시에도 선정산을 COMPLETED로 처리합니다 (로컬·시연용).
+     * 지급대행 최소 연동 설정.
+     * autoComplete=true이면 PG skipped 응답 시에도 지급 장부를 완료 처리합니다 (로컬·시연용).
      */
     public record Payout(boolean autoComplete, String bankCode, String accountNumber, String destinationSellerId) {
     }

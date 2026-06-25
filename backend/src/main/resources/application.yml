@@ -27,6 +27,13 @@ app:
 server:
   port: 8080
 
+payment:
+  payout:
+    retry:
+      max-attempts: 3
+      delay-ms: 1000
+      scheduler-delay-ms: 60000
+
 verification:
   forbidden-keywords:
     - 100% 보장
