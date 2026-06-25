@@ -32,6 +32,13 @@ jwt:
 payment:
   webhook:
     secret: dev-webhook-secret
+  payout:
+    auto-complete: true
+    bank-code: "088"
+    account-number: "000000000000"
+    destination-seller-id: ""
+  refund-pending:
+    delay-ms: 60000
 
 nts:
   api:

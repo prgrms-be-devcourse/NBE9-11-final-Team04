@@ -8,7 +8,8 @@ public record PaymentProperties(
         Toss toss,
         Webhook webhook,
         Pool pool,
-        Demo demo
+        Demo demo,
+        Payout payout
 ) {
 
     public PaymentProperties {
@@ -27,6 +28,9 @@ public record PaymentProperties(
         if (demo == null) {
             demo = new Demo(false);
         }
+        if (payout == null) {
+            payout = new Payout(true, "088", "000000000000", "");
+        }
     }
 
     public record Gateway(String type) {
@@ -41,7 +45,14 @@ public record PaymentProperties(
     public record Pool(boolean enabled) {
     }
 
-    /** 포트폴리오·부트캠프 시연 모드 — 테스트 결제창 입력만으로 결제 완료 처리 */
+    /** 테스트 결제창 입력만으로 결제 완료 처리 */
     public record Demo(boolean enabled) {
+    }
+
+    /**
+     * 선정산 지급대행 최소 연동 설정.
+     * autoComplete=true이면 PG skipped 응답 시에도 선정산을 COMPLETED로 처리합니다 (로컬·시연용).
+     */
+    public record Payout(boolean autoComplete, String bankCode, String accountNumber, String destinationSellerId) {
     }
 }

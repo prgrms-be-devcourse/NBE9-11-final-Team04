@@ -3,10 +3,12 @@ package com.team04.domain.payment.client;
 import com.team04.domain.payment.client.toss.TossApiDtos.TossErrorResponse;
 import com.team04.domain.payment.client.toss.TossApiDtos.TossPaymentResponse;
 import com.team04.domain.payment.client.toss.TossApiDtos.TossVirtualAccount;
+import com.team04.domain.payment.dto.request.PayoutRequest;
 import com.team04.domain.payment.dto.response.PaymentConfirmResult;
 import com.team04.domain.payment.dto.response.PaymentRefundResult;
 import com.team04.domain.payment.dto.response.PaymentSessionResult;
 import com.team04.domain.payment.dto.response.PaymentVerifyResult;
+import com.team04.domain.payment.dto.response.PayoutResult;
 import com.team04.domain.payment.dto.response.VirtualAccountIssueResult;
 import com.team04.domain.payment.entity.PaymentTypes.PaymentMethod;
 import com.team04.global.config.payment.PaymentProperties;
@@ -133,8 +135,27 @@ public class TossPaymentGateway implements PaymentGateway {
     }
 
     @Override
-    public void payout(Long preSettlementId, long amount) {
-        throw new CustomException(ErrorCode.PAYMENT_NOT_READY);
+    public PayoutResult payout(PayoutRequest request) {
+        PaymentProperties.Toss toss = paymentProperties.toss();
+        if (!toss.payoutEnabled()) {
+            log.info("[TossPG] 지급대행 비활성 — preSettlementId={}, amount={}",
+                    request.preSettlementId(), request.amount());
+            return PayoutResult.skipped("toss-payout-disabled");
+        }
+
+        if (toss.securityKey() == null || toss.securityKey().isBlank()) {
+            return PayoutResult.failure("지급대행 securityKey가 설정되지 않았습니다");
+        }
+
+        String destination = paymentProperties.payout().destinationSellerId();
+        if (destination == null || destination.isBlank()) {
+            return PayoutResult.failure("지급대행 destinationSellerId가 설정되지 않았습니다");
+        }
+
+        // 토스 지급대행(/v2/payouts)은 JWE 암호화 연동이 필요합니다 — 추후 구현
+        log.warn("[TossPG] 지급대행 미구현 — preSettlementId={}, destination={}, amount={}",
+                request.preSettlementId(), destination, request.amount());
+        return PayoutResult.skipped("toss-payout-not-implemented");
     }
 
     private PaymentConfirmResult mapConfirmResponse(TossPaymentResponse response) {
