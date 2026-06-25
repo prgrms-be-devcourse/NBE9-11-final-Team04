@@ -488,13 +488,15 @@ public class IdeaService {
 
     /** 마일스톤 개수와 단계 값이 정확히 1, 2, 3인지 검증합니다. */
     private void validateMilestones(CreateIdeaRequest request) {
-
         if (request.milestones() == null || request.milestones().size() != REQUIRED_MILESTONE_COUNT) {
             throw new CustomException(ErrorCode.INVALID_MILESTONE_COUNT);
         }
 
         Set<Integer> steps = new HashSet<>();
         for (var milestone : request.milestones()) {
+            if (milestone == null) {
+                throw new CustomException(ErrorCode.INVALID_INPUT);
+            }
             steps.add(milestone.step());
         }
 
