@@ -121,7 +121,7 @@ export default function FundingDetailPage() {
         </div>
         {liveProgress && <p className="mt-2 text-center text-xs text-emerald-600">● LIVE</p>}
       </Card>
-      {isAuthenticated && idea.status === 'OPEN' && (
+      {isAuthenticated && (idea.status === 'OPEN' || idea.status === 'IN_PROGRESS') && (
         <Card className="mt-6">
           <h2 className="font-semibold">후원하기</h2>
           <div className="mt-4 flex gap-2">

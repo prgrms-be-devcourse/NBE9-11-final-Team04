@@ -556,7 +556,7 @@ export default function IdeaDetailPage() {
 
           {/* CTA 버튼들 */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {idea.status === 'OPEN' && !isUpcoming && (
+            {isFunding && !isUpcoming && (
               <Link href={`/fundings/idea/${idea.ideaId}`} style={{
                 display: 'block', textAlign: 'center',
                 padding: '14px', fontSize: '16px', fontWeight: 700,
