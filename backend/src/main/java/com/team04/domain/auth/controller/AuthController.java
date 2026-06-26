@@ -6,8 +6,12 @@ import com.team04.domain.auth.dto.response.OAuthResponse;
 import com.team04.domain.auth.dto.response.TokenResponse;
 import com.team04.domain.auth.service.AuthService;
 import com.team04.domain.auth.service.OAuthService;
+import com.team04.global.exception.CustomException;
+import com.team04.global.exception.ErrorCode;
 import com.team04.global.response.ApiResponse;
 import com.team04.global.security.CustomUserDetails;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -145,10 +149,22 @@ public class AuthController {
 
     @PostMapping("/token-refresh")
     public ApiResponse<TokenResponse> tokenRefresh(
-            @RequestBody @Valid TokenRefreshRequest request,
+            HttpServletRequest request,
             HttpServletResponse response
     ){
-        TokenResponse tokenResponse = authService.tokenRefresh(request);
+        String refreshToken = null;
+        if (request.getCookies() != null) {
+            for (Cookie cookie : request.getCookies()) {
+                if ("refreshToken".equals(cookie.getName())) {
+                    refreshToken = cookie.getValue();
+                    break;
+                }
+            }
+        }
+        if (refreshToken == null || refreshToken.isBlank()) {
+            throw new CustomException(ErrorCode.INVALID_REFRESH_TOKEN);
+        }
+        TokenResponse tokenResponse = authService.tokenRefresh(new TokenRefreshRequest(refreshToken));
         setTokenCookies(response, tokenResponse);
         return ApiResponse.ofSuccess(tokenResponse);
     }
