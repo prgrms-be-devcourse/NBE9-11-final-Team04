@@ -1,6 +1,7 @@
 package com.team04.domain.milestone.controller;
 
 import com.team04.domain.milestone.dto.request.CompletionReportRequest;
+import com.team04.domain.milestone.dto.request.RejectReportRequest;
 import com.team04.domain.milestone.dto.response.CompletionReportResponse;
 import com.team04.domain.milestone.dto.response.MilestoneResponse;
 import com.team04.domain.milestone.service.MilestoneService;
@@ -9,6 +10,7 @@ import com.team04.global.exception.CustomException;
 import com.team04.global.exception.ErrorCode;
 import com.team04.global.response.ApiResponse;
 import com.team04.global.security.CustomUserDetails;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -115,11 +117,12 @@ public class MilestoneController {
     @PostMapping("/{milestoneId}/reports/reject")
     public ApiResponse<CompletionReportResponse> rejectReport(
             @PathVariable Long milestoneId,
+            @Valid @RequestBody RejectReportRequest request,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         if (userDetails.getRole() != Role.ADMIN) {
             throw new CustomException(ErrorCode.FORBIDDEN);
         }
-        return ApiResponse.ofSuccess(milestoneService.rejectReport(milestoneId));
+        return ApiResponse.ofSuccess(milestoneService.rejectReport(milestoneId, request));
     }
 
     /**
