@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { notificationsApi } from '@/api/notifications'
 import { useSse } from '@/hooks/useSse'
@@ -7,6 +8,7 @@ import type { Notification } from '@/types/notification'
 
 export function useNotifications(enabled = true) {
   const queryClient = useQueryClient()
+  const [latestNotification, setLatestNotification] = useState<Notification | null>(null)
 
   const query = useQuery({
     queryKey: ['notifications'],
@@ -29,9 +31,10 @@ export function useNotifications(enabled = true) {
           }
         },
       )
+      setLatestNotification(notification)
     },
   })
 
   const unreadCount = query.data?.content.filter((n) => !n.isRead).length ?? 0
-  return { ...query, unreadCount }
+  return { ...query, unreadCount, latestNotification }
 }
