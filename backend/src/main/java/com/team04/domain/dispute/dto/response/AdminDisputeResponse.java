@@ -18,9 +18,10 @@ public record AdminDisputeResponse(
         String reporterNickname,
         Long reportedId,
         String reportedNickname,
-        LocalDateTime createdAt
+        LocalDateTime createdAt,
+        String ideaStatus
 ) {
-    public static AdminDisputeResponse of(Dispute dispute) {
+    public static AdminDisputeResponse of(Dispute dispute, String ideaStatus) {
         return new AdminDisputeResponse(
                 dispute.getId(),
                 dispute.getTargetType(),
@@ -32,7 +33,12 @@ public record AdminDisputeResponse(
                 dispute.getReporter().getNickname(),
                 dispute.getReported().getId(),
                 dispute.getReported().getNickname(),
-                dispute.getCreatedAt()
+                dispute.getCreatedAt(),
+                ideaStatus
         );
+    }
+
+    public static AdminDisputeResponse of(Dispute dispute) {
+        return of(dispute, null);
     }
 }

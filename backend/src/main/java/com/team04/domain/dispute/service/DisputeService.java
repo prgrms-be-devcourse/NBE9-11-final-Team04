@@ -131,10 +131,29 @@ public class DisputeService {
     }
 
     @Transactional(readOnly = true)
+    public Page<DisputeResponse> getMyDisputes(Long userId, Pageable pageable) {
+        return disputeRepository.findAllByReporterId(userId, pageable)
+                .map(DisputeResponse::of);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<DisputeResponse> getReceivedDisputes(Long userId, Pageable pageable) {
+        return disputeRepository.findAllByReportedId(userId, pageable)
+                .map(DisputeResponse::of);
+    }
+
+    @Transactional(readOnly = true)
     public Page<AdminDisputeResponse> getDisputeList(
             DisputeStatus status, DisputeCategory category, TargetType targetType, Pageable pageable) {
         return disputeRepository.findAllByFilters(status, category, targetType, pageable)
-                .map(AdminDisputeResponse::of);
+                .map(dispute -> {
+                    String ideaStatus = null;
+                    if (dispute.getTargetType() == TargetType.IDEA) {
+                        com.team04.domain.idea.entity.IdeaStatus is = ideaAdminService.getIdeaStatus(dispute.getTargetId());
+                        ideaStatus = is != null ? is.name() : null;
+                    }
+                    return AdminDisputeResponse.of(dispute, ideaStatus);
+                });
     }
 
     @Transactional(readOnly = true)

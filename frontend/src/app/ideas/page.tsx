@@ -25,6 +25,7 @@ const CATEGORY_ICONS: Record<IdeaCategory, string> = {
 const STATUS_VARIANT: Record<IdeaStatus, 'blue' | 'green' | 'orange' | 'red' | 'gray'> = {
   AI_PENDING: 'gray', EXPERT_PENDING: 'orange', ADMIN_PENDING: 'orange',
   OPEN: 'blue', IN_PROGRESS: 'green', COMPLETED: 'green', CANCELLED: 'red',
+  REJECTED: 'red', CANCELLATION_REQUESTED: 'orange', SUSPENDED: 'red',
 }
 
 const SORT_OPTIONS = [
@@ -254,7 +255,7 @@ export default function IdeaListPage() {
                           <ProgressBar value={rate} />
                           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--fg-muted)', marginTop: '6px' }}>
                             <span>{formatCurrency(idea.currentAmount)}</span>
-                            <span>{idea.supporterCount}명 후원</span>
+                            <span>{idea.sponsorCount}명 후원</span>
                           </div>
                         </div>
                       )}

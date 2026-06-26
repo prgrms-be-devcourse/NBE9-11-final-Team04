@@ -19,7 +19,7 @@ public class MockOpenAiVerificationClient implements OpenAiVerificationClient {
     public OpenAiVerificationResponse verify(OpenAiVerificationRequest request) {
         String mockContent = """
                 {
-                  "decision": "PASS",
+                  "decision": "INFO",
                   "checks": [
                     {"checkCode": "EXAGGERATED_ADVERTISEMENT", "passed": true, "score": 20, "reason": "과대광고 문구 없음"},
                     {"checkCode": "SIMILAR_SERVICE", "passed": true, "score": 20, "reason": "유사 서비스 없음"},

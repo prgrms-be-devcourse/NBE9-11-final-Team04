@@ -8,7 +8,7 @@ export interface IdeaSummary {
   oneLineIntro: string
   goalAmount: number
   currentAmount: number
-  supporterCount: number
+  sponsorCount: number
   fundingStartAt: string
   fundingEndAt: string
   status: IdeaStatus
@@ -28,8 +28,9 @@ export interface IdeaDetail {
   competitor: string
   teamIntro: string
   goalAmount: number
+  depositAmount: number
   currentAmount: number
-  supporterCount: number
+  sponsorCount: number
   fundingStartAt: string
   fundingEndAt: string
   rewardType: RewardType
@@ -58,6 +59,7 @@ export interface CreateIdeaRequest {
   competitor: string
   teamIntro: string
   goalAmount: number
+  depositAmount: number
   fundingStartAt: string
   fundingEndAt: string
   rewardType: RewardType
@@ -97,4 +99,17 @@ export interface IdeaListParams {
   page?: number
   size?: number
   keyword?: string
+}
+
+export type MilestoneStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
+
+export interface Milestone {
+  id: number
+  ideaId: number
+  step: number
+  goal: string
+  expectedResult: string
+  expectedDate: string
+  status: MilestoneStatus
+  createdAt: string
 }

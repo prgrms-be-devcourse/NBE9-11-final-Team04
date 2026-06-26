@@ -31,7 +31,7 @@ export default function FundingListPage() {
               <p className="mt-1 line-clamp-2 text-sm text-slate-500">{idea.oneLineIntro}</p>
               <div className="mt-4">
                 <ProgressBar value={calcAchievementRate(idea.currentAmount, idea.goalAmount)} />
-                <p className="mt-2 text-xs text-slate-500">{formatCurrency(idea.currentAmount)} · {idea.supporterCount}명</p>
+                <p className="mt-2 text-xs text-slate-500">{formatCurrency(idea.currentAmount)} · {idea.sponsorCount}명</p>
               </div>
             </Card>
           </Link>

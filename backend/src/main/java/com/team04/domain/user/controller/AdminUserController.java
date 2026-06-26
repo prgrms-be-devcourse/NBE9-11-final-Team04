@@ -4,7 +4,9 @@ import com.team04.domain.user.dto.request.UserRoleRequest;
 import com.team04.domain.user.dto.request.UserStatusRequest;
 import com.team04.domain.user.dto.response.AdminUserResponse;
 import com.team04.domain.user.dto.response.UserStatsResponse;
+import com.team04.domain.user.entity.Role;
 import com.team04.domain.user.service.UserService;
+import com.team04.domain.user.status.UserStatus;
 import com.team04.global.response.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -25,8 +27,10 @@ public class AdminUserController {
 
     @GetMapping
     public ApiResponse<Page<AdminUserResponse>> getUsers(
+            @RequestParam(required = false) UserStatus status,
+            @RequestParam(required = false) Role role,
             @PageableDefault(size = 20) Pageable pageable) {
-        return ApiResponse.ofSuccess(userService.getUsers(pageable));
+        return ApiResponse.ofSuccess(userService.getUsers(status, role, pageable));
     }
 
     @PatchMapping("/{userId}/status")

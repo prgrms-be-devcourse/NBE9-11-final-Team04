@@ -84,4 +84,22 @@ export const authApi = {
         return tokens
       },
     ),
+
+  adminInvite: (email: string) =>
+    unwrap(apiClient.post<ApiResponse<void>>('/auth/admin-invitations', { email })),
+
+  adminSignup: (body: {
+    inviteToken: string
+    email: string
+    password: string
+    name: string
+    nickname: string
+    age: number
+  }) =>
+    unwrap(apiClient.post<ApiResponse<TokenResponse>>('/auth/admin-signup', body)).then(
+      (tokens) => {
+        setTokens(tokens)
+        return tokens
+      },
+    ),
 }

@@ -22,10 +22,11 @@ public class IdeaAdminService {
 
     private final IdeaRepository ideaRepository;
 
-    /** 요청한 상태의 삭제되지 않은 아이디어 심사 목록을 페이지로 조회합니다. */
+    /** 요청한 상태의 삭제되지 않은 아이디어 심사 목록을 페이지로 조회합니다. status가 null이면 전체 조회합니다. */
     @Transactional(readOnly = true)
     public Page<AdminIdeaReviewResponse> getReviews(IdeaStatus status, Pageable pageable) {
-        return ideaRepository.findByStatusInAndDeletedAtIsNull(List.of(status), pageable)
+        List<IdeaStatus> statuses = status != null ? List.of(status) : List.of(IdeaStatus.values());
+        return ideaRepository.findByStatusInAndDeletedAtIsNull(statuses, pageable)
                 .map(AdminIdeaReviewResponse::of);
     }
 
@@ -82,6 +83,14 @@ public class IdeaAdminService {
     @Transactional(readOnly = true)
     public Map<IdeaStatus, Long> getStatusStats() {
         return ideaRepository.countByStatus();
+    }
+
+    /** 아이디어 현재 상태를 조회합니다. 존재하지 않으면 null을 반환합니다. */
+    @Transactional(readOnly = true)
+    public IdeaStatus getIdeaStatus(Long ideaId) {
+        return ideaRepository.findByIdAndDeletedAtIsNull(ideaId)
+                .map(Idea::getStatus)
+                .orElse(null);
     }
 
     /** 소프트 삭제되지 않은 아이디어를 조회하고 없으면 공통 예외를 발생시킵니다. */

@@ -2,7 +2,8 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
+import type { Notification } from '@/types/notification'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { authApi } from '@/api/auth'
 import { notificationsApi } from '@/api/notifications'
@@ -42,10 +43,26 @@ export function Unb() {
 export function Gnb() {
   const pathname = usePathname()
   const { isAuthenticated, user, setUser, logout, initAuth, hydrated } = useAuthStore()
-  const { data: notifData, unreadCount } = useNotifications(isAuthenticated)
+  const { data: notifData, unreadCount, latestNotification } = useNotifications(isAuthenticated)
   const queryClient = useQueryClient()
   const [bellOpen, setBellOpen] = useState(false)
   const bellRef = useRef<HTMLDivElement>(null)
+  const [toast, setToast] = useState<Notification | null>(null)
+  const [toastVisible, setToastVisible] = useState(false)
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const dismissToast = useCallback(() => {
+    setToastVisible(false)
+    setTimeout(() => setToast(null), 300)
+  }, [])
+
+  useEffect(() => {
+    if (!latestNotification) return
+    setToast(latestNotification)
+    setToastVisible(true)
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current)
+    toastTimerRef.current = setTimeout(dismissToast, 4000)
+  }, [latestNotification, dismissToast])
 
   useEffect(() => {
     if (!bellOpen) return
@@ -95,13 +112,14 @@ export function Gnb() {
       case 'EXPERT':
         return [explore, { href: '/expert/matches', label: '매칭 관리' }]
       case 'ADMIN':
-        return [explore, { href: '/admin', label: '관리자' }]
+        return [explore]
       default:
         return [explore, { href: '/fundings', label: '펀딩' }]
     }
   })()
 
   return (
+    <>
     <header style={{
       background: 'var(--brand)',
       height: 'var(--nav-height)',
@@ -156,7 +174,7 @@ export function Gnb() {
                     background: bellOpen ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.15)',
                     borderRadius: '50%', border: 'none', cursor: 'pointer',
                     alignItems: 'center', justifyContent: 'center',
-                    fontSize: '16px', transition: 'background 0.2s',
+                    fontSize: '20px', transition: 'background 0.2s',
                   }}
                 >
                   🔔
@@ -288,6 +306,45 @@ export function Gnb() {
                 )}
               </div>
 
+              {/* 전문가 신청 버튼 (USER 전용) */}
+              {user?.role === 'USER' && (
+                <Link
+                  href="/expert-apply"
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '5px',
+                    fontSize: '13px', fontWeight: 700,
+                    color: 'var(--brand-dark)',
+                    background: '#fff',
+                    padding: '6px 14px',
+                    borderRadius: '99px',
+                    textDecoration: 'none',
+                    whiteSpace: 'nowrap',
+                    transition: 'background 0.2s',
+                  }}
+                >
+                  🎓 전문가 신청
+                </Link>
+              )}
+
+              {/* 관리자 버튼 */}
+              {user?.role === 'ADMIN' && (
+                <Link
+                  href="/admin"
+                  title="관리자 페이지"
+                  style={{
+                    display: 'flex',
+                    width: '36px', height: '36px',
+                    background: pathname.startsWith('/admin') ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.15)',
+                    borderRadius: '50%', border: 'none',
+                    alignItems: 'center', justifyContent: 'center',
+                    fontSize: '20px', transition: 'background 0.2s',
+                    textDecoration: 'none',
+                  }}
+                >
+                  ⚙️
+                </Link>
+              )}
+
               {/* 유저 pill */}
               <Link href="/mypage" style={{
                 display: 'flex', alignItems: 'center', gap: '8px',
@@ -354,6 +411,50 @@ export function Gnb() {
         </div>
       </div>
     </header>
+
+      {/* 알림 토스트 */}
+      {toast && (
+        <div
+          onClick={dismissToast}
+          style={{
+            position: 'fixed',
+            top: '80px',
+            right: '24px',
+            zIndex: 9999,
+            width: '320px',
+            background: '#fff',
+            border: '1px solid var(--border)',
+            borderLeft: '4px solid var(--brand)',
+            borderRadius: '12px',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+            padding: '14px 16px',
+            display: 'flex',
+            gap: '12px',
+            alignItems: 'flex-start',
+            cursor: 'pointer',
+            opacity: toastVisible ? 1 : 0,
+            transform: toastVisible ? 'translateX(0)' : 'translateX(24px)',
+            transition: 'opacity 0.3s, transform 0.3s',
+          }}
+        >
+          <span style={{ fontSize: '20px', flexShrink: 0, marginTop: '1px' }}>🔔</span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ fontSize: '13px', fontWeight: 700, color: 'var(--fg)', marginBottom: '3px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {toast.title}
+            </p>
+            <p style={{ fontSize: '12px', color: 'var(--fg-muted)', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+              {toast.message}
+            </p>
+          </div>
+          <button
+            onClick={(e) => { e.stopPropagation(); dismissToast() }}
+            style={{ background: 'none', border: 'none', color: 'var(--fg-muted)', fontSize: '16px', cursor: 'pointer', padding: '0', lineHeight: 1, flexShrink: 0 }}
+          >
+            ×
+          </button>
+        </div>
+      )}
+    </>
   )
 }
 

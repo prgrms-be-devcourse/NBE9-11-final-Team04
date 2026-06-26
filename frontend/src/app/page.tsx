@@ -37,6 +37,7 @@ const SCORE_ITEMS = [
 const STATUS_VARIANT: Record<IdeaStatus, 'blue' | 'green' | 'orange' | 'red' | 'gray'> = {
   AI_PENDING: 'gray', EXPERT_PENDING: 'orange', ADMIN_PENDING: 'orange',
   OPEN: 'blue', IN_PROGRESS: 'green', COMPLETED: 'green', CANCELLED: 'red',
+  REJECTED: 'red', CANCELLATION_REQUESTED: 'orange', SUSPENDED: 'red',
 }
 
 const inner: React.CSSProperties = { maxWidth: '1100px', margin: '0 auto', padding: '0 24px' }
@@ -49,8 +50,15 @@ function usePrimaryCta() {
   return { href: '/ideas/new', label: '아이디어 제안하기 →' }
 }
 
+const EXPERT_BENEFITS = [
+  { icon: '🎓', text: '국가자격 인증으로 공신력 있는 전문가로 활동' },
+  { icon: '💡', text: '다양한 아이디어를 검토하며 인사이트 확장' },
+  { icon: '🤝', text: '제안자와 직접 협업하는 전문가 워크스페이스 제공' },
+  { icon: '⭐', text: '검증 참여 이력이 플랫폼 프로필에 축적' },
+]
+
 export default function HomePage() {
-  const { isAuthenticated } = useAuthStore()
+  const { isAuthenticated, user } = useAuthStore()
   const cta = usePrimaryCta()
   const { data: topIdeas } = useQuery({ queryKey: ['ideas', 'top5'], queryFn: ideasApi.getTop5, retry: false })
 
@@ -251,6 +259,75 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* ===== 전문가 모집 ===== */}
+      <section style={{ ...sectionPad, background: 'var(--bg-alt)' }}>
+        <div style={{ ...inner, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '64px', alignItems: 'center' }}>
+          {/* 좌측: 설명 */}
+          <div>
+            <span style={{ display: 'inline-block', fontSize: '13px', fontWeight: 700, color: 'var(--brand-dark)', background: 'var(--brand-tint)', padding: '5px 14px', borderRadius: '99px', marginBottom: '16px' }}>
+              전문가 모집
+            </span>
+            <h2 style={{ fontSize: 'clamp(24px, 3vw, 36px)', fontWeight: 700, lineHeight: 1.2, letterSpacing: '-0.02em', color: 'var(--fg)', marginBottom: '16px' }}>
+              당신의 전문성으로<br /><em style={{ color: 'var(--brand)', fontStyle: 'normal' }}>아이디어를 검증하세요</em>
+            </h2>
+            <p style={{ fontSize: '16px', color: 'var(--fg-muted)', lineHeight: 1.7, marginBottom: '32px' }}>
+              SeedLink의 전문가(EXPERT)는 국가자격 인증을 받은 도메인 전문가입니다.<br />
+              AI 검증을 넘어선 심층적인 아이디어 검토에 참여하고, 플랫폼 신뢰도를 함께 만들어 가세요.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {EXPERT_BENEFITS.map((b) => (
+                <div key={b.text} style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                  <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'var(--brand-tint)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0 }}>
+                    {b.icon}
+                  </div>
+                  <span style={{ fontSize: '15px', color: 'var(--fg)', lineHeight: 1.5 }}>{b.text}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* 우측: 자격 카드 */}
+          <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: '16px', padding: '36px', boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }}>
+            <div style={{ fontSize: '16px', fontWeight: 700, color: 'var(--fg)', marginBottom: '20px' }}>
+              🎯 지원 자격
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: '32px' }}>
+              {[
+                '국가 공인 자격증 보유자 (필수)',
+                '해당 분야 실무 경험 보유',
+                '아이디어 검증 활동 참여 의향',
+              ].map((req) => (
+                <div key={req} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'var(--brand-tint)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--brand-dark)' }}>✓</span>
+                  </div>
+                  <span style={{ fontSize: '14px', color: 'var(--fg)' }}>{req}</span>
+                </div>
+              ))}
+            </div>
+            <div style={{ fontSize: '12px', color: 'var(--fg-muted)', background: 'var(--bg-alt)', borderRadius: '10px', padding: '12px 16px', marginBottom: '24px', lineHeight: 1.6 }}>
+              💡 한국산업인력공단 국가자격 API를 통해 자격증 진위를 자동 검증합니다.<br />매주 월요일 자격 재검증이 실행됩니다.
+            </div>
+            {user?.role === 'EXPERT' ? (
+              <div style={{ textAlign: 'center', fontSize: '15px', fontWeight: 700, color: 'var(--brand-dark)', background: 'var(--brand-tint)', padding: '14px', borderRadius: '10px' }}>
+                ✓ 이미 전문가로 활동 중입니다
+              </div>
+            ) : (
+              <Link
+                href={isAuthenticated ? '/expert-apply' : '/login'}
+                style={{
+                  display: 'block', textAlign: 'center', background: 'var(--brand)', color: '#fff',
+                  padding: '14px', borderRadius: '10px', fontSize: '16px', fontWeight: 700,
+                  textDecoration: 'none', transition: 'background 0.2s',
+                }}
+              >
+                전문가 신청하기 →
+              </Link>
+            )}
+          </div>
+        </div>
+      </section>
+
       {/* ===== 인기 프로젝트 TOP5 ===== */}
       <section style={{ ...sectionPad, background: '#fff' }}>
         <div style={inner}>
@@ -290,7 +367,7 @@ export default function HomePage() {
                       <ProgressBar value={calcAchievementRate(idea.currentAmount, idea.goalAmount)} />
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'var(--fg-muted)', marginTop: '8px' }}>
                         <span style={{ fontWeight: 700, color: 'var(--brand)' }}>{formatCurrency(idea.currentAmount)}</span>
-                        <span>{idea.supporterCount}명 후원</span>
+                        <span>{idea.sponsorCount}명 후원</span>
                       </div>
                     </div>
                   </div>
