@@ -36,8 +36,8 @@ const SCORE_ITEMS = [
 
 const STATUS_VARIANT: Record<IdeaStatus, 'blue' | 'green' | 'orange' | 'red' | 'gray'> = {
   AI_PENDING: 'gray', EXPERT_PENDING: 'orange', ADMIN_PENDING: 'orange',
-  OPEN: 'blue', IN_PROGRESS: 'green', COMPLETED: 'green', CANCELLED: 'red',REJECTED: "red", 
-  CANCELLATION_REQUESTED: "orange"
+  OPEN: 'blue', IN_PROGRESS: 'green', COMPLETED: 'green', CANCELLED: 'red',
+  REJECTED: 'red', CANCELLATION_REQUESTED: 'orange', SUSPENDED: 'red',
 }
 
 const inner: React.CSSProperties = { maxWidth: '1100px', margin: '0 auto', padding: '0 24px' }

@@ -37,7 +37,7 @@ const TECH_STACKS = Object.keys(TECH_STACK_LABELS)
 const STATUS_VARIANT: Record<IdeaStatus, 'blue' | 'green' | 'orange' | 'red' | 'gray'> = {
   AI_PENDING: 'gray', EXPERT_PENDING: 'orange', ADMIN_PENDING: 'orange',
   OPEN: 'blue', IN_PROGRESS: 'green', COMPLETED: 'green', CANCELLED: 'red',
-  REJECTED: 'red', CANCELLATION_REQUESTED: 'orange',
+  REJECTED: 'red', CANCELLATION_REQUESTED: 'orange', SUSPENDED: 'red',
 }
 
 const REWARD_ICONS: Record<RewardType, string> = {
@@ -235,6 +235,26 @@ export default function IdeaDetailPage() {
         </Badge>
       </div>
 
+      {/* 분쟁 처리 중 배너 */}
+      {idea.status === 'SUSPENDED' && (
+        <div style={{
+          padding: '14px 20px', marginBottom: '20px',
+          background: '#fef2f2', border: '1px solid #fecaca',
+          borderRadius: '10px',
+          display: 'flex', alignItems: 'flex-start', gap: '10px',
+        }}>
+          <span style={{ fontSize: '18px', flexShrink: 0 }}>⚠️</span>
+          <div>
+            <div style={{ fontSize: '14px', fontWeight: 700, color: '#dc2626', marginBottom: '2px' }}>
+              분쟁 처리 중으로 일시 중단된 아이디어입니다
+            </div>
+            <div style={{ fontSize: '13px', color: '#b91c1c' }}>
+              관리자가 신고 내용을 검토하고 있습니다. 검토 완료 후 재개 또는 취소됩니다.
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 제목 + 한 줄 소개 */}
       <h1 style={{ fontSize: '28px', fontWeight: 800, color: 'var(--fg)', lineHeight: 1.3, marginBottom: '10px' }}>
         {idea.title}
@@ -274,7 +294,7 @@ export default function IdeaDetailPage() {
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '12px' }}>
                   <div>
-                    <div style={{ fontSize: '32px', fontWeight: 800, color: 'var(--brand)', lineHeight: 1 }}>{rate}%</div>
+                    <div style={{ fontSize: '32px', fontWeight: 800, color: 'var(--brand)', lineHeight: 1 }}>{Number(rate).toFixed(1)}%</div>
                     <div style={{ fontSize: '13px', color: 'var(--fg-muted)', marginTop: '2px' }}>
                       달성률{liveProgress && <span style={{ color: '#10b981', marginLeft: '6px', fontSize: '11px' }}>● LIVE</span>}
                     </div>

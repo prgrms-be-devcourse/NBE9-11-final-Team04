@@ -25,8 +25,8 @@ const navItems: NavItem[] = [
   { path: '/mypage/payments',      label: '결제 내역',  icon: '💰', roles: ['USER'] },
   { path: '/mypage/refunds',       label: '환불 내역',  icon: '↩️', roles: ['USER'] },
   { path: '/mypage/notifications', label: '알림',       icon: '🔔' },
-  { path: '/mypage/disputes',          label: '신고 내역',  icon: '🚨', exact: true },
-  { path: '/mypage/disputes/received', label: '받은 신고',  icon: '📨' },
+  { path: '/mypage/disputes',          label: '신고 내역',  icon: '🚨', exact: true, roles: ['USER', 'EXPERT'] },
+  { path: '/mypage/disputes/received', label: '받은 신고',  icon: '📨', roles: ['USER', 'EXPERT'] },
 ]
 
 const settingItems: NavItem[] = [

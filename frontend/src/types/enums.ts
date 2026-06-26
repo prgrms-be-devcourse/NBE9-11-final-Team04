@@ -10,6 +10,7 @@ export type IdeaStatus =
   | 'CANCELLED'
   | 'REJECTED'
   | 'CANCELLATION_REQUESTED'
+  | 'SUSPENDED'
 
 export type IdeaCategory =
   | 'TECH'
@@ -44,6 +45,7 @@ export const IDEA_STATUS_LABELS: Record<IdeaStatus, string> = {
   CANCELLED:                '취소됨',
   REJECTED:                 '반려됨',
   CANCELLATION_REQUESTED:   '취소 요청중',
+  SUSPENDED:                '분쟁 처리 중 (일시 중단)',
 }
 
 export const IDEA_CATEGORY_LABELS: Record<IdeaCategory, string> = {

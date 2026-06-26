@@ -9,6 +9,9 @@ const statusVariants: Record<IdeaStatus, 'blue' | 'green' | 'orange' | 'red' | '
   IN_PROGRESS: 'green',
   COMPLETED: 'gray',
   CANCELLED: 'red',
+  REJECTED: 'red',
+  CANCELLATION_REQUESTED: 'orange',
+  SUSPENDED: 'red',
 }
 
 export function IdeaStatusBadge({ status }: { status: IdeaStatus }) {

@@ -9,13 +9,16 @@ import { IDEA_STATUS_LABELS, type IdeaStatus } from '@/types/enums'
 import { formatCurrency, formatDate } from '@/utils/format'
 
 const STATUS_VARIANT: Record<IdeaStatus, 'blue' | 'green' | 'orange' | 'red' | 'gray'> = {
-  AI_PENDING:     'gray',
-  EXPERT_PENDING: 'orange',
-  ADMIN_PENDING:  'orange',
-  OPEN:           'blue',
-  IN_PROGRESS:    'green',
-  COMPLETED:      'green',
-  CANCELLED:      'red',
+  AI_PENDING:             'gray',
+  EXPERT_PENDING:         'orange',
+  ADMIN_PENDING:          'orange',
+  OPEN:                   'blue',
+  IN_PROGRESS:            'green',
+  COMPLETED:              'green',
+  CANCELLED:              'red',
+  REJECTED:               'red',
+  CANCELLATION_REQUESTED: 'orange',
+  SUSPENDED:              'red',
 }
 
 export default function MyIdeasPage() {
@@ -77,15 +80,30 @@ export default function MyIdeasPage() {
             {ideas.map((idea) => (
               <Link key={idea.ideaId} href={`/ideas/${idea.ideaId}`} style={{
                 display: 'flex',
-                alignItems: 'center',
-                gap: '20px',
+                flexDirection: 'column',
                 background: '#fff',
-                border: '1px solid var(--border)',
+                border: `1px solid ${idea.status === 'SUSPENDED' ? '#fca5a5' : 'var(--border)'}`,
                 borderRadius: '12px',
-                padding: '20px 24px',
+                overflow: 'hidden',
                 transition: 'box-shadow 0.2s',
                 textDecoration: 'none',
               }}>
+                {idea.status === 'SUSPENDED' && (
+                  <div style={{
+                    padding: '8px 20px',
+                    background: '#fef2f2',
+                    borderBottom: '1px solid #fecaca',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    color: '#dc2626',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                  }}>
+                    ⚠️ 분쟁 처리 중으로 일시 중단된 아이디어입니다. 관리자 검토 후 재개됩니다.
+                  </div>
+                )}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '20px', padding: '20px 24px' }}>
                 <div style={{
                   width: '56px',
                   height: '56px',
@@ -117,6 +135,7 @@ export default function MyIdeasPage() {
                   <p style={{ fontSize: '13px', color: 'var(--fg-muted)', marginTop: '2px' }}>
                     목표 {formatCurrency(idea.goalAmount)}
                   </p>
+                </div>
                 </div>
               </Link>
             ))}
