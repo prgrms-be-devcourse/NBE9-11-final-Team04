@@ -52,10 +52,12 @@ public class IdeaFundingPaidListener {
         Idea idea = ideaRepository.findByIdForUpdate(event.ideaId())
                 .orElseThrow(() -> new CustomException(ErrorCode.IDEA_NOT_FOUND));
 
+        long previousAmount = idea.getCurrentAmount();
         idea.addFundingAmount(event.amount());
         funding.markAmountAppliedToIdea();
 
-        if (idea.getCurrentAmount() >= idea.getGoalAmount()) {
+        // 이번 후원으로 처음 목표를 달성한 경우에만 마일스톤 시작 (초과 후원 시 중복 호출 방지)
+        if (previousAmount < idea.getGoalAmount() && idea.getCurrentAmount() >= idea.getGoalAmount()) {
             milestoneService.startFirstMilestone(event.ideaId());
         }
     }
