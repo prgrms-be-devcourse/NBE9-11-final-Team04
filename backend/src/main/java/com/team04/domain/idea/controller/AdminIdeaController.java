@@ -31,10 +31,10 @@ public class AdminIdeaController {
 
     private final IdeaAdminService ideaAdminService;
 
-    /** 요청한 상태의 관리자 아이디어 심사 목록을 페이지로 조회합니다. */
+    /** 요청한 상태의 관리자 아이디어 심사 목록을 페이지로 조회합니다. status 생략 시 전체 조회합니다. */
     @GetMapping
     public ApiResponse<Page<AdminIdeaReviewResponse>> getReviews(
-            @RequestParam IdeaStatus status,
+            @RequestParam(required = false) IdeaStatus status,
             @PageableDefault(size = 20) Pageable pageable
     ) {
         return ApiResponse.ofSuccess(ideaAdminService.getReviews(status, pageable));

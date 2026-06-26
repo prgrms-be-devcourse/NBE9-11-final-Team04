@@ -4,16 +4,11 @@ import type { ApiResponse } from '@/types/api'
 import type { TokenResponse } from '@/types/auth'
 
 let isRefreshing = false
-let refreshQueue: Array<(token: string) => void> = []
+let refreshQueue: Array<() => void> = []
 
 function getAccessToken() {
   if (typeof window === 'undefined') return null
   return localStorage.getItem(TOKEN_KEYS.ACCESS)
-}
-
-function getRefreshToken() {
-  if (typeof window === 'undefined') return null
-  return localStorage.getItem(TOKEN_KEYS.REFRESH)
 }
 
 export function setTokens(tokens: TokenResponse) {
@@ -35,6 +30,9 @@ export const apiClient = axios.create({
 apiClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   const token = getAccessToken()
   if (token) config.headers.Authorization = `Bearer ${token}`
+  if (config.data instanceof FormData) {
+    delete config.headers['Content-Type']
+  }
   return config
 })
 
@@ -44,34 +42,27 @@ apiClient.interceptors.response.use(
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean }
     if (error.response?.status !== 401 || originalRequest._retry) return Promise.reject(error)
 
-    const refreshToken = getRefreshToken()
-    if (!refreshToken) {
-      clearTokens()
-      return Promise.reject(error)
-    }
-
+    // 갱신 진행 중이면 큐에 대기
     if (isRefreshing) {
-      return new Promise((resolve) => {
-        refreshQueue.push((token: string) => {
-          originalRequest.headers.Authorization = `Bearer ${token}`
-          resolve(apiClient(originalRequest))
-        })
-      })
+      return new Promise<void>((resolve) => {
+        refreshQueue.push(resolve)
+      }).then(() => apiClient(originalRequest))
     }
 
     originalRequest._retry = true
     isRefreshing = true
 
     try {
+      // refreshToken은 httpOnly 쿠키로 관리 — body 없이 전송하면 쿠키가 자동으로 함께 전송됨
       const { data } = await axios.post<ApiResponse<TokenResponse>>(
         `${API_BASE_URL}/auth/token-refresh`,
-        { refreshToken },
+        null,
         { withCredentials: true },
       )
+      // localStorage도 새 토큰으로 동기화 — request 인터셉터가 Authorization 헤더에 사용
       setTokens(data.data)
-      refreshQueue.forEach((cb) => cb(data.data.accessToken))
+      refreshQueue.forEach((resolve) => resolve())
       refreshQueue = []
-      originalRequest.headers.Authorization = `Bearer ${data.data.accessToken}`
       return apiClient(originalRequest)
     } catch {
       clearTokens()

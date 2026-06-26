@@ -8,6 +8,10 @@ import com.team04.global.response.ApiResponse;
 import com.team04.global.security.CustomUserDetails;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -19,6 +23,20 @@ import org.springframework.web.multipart.MultipartFile;
 public class DisputeController {
 
     private final DisputeService disputeService;
+
+    @GetMapping("/me")
+    public ApiResponse<Page<DisputeResponse>> getMyDisputes(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        return ApiResponse.ofSuccess(disputeService.getMyDisputes(userDetails.getUserId(), pageable));
+    }
+
+    @GetMapping("/received")
+    public ApiResponse<Page<DisputeResponse>> getReceivedDisputes(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        return ApiResponse.ofSuccess(disputeService.getReceivedDisputes(userDetails.getUserId(), pageable));
+    }
 
     @PostMapping
     public ApiResponse<DisputeResponse> createDispute(

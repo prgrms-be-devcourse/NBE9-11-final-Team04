@@ -26,7 +26,7 @@ export function formatDateTime(date: string): string {
 
 export function calcAchievementRate(current: number, goal: number): number {
   if (goal <= 0) return 0
-  return Math.min(100, Math.round((current / goal) * 100))
+  return Math.round((current / goal) * 100)
 }
 
 export function getDaysRemaining(endDate: string): number {

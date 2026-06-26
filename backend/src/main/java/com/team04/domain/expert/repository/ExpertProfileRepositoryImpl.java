@@ -104,6 +104,24 @@ public class ExpertProfileRepositoryImpl implements ExpertProfileRepositoryCusto
     }
 
     @Override
+    public Page<ExpertProfile> findAllProfiles(Pageable pageable) {
+        List<ExpertProfile> content = queryFactory
+                .selectFrom(expertProfile)
+                .join(expertProfile.user).fetchJoin()
+                .orderBy(expertProfile.id.desc())
+                .offset(pageable.getOffset())
+                .limit(pageable.getPageSize())
+                .fetch();
+
+        Long total = queryFactory
+                .select(expertProfile.count())
+                .from(expertProfile)
+                .fetchOne();
+
+        return new PageImpl<>(content, pageable, total == null ? 0 : total);
+    }
+
+    @Override
     public Page<ExpertProfile> findProfilesByStatus(ExpertStatus status, Pageable pageable) {
         List<ExpertProfile> content = queryFactory
                 .selectFrom(expertProfile)

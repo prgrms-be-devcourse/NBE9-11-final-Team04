@@ -1,5 +1,8 @@
 package com.team04.domain.match.service;
 
+import com.team04.domain.idea.entity.Idea;
+import com.team04.domain.idea.entity.IdeaStatus;
+import com.team04.domain.idea.repository.IdeaRepository;
 import com.team04.domain.match.dto.request.ExpertReviewRequest;
 import com.team04.domain.match.dto.response.ExpertReviewResponse;
 import com.team04.domain.expert.entity.ExpertProfile;
@@ -9,9 +12,15 @@ import com.team04.domain.match.repository.ExpertMatchRepository;
 import com.team04.domain.match.repository.ExpertReviewRepository;
 import com.team04.domain.match.entity.ExpertMatch;
 import com.team04.domain.match.entity.MatchStatus;
+import com.team04.domain.notification.entity.NotificationPriority;
+import com.team04.domain.notification.entity.NotificationType;
+import com.team04.domain.verification.entity.TrustScore;
+import com.team04.domain.verification.repository.TrustScoreRepository;
+import com.team04.global.event.NotificationEvent;
 import com.team04.global.exception.CustomException;
 import com.team04.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,14 +28,18 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class ExpertReviewService {
 
+    private static final int EXPERT_MATCHING_SCORE = 20;
+
     private final ExpertMatchRepository expertMatchRepository;
     private final ExpertProfileRepository expertProfileRepository;
     private final ExpertReviewRepository expertReviewRepository;
+    private final IdeaRepository ideaRepository;
+    private final TrustScoreRepository trustScoreRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public ExpertReviewResponse createReview(Long userId, Long matchId, ExpertReviewRequest request) {
 
-        // 전문가 프로필 조회 및 검증 완료 여부 확인
         ExpertProfile expertProfile = expertProfileRepository.findByUserId(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.EXPERT_NOT_FOUND));
 
@@ -34,16 +47,13 @@ public class ExpertReviewService {
             throw new CustomException(ErrorCode.EXPERT_NOT_VERIFIED);
         }
 
-        // 매칭 조회 및 본인 매칭인지 확인
         ExpertMatch match = expertMatchRepository.findByIdAndUserId(matchId, userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.MATCH_NOT_FOUND));
 
-        // 수락된 매칭인지 확인
         if (match.getStatus() != MatchStatus.ACCEPTED) {
             throw new CustomException(ErrorCode.MATCH_NOT_ACCEPTED);
         }
 
-        // 이미 리뷰가 작성된 매칭인지 확인
         if (expertReviewRepository.existsByExpertMatch_Id(matchId)) {
             throw new CustomException(ErrorCode.REVIEW_ALREADY_EXISTS);
         }
@@ -57,8 +67,39 @@ public class ExpertReviewService {
                 request.riskFactor(),
                 request.opinion()
         );
-
         expertReviewRepository.save(review);
+
+        Idea idea = ideaRepository.findByIdAndDeletedAtIsNull(match.getIdeaId())
+                .orElseThrow(() -> new CustomException(ErrorCode.IDEA_NOT_FOUND));
+
+        // EXPERT_PENDING 상태일 때만 ADMIN_PENDING으로 전환
+        if (idea.getStatus() == IdeaStatus.EXPERT_PENDING) {
+            idea.changeStatus(IdeaStatus.ADMIN_PENDING);
+            ideaRepository.save(idea);
+        }
+
+        // 신뢰도 점수 반영 (전문가 매칭 20점)
+        trustScoreRepository.findByIdeaId(idea.getId()).ifPresent(trustScore -> {
+            trustScore.updateScores(
+                    trustScore.getAiVerificationScore(),
+                    trustScore.getMilestoneSpecificityScore(),
+                    EXPERT_MATCHING_SCORE,
+                    trustScore.getAdminApprovalScore(),
+                    trustScore.getProposerHistoryScore()
+            );
+            trustScoreRepository.save(trustScore);
+        });
+
+        // 제안자에게 알림 발송
+        eventPublisher.publishEvent(new NotificationEvent(
+                idea.getUserId(),
+                NotificationType.IDEA_EXPERT_APPROVED,
+                "전문가 검증 완료",
+                "전문가 검증서가 제출되었습니다. 관리자 최종 승인 단계로 이동했습니다.",
+                idea.getId(),
+                NotificationPriority.NORMAL
+        ));
+
         return ExpertReviewResponse.from(review);
     }
 }

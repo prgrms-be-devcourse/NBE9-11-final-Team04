@@ -12,4 +12,7 @@ export const paymentsApi = {
 
   refund: (paymentId: number) =>
     unwrap(apiClient.post<ApiResponse<void>>(`/payments/${paymentId}/refund`)),
+
+  demoConfirm: (paymentId: number) =>
+    unwrap(apiClient.post<ApiResponse<Payment>>(`/payments/${paymentId}/demo-confirm`)),
 }

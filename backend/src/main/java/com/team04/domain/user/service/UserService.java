@@ -40,9 +40,18 @@ public class UserService {
     }
 
     @Transactional(readOnly = true)
-    public Page<AdminUserResponse> getUsers(Pageable pageable) {
-        return userRepository.findAll(pageable)
-                .map(AdminUserResponse::of);
+    public Page<AdminUserResponse> getUsers(UserStatus status, Role role, Pageable pageable) {
+        Page<User> result;
+        if (status != null && role != null) {
+            result = userRepository.findByStatusAndRole(status, role, pageable);
+        } else if (status != null) {
+            result = userRepository.findByStatus(status, pageable);
+        } else if (role != null) {
+            result = userRepository.findByRole(role, pageable);
+        } else {
+            result = userRepository.findAll(pageable);
+        }
+        return result.map(AdminUserResponse::of);
     }
 
     //탈퇴,정지된 회원인지 권한 검증

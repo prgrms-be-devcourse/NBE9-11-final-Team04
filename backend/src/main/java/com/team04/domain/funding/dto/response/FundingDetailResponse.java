@@ -25,7 +25,7 @@ public record FundingDetailResponse(
                 idea.getId(),
                 idea.getGoalAmount(),
                 idea.getCurrentAmount(),
-                Math.min(rate, 100.0),
+                rate,
                 idea.getSponsorCount(),
                 idea.getFundingStartAt(),
                 idea.getFundingEndAt(),

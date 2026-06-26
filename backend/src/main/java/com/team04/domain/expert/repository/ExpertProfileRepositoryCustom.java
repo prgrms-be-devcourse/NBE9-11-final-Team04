@@ -17,6 +17,9 @@ public interface ExpertProfileRepositoryCustom {
     // 격리 전문가 목록 조회
     Page<ExpertProfile> findProfilesByStatus(ExpertStatus status, Pageable pageable);
 
+    // 관리자용 전체 전문가 목록 (status 필터 없음)
+    Page<ExpertProfile> findAllProfiles(Pageable pageable);
+
     // 스케줄러용
     // offset 방식 (처리 후 status 변경되므로 안전)
     List<ExpertProfile> findActiveBusinessRegistrationProfiles(int offset, int limit);

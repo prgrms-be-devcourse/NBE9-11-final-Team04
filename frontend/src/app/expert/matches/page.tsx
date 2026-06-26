@@ -7,7 +7,6 @@ import { matchesApi } from '@/api/matches'
 import { ideasApi } from '@/api/ideas'
 import { ProtectedRoute } from '@/components/layout/AppShell'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
-import { ReviewModal } from '@/components/views/ReviewModal'
 import { IDEA_CATEGORY_LABELS, type IdeaCategory } from '@/types/enums'
 import { formatDate } from '@/utils/format'
 
@@ -96,7 +95,6 @@ export default function ExpertMatchesPage() {
   const [categoryFilter, setCategoryFilter] = useState<IdeaCategory | 'ALL'>('ALL')
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDING' | 'ACCEPTED' | 'REJECTED'>('ALL')
   const [rejectTarget, setRejectTarget] = useState<number | null>(null)
-  const [reviewTarget, setReviewTarget] = useState<{ matchId: number; ideaTitle: string } | null>(null)
 
   const isReviewed = (matchId: number) => {
     try { return !!localStorage.getItem(`reviewed_match_${matchId}`) } catch { return false }
@@ -134,11 +132,6 @@ export default function ExpertMatchesPage() {
   const handleReject = (matchId: number, reason: string) => {
     respondMutation.mutate({ matchId, status: 'REJECTED', rejectReason: reason })
     setRejectTarget(null)
-  }
-
-  const handleReviewClose = () => {
-    setReviewTarget(null)
-    queryClient.invalidateQueries({ queryKey: ['matches'] })
   }
 
   const isLoading = matchesLoading || ideaQueries.some((q) => q.isLoading && q.fetchStatus !== 'idle')
@@ -318,20 +311,18 @@ export default function ExpertMatchesPage() {
                         ✅ 검증서 제출 완료
                       </div>
                     ) : (
-                      <button
-                        onClick={() => setReviewTarget({
-                          matchId: match.matchId,
-                          ideaTitle: idea?.title ?? `아이디어 #${match.ideaId}`,
-                        })}
+                      <Link
+                        href={`/expert/matches/${match.matchId}/review`}
                         style={{
                           alignSelf: 'flex-start', padding: '10px 24px',
                           borderRadius: '8px', border: 'none',
                           background: '#059669', color: '#fff',
                           fontWeight: 700, fontSize: '14px', cursor: 'pointer',
+                          textDecoration: 'none', display: 'inline-block',
                         }}
                       >
                         📋 검증서 작성
-                      </button>
+                      </Link>
                     )
                   )}
                 </div>
@@ -345,14 +336,6 @@ export default function ExpertMatchesPage() {
         <RejectModal
           onConfirm={(reason) => handleReject(rejectTarget, reason)}
           onCancel={() => setRejectTarget(null)}
-        />
-      )}
-
-      {reviewTarget !== null && (
-        <ReviewModal
-          matchId={reviewTarget.matchId}
-          ideaTitle={reviewTarget.ideaTitle}
-          onClose={handleReviewClose}
         />
       )}
     </ProtectedRoute>

@@ -128,9 +128,9 @@ public class NotificationService {
 
         sseEmitterStorage.add(userId, emitter);
 
-        emitter.onCompletion(() -> sseEmitterStorage.remove(userId));
-        emitter.onTimeout(() -> sseEmitterStorage.remove(userId));
-        emitter.onError((e) -> sseEmitterStorage.remove(userId));
+        emitter.onCompletion(() -> sseEmitterStorage.removeIfSame(userId, emitter));
+        emitter.onTimeout(() -> sseEmitterStorage.removeIfSame(userId, emitter));
+        emitter.onError((e) -> sseEmitterStorage.removeIfSame(userId, emitter));
 
         try {
             emitter.send(SseEmitter.event().name("connect").data("connected"));
