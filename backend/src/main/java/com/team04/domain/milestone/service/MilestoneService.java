@@ -20,7 +20,7 @@ import com.team04.domain.settlement.service.SettlementService;
 import com.team04.global.event.NotificationEvent;
 import com.team04.global.exception.CustomException;
 import com.team04.global.exception.ErrorCode;
-import com.team04.global.storage.StorageClient;
+import com.team04.global.storage.MilestoneReportStorageClient;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -36,7 +36,8 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class MilestoneService {
 
-    private static final String REPORT_STORAGE_DIR = "milestone/reports";
+    private static final String COMPLETION_REPORT_DIR = "completion";
+    private static final String APPEAL_REPORT_DIR = "appeal";
 
     private final MilestoneRepository milestoneRepository;
     private final CompletionReportRepository completionReportRepository;
@@ -44,9 +45,9 @@ public class MilestoneService {
     private final SettlementService settlementService;
     private final RefundService refundService;
     private final FundingService fundingService;
+    private final MilestoneReportStorageClient milestoneReportStorageClient;
     private final FundingRepository fundingRepository;
     private final ApplicationEventPublisher eventPublisher;
-    private final StorageClient storageClient;
 
     /**
      * 마일스톤 목록 조회
@@ -82,7 +83,7 @@ public class MilestoneService {
         if (!report.getMilestoneId().equals(milestoneId)) {
             throw new CustomException(ErrorCode.COMPLETION_REPORT_MISMATCH);
         }
-        return CompletionReportResponse.from(report);
+        return CompletionReportResponse.from(report, milestoneReportStorageClient);
     }
 
     /**
@@ -96,7 +97,7 @@ public class MilestoneService {
         }
         return completionReportRepository.findByMilestoneIdOrderBySubmittedAtDesc(milestoneId)
                 .stream()
-                .map(CompletionReportResponse::from)
+                .map(report -> CompletionReportResponse.from(report, milestoneReportStorageClient))
                 .toList();
     }
 
@@ -121,17 +122,17 @@ public class MilestoneService {
             throw new CustomException(ErrorCode.MILESTONE_ALREADY_COMPLETED);
         }
 
-        String fileUrl = uploadFileIfPresent(file);
+        String fileKey = uploadFileIfPresent(file, COMPLETION_REPORT_DIR);
         milestone.clearOverdue();
 
         CompletionReport report = CompletionReport.builder()
                 .milestoneId(milestoneId)
                 .type(CompletionReportType.COMPLETION)
                 .content(request.content())
-                .fileUrl(fileUrl)
+                .fileUrl(fileKey)
                 .build();
 
-        return CompletionReportResponse.from(completionReportRepository.save(report));
+        return CompletionReportResponse.from(completionReportRepository.save(report), milestoneReportStorageClient);
     }
 
     /**
@@ -158,17 +159,17 @@ public class MilestoneService {
             throw new CustomException(ErrorCode.INVALID_MILESTONE_STATUS_TRANSITION);
         }
 
-        String fileUrl = uploadFileIfPresent(file);
+        String fileKey = uploadFileIfPresent(file, APPEAL_REPORT_DIR);
         milestone.clearOverdue();
 
         CompletionReport appealReport = CompletionReport.builder()
                 .milestoneId(milestoneId)
                 .type(CompletionReportType.APPEAL)
                 .content(request.content())
-                .fileUrl(fileUrl)
+                .fileUrl(fileKey)
                 .build();
 
-        return CompletionReportResponse.from(completionReportRepository.save(appealReport));
+        return CompletionReportResponse.from(completionReportRepository.save(appealReport), milestoneReportStorageClient);
     }
 
     /**
@@ -197,7 +198,7 @@ public class MilestoneService {
             startNextMilestone(milestone.getIdeaId(), milestone.getStep() + 1);
         }
 
-        return CompletionReportResponse.from(report);
+        return CompletionReportResponse.from(report, milestoneReportStorageClient);
     }
 
     /**
@@ -226,7 +227,7 @@ public class MilestoneService {
             startNextMilestone(milestone.getIdeaId(), milestone.getStep() + 1);
         }
 
-        return CompletionReportResponse.from(report);
+        return CompletionReportResponse.from(report, milestoneReportStorageClient);
     }
 
     /**
@@ -240,7 +241,7 @@ public class MilestoneService {
         CompletionReport report = findLatestReport(milestoneId);
         report.reject();
         notifyReportRejected(milestone, report);
-        return CompletionReportResponse.from(report);
+        return CompletionReportResponse.from(report, milestoneReportStorageClient);
     }
 
     /**
@@ -314,11 +315,13 @@ public class MilestoneService {
     }
 
 
-    private String uploadFileIfPresent(MultipartFile file) {
+    private String uploadFileIfPresent(MultipartFile file, String subDirectory) {
         if (file == null || file.isEmpty()) {
             return null;
         }
-        return storageClient.upload(file, REPORT_STORAGE_DIR);
+        // 완료/소명 보고서는 공개 이미지 URL이 아니라 보안 스토리지 객체 key로 저장합니다.
+        // 조회 응답에서만 짧은 만료 시간을 가진 접근 URL로 변환합니다.
+        return milestoneReportStorageClient.upload(file, subDirectory);
     }
 
     private void startNextMilestone(Long ideaId, int step) {
