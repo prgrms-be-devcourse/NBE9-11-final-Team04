@@ -44,6 +44,12 @@ public interface DisputeRepository extends JpaRepository<Dispute, Long> {
             Pageable pageable
     );
 
+    @Query("SELECT d FROM Dispute d JOIN FETCH d.reporter JOIN FETCH d.reported WHERE d.reporter.id = :reporterId ORDER BY d.createdAt DESC")
+    Page<Dispute> findAllByReporterId(@Param("reporterId") Long reporterId, Pageable pageable);
+
+    @Query("SELECT d FROM Dispute d JOIN FETCH d.reporter JOIN FETCH d.reported WHERE d.reported.id = :reportedId ORDER BY d.createdAt DESC")
+    Page<Dispute> findAllByReportedId(@Param("reportedId") Long reportedId, Pageable pageable);
+
     @Query("SELECT d.status, COUNT(d) FROM Dispute d GROUP BY d.status")
     List<Object[]> countGroupByStatus();
 }
