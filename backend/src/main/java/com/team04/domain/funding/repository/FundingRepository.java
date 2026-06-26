@@ -53,4 +53,15 @@ public interface FundingRepository extends JpaRepository<Funding, Long> {
             "AND f.status = com.team04.domain.funding.entity.FundingTypes.FundingStatus.PAID " +
             "AND p.status = com.team04.domain.payment.entity.PaymentTypes.PaymentStatus.SUCCESS")
     boolean existsPaidSponsorByIdeaIdAndSponsorId(@Param("ideaId") Long ideaId, @Param("sponsorId") Long sponsorId);
+
+    /**
+     * 마일스톤 전환 알림 대상 조회용
+     * 실제 결제 성공 후원자만 중복 없이 반환합니다.
+     */
+    @Query("SELECT DISTINCT f.sponsorId FROM Funding f " +
+            "JOIN Payment p ON p.fundingId = f.id " +
+            "WHERE f.ideaId = :ideaId " +
+            "AND f.status = com.team04.domain.funding.entity.FundingTypes.FundingStatus.PAID " +
+            "AND p.status = com.team04.domain.payment.entity.PaymentTypes.PaymentStatus.SUCCESS")
+    List<Long> findPaidSponsorIdsByIdeaId(@Param("ideaId") Long ideaId);
 }
