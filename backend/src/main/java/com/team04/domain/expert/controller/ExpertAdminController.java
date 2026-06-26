@@ -44,7 +44,7 @@ public class ExpertAdminController {
         return ResponseEntity.ok(ApiResponse.ofSuccess(response));
     }
 
-    // 격리 전문가 목록 조회 (하위호환)
+    /* 격리된 전문가 목록 조회 API */
     @GetMapping("/suspended")
     public ResponseEntity<ApiResponse<Page<AdminExpertSuspendedResponse>>> getSuspendedExperts(
             @PageableDefault(size = 10) Pageable pageable
@@ -55,6 +55,7 @@ public class ExpertAdminController {
         return ResponseEntity.ok(ApiResponse.ofSuccess(response));
     }
 
+    /* 소명 자료 목록 조회 API */
     @GetMapping("/{expertProfileId}/appeals")
     public ResponseEntity<ApiResponse<List<AdminExpertAppealSummaryResponse>>> getAppeals(
             @PathVariable Long expertProfileId
@@ -71,7 +72,7 @@ public class ExpertAdminController {
         return ResponseEntity.ok(ApiResponse.ofSuccess(response));
     }
 
-    // 계정 복구
+    /* 계정 복구 API */
     @PostMapping("/{expertProfileId}/restore")
     public ResponseEntity<ApiResponse<Void>> restoreExpert(
             @PathVariable Long expertProfileId
@@ -80,7 +81,7 @@ public class ExpertAdminController {
         return ResponseEntity.ok(ApiResponse.ofSuccessWithoutBody());
     }
 
-    // 권한 강등
+    /* 권한 강등 API */
     @PostMapping("/{expertProfileId}/demote")
     public ResponseEntity<ApiResponse<Void>> demoteExpert(
             @PathVariable Long expertProfileId

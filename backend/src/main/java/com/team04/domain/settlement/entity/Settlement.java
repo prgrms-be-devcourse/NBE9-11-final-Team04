@@ -42,10 +42,13 @@ public class Settlement extends BaseEntity {
     @Column(nullable = false, unique = true)
     private String idempotencyKey;
 
+    @Column(columnDefinition = "TEXT")
+    private String memo;
+
     @Builder
     private Settlement(Long ideaId, SettlementType type,
                        Long totalAmount, Long platformFee, Long payoutAmount,
-                       String idempotencyKey) {
+                       String idempotencyKey, String memo) {
         if (platformFee + payoutAmount > totalAmount) {
             throw new IllegalArgumentException("platformFee와 payoutAmount의 합은 totalAmount를 초과할 수 없습니다");
         }
@@ -56,36 +59,63 @@ public class Settlement extends BaseEntity {
         this.payoutAmount = payoutAmount;
         this.status = SettlementStatus.PENDING;
         this.idempotencyKey = idempotencyKey;
+        this.memo = memo;
+    }
+
+    public void recordMemo(String memo) {
+        if (memo == null || memo.isBlank()) {
+            return;
+        }
+        this.memo = memo;
     }
 
     public void complete() {
-        validatePendingStatus();
-        this.status = SettlementStatus.COMPLETED;
+        completeAs(SettlementStatus.COMPLETED);
     }
 
     public void depositRefund() {
-        validatePendingStatus();
-        this.status = SettlementStatus.DEPOSIT_REFUNDED;
+        completeAs(SettlementStatus.DEPOSIT_REFUNDED);
     }
 
     public void depositExhausted() {
-        validatePendingStatus();
-        this.status = SettlementStatus.DEPOSIT_EXHAUSTED;
+        completeAs(SettlementStatus.DEPOSIT_EXHAUSTED);
     }
 
     public void partialRefund() {
-        validatePendingStatus();
-        this.status = SettlementStatus.PARTIALLY_REFUNDED;
+        completeAs(SettlementStatus.PARTIALLY_REFUNDED);
     }
 
     public void forfeit() {
-        validatePendingStatus();
-        this.status = SettlementStatus.FORFEITED;
+        completeAs(SettlementStatus.FORFEITED);
     }
 
     public void refund() {
+        completeAs(SettlementStatus.REFUNDED);
+    }
+
+    public void fail() {
+        if (this.status == SettlementStatus.FAILED) {
+            return;
+        }
         validatePendingStatus();
-        this.status = SettlementStatus.REFUNDED;
+        this.status = SettlementStatus.FAILED;
+    }
+
+    /** 지급 실패 건을 스케줄러가 다시 처리할 수 있도록 대기 상태로 되돌립니다. */
+    public void retryPayout() {
+        // 스케줄러 재처리는 실패 건만 대상으로 하여 완료 장부의 중복 지급을 막는다.
+        if (this.status != SettlementStatus.FAILED) {
+            throw new CustomException(ErrorCode.SETTLEMENT_INVALID_STATUS_TRANSITION);
+        }
+        this.status = SettlementStatus.PENDING;
+    }
+
+    public void completeAs(SettlementStatus successStatus) {
+        validatePendingStatus();
+        if (successStatus == SettlementStatus.PENDING || successStatus == SettlementStatus.FAILED) {
+            throw new CustomException(ErrorCode.SETTLEMENT_INVALID_STATUS_TRANSITION);
+        }
+        this.status = successStatus;
     }
 
     private void validatePendingStatus() {

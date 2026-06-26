@@ -30,12 +30,10 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /** 아이디어 등록, 조회, 수정, 삭제, 신고 비즈니스 로직을 처리하는 서비스입니다. */
 @Service
@@ -116,15 +114,17 @@ public class IdeaService {
 
     /** AI 검증에 전달할 아이디어 상세 설명을 생성합니다. */
     private String buildVerificationDescription(CreateIdeaRequest request) {
-        return String.join("\n",
-                request.oneLineIntro(),
-                request.problemDefinition(),
-                request.solution(),
-                request.goal(),
-                request.targetCustomer(),
-                request.competitor(),
-                request.teamIntro()
-        );
+        return Stream.of(
+                        request.oneLineIntro(),
+                        request.problemDefinition(),
+                        request.solution(),
+                        request.goal(),
+                        request.targetCustomer(),
+                        request.competitor(),
+                        request.teamIntro()
+                )
+                .filter(Objects::nonNull)
+                .collect(Collectors.joining("\n"));
     }
 
     /** 프로젝트 목록을 카테고리, 마감임박 필터, 정렬 조건에 따라 Page로 조회합니다. */
@@ -186,6 +186,9 @@ public class IdeaService {
         List<Long> ideaIds = bookmarks.stream()
                 .map(IdeaBookmark::getIdeaId)
                 .toList();
+        if (ideaIds.isEmpty()) {
+            return Page.empty(pageable);
+        }
         Map<Long, Idea> ideasById = ideaRepository.findByIdInAndDeletedAtIsNull(ideaIds)
                 .stream()
                 .collect(Collectors.toMap(Idea::getId, Function.identity()));
@@ -271,10 +274,8 @@ public class IdeaService {
     public IdeaResponse publishDraft(Long draftId, Long userId, CreateIdeaRequest request) {
         IdeaDraft draft = findDraft(draftId, userId);
         IdeaResponse response = createIdea(userId, request);
-        Idea idea = findActiveIdea(response.ideaId());
-        idea.updateImageUrls(draft.getImageUrls());
         ideaDraftRepository.delete(draft);
-        return IdeaResponse.of(idea);
+        return response;
     }
 
     /** 로그인 사용자가 등록한 아이디어 목록을 조회합니다. */
@@ -487,9 +488,15 @@ public class IdeaService {
 
     /** 마일스톤 개수와 단계 값이 정확히 1, 2, 3인지 검증합니다. */
     private void validateMilestones(CreateIdeaRequest request) {
+        if (request.milestones() == null || request.milestones().size() != REQUIRED_MILESTONE_COUNT) {
+            throw new CustomException(ErrorCode.INVALID_MILESTONE_COUNT);
+        }
 
         Set<Integer> steps = new HashSet<>();
         for (var milestone : request.milestones()) {
+            if (milestone == null) {
+                throw new CustomException(ErrorCode.INVALID_INPUT);
+            }
             steps.add(milestone.step());
         }
 

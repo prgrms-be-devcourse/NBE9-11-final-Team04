@@ -80,7 +80,7 @@ public class RefundService {
      * 가상계좌 잔액 계산:
      *   SUM(payment SUCCESS) + 보증금 - SUM(pre_settlement COMPLETED)
      *
-     * Deposit 상태 변경은 FundingService.forfeitDeposit() / releaseDeposit()으로 처리
+     * 보증금 몰수는 즉시 처리하고, 보증금 환급 상태는 지급 성공 콜백에서 처리
      */
     @Transactional
     public void createCancelRefunds(Long ideaId, boolean isJustified) {
@@ -209,6 +209,9 @@ public class RefundService {
                 .toList();
     }
 
+    // 이미 환불 레코드가 생성된 결제건은 재환불 대상에서 제외한다.
+    // force refund는 아직 환불되지 않은 후원자들에게 남은 환불 가능 금액을 재분배하는 정책이다.
+    // 따라서 totalPayment, fundingBalance, depositShare 계산은 환불 대상자 기준으로 다시 수행한다.
     private List<Object[]> excludeAlreadyRefundedPayments(List<Object[]> results) {
         if (results.isEmpty()) {
             return results;
@@ -234,7 +237,7 @@ public class RefundService {
 
     private void updateDepositStatus(Long ideaId, boolean isJustified) {
         if (isJustified) {
-            fundingService.releaseDeposit(ideaId);
+            // 정당한 사유 중단의 보증금 환급 상태는 보증금 환급 지급 성공 콜백에서 전환한다.
             return;
         }
         fundingService.forfeitDeposit(ideaId);

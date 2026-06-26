@@ -69,4 +69,13 @@ public class PreSettlement {
         }
         this.status = PreSettlementStatus.FAILED;
     }
+
+    /** 지급 실패 건을 스케줄러가 다시 처리할 수 있도록 대기 상태로 되돌립니다. */
+    public void retry() {
+        // 스케줄러 재처리는 실패 건만 대상으로 하여 완료 건의 중복 지급을 막는다.
+        if (this.status != PreSettlementStatus.FAILED) {
+            throw new CustomException(ErrorCode.SETTLEMENT_INVALID_STATUS_TRANSITION);
+        }
+        this.status = PreSettlementStatus.REQUESTED;
+    }
 }

@@ -1,21 +1,21 @@
 package com.team04.domain.verification.entity;
 
 import com.team04.global.entity.BaseEntity;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 /** 프로젝트 검증 요청의 현재 상태를 저장하는 엔티티입니다. */
 @Entity
-@Table(name = "project_verification")
+@Table(
+        name = "project_verification",
+        uniqueConstraints = @UniqueConstraint(
+                name = "uk_project_verification_idea",
+                columnNames = "idea_id"
+        ),
+        indexes = @Index(name = "idx_project_verification_status", columnList = "status")
+)
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class ProjectVerification extends BaseEntity {

@@ -77,8 +77,8 @@ public class MockPaymentGateway implements PaymentGateway {
 
     @Override
     public PayoutResult payout(PayoutRequest request) {
-        log.info("[MockPG] 선정산 지급 preSettlementId={}, ideaId={}, amount={}",
-                request.preSettlementId(), request.ideaId(), request.amount());
-        return PayoutResult.success("mock-payout-" + request.preSettlementId());
+        log.info("[MockPG] 지급대행 type={}, targetId={}, ideaId={}, amount={}",
+                request.payoutTargetType(), request.payoutTargetId(), request.ideaId(), request.amount());
+        return PayoutResult.success("mock-payout-" + request.payoutTargetType() + "-" + request.payoutTargetId());
     }
 }
