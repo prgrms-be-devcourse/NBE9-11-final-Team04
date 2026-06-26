@@ -100,3 +100,16 @@ export interface IdeaListParams {
   size?: number
   keyword?: string
 }
+
+export type MilestoneStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
+
+export interface Milestone {
+  id: number
+  ideaId: number
+  step: number
+  goal: string
+  expectedResult: string
+  expectedDate: string
+  status: MilestoneStatus
+  createdAt: string
+}

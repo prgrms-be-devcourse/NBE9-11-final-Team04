@@ -223,13 +223,8 @@ export default function IdeaFormView() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!isEdit) {
-      const err = validateStep2()
-      if (err) { setError(err); return }
-    } else {
-      const err = validateStep1() || validateStep2()
-      if (err) { setError(err); return }
-    }
+    const err = validateStep2()
+    if (err) { setError(err); return }
     setError('')
     isEdit ? updateMutation.mutate() : createMutation.mutate()
   }
@@ -286,8 +281,8 @@ export default function IdeaFormView() {
     setError('')
   }
 
-  const showStep1 = isEdit || step === 1
-  const showStep2 = isEdit || step === 2
+  const showStep1 = step === 1
+  const showStep2 = step === 2
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8">
@@ -295,8 +290,7 @@ export default function IdeaFormView() {
         {isEdit ? '아이디어 수정' : '아이디어 등록'}
       </h1>
 
-      {/* 단계 인디케이터 (신규 등록 전용) */}
-      {!isEdit && <StepIndicator current={step} />}
+      <StepIndicator current={step} />
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* ===== STEP 1: 아이디어 정보 ===== */}
@@ -475,15 +469,15 @@ export default function IdeaFormView() {
         {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
         {/* ===== 버튼 영역 ===== */}
-        {!isEdit && step === 1 && (
+        {step === 1 && (
           <div className="flex gap-3">
             <Button type="button" onClick={handleNext}>다음 →</Button>
-            <Button type="button" variant="outline" onClick={() => draftMutation.mutate()}>임시저장</Button>
+            {!isEdit && <Button type="button" variant="outline" onClick={() => draftMutation.mutate()}>임시저장</Button>}
             <Button type="button" variant="ghost" onClick={() => router.back()}>취소</Button>
           </div>
         )}
 
-        {(!isEdit && step === 2) && (
+        {!isEdit && step === 2 && (
           <div className="flex gap-3">
             <Button
               type="button"
@@ -497,8 +491,15 @@ export default function IdeaFormView() {
           </div>
         )}
 
-        {isEdit && (
+        {isEdit && step === 2 && (
           <div className="flex gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => { setError(''); setStep(1); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
+            >
+              ← 이전
+            </Button>
             <Button type="submit" loading={updateMutation.isPending}>수정</Button>
             <Button type="button" variant="ghost" onClick={() => router.back()}>취소</Button>
           </div>

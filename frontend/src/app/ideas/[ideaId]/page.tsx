@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation'
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { ideasApi } from '@/api/ideas'
+import type { Milestone } from '@/types/idea'
 import { matchesApi } from '@/api/matches'
 import { expertsApi } from '@/api/experts'
 import { useAuthStore } from '@/store/authStore'
@@ -21,6 +22,20 @@ import {
   type IdeaCategory,
   type RewardType,
 } from '@/types/enums'
+
+const MILESTONE_STATUS_LABEL: Record<string, string> = {
+  PENDING: '예정',
+  IN_PROGRESS: '진행 중',
+  COMPLETED: '완료',
+  CANCELLED: '취소',
+}
+
+const MILESTONE_STATUS_VARIANT: Record<string, 'green' | 'orange' | 'red' | 'gray'> = {
+  PENDING: 'gray',
+  IN_PROGRESS: 'orange',
+  COMPLETED: 'green',
+  CANCELLED: 'red',
+}
 import { formatCurrency, formatDate, calcAchievementRate, getDaysRemaining } from '@/utils/format'
 
 const CATEGORY_ICONS: Record<IdeaCategory, string> = {
@@ -129,6 +144,13 @@ export default function IdeaDetailPage() {
     queryKey: ['ideas', ideaId, 'trust-score'],
     queryFn: () => ideasApi.getTrustScore(ideaId),
     enabled: !!ideaId,
+    retry: false,
+  })
+
+  const { data: milestones } = useQuery({
+    queryKey: ['ideas', ideaId, 'milestones'],
+    queryFn: () => ideasApi.getMilestones(ideaId),
+    enabled: !!ideaId && !!user,
     retry: false,
   })
 
@@ -331,6 +353,40 @@ export default function IdeaDetailPage() {
               </p>
             </SectionCard>
           ))}
+
+          {/* 마일스톤 섹션 */}
+          {milestones && milestones.length > 0 && (
+            <SectionCard icon="📋" title="마일스톤">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {milestones.map((ms: Milestone) => (
+                  <div key={ms.id} style={{
+                    padding: '16px',
+                    borderRadius: '10px',
+                    background: '#f8fafc',
+                    border: '1px solid var(--border)',
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                      <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--fg)' }}>
+                        {ms.step}단계
+                      </span>
+                      <Badge variant={MILESTONE_STATUS_VARIANT[ms.status]}>
+                        {MILESTONE_STATUS_LABEL[ms.status]}
+                      </Badge>
+                    </div>
+                    <p style={{ fontSize: '14px', color: 'var(--fg)', marginBottom: '6px', lineHeight: 1.6 }}>
+                      {ms.goal}
+                    </p>
+                    <p style={{ fontSize: '13px', color: 'var(--fg-muted)', marginBottom: '6px', lineHeight: 1.6 }}>
+                      {ms.expectedResult}
+                    </p>
+                    <div style={{ fontSize: '12px', color: 'var(--fg-muted)' }}>
+                      목표 완료일: {ms.expectedDate}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </SectionCard>
+          )}
 
           {/* 전문가 매칭 요청 섹션 (소유자 + EXPERT_PENDING 상태일 때만) */}
           {isOwner && idea.status === 'EXPERT_PENDING' && (

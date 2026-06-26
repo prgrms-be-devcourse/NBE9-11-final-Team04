@@ -6,6 +6,7 @@ import type {
   IdeaDraft,
   IdeaListParams,
   IdeaSummary,
+  Milestone,
   TrustScoreResponse,
 } from '@/types/idea'
 
@@ -61,4 +62,7 @@ export const ideasApi = {
 
   publishDraft: (draftId: number, body: CreateIdeaRequest) =>
     unwrap(apiClient.post<ApiResponse<IdeaDetail>>(`/ideas/drafts/${draftId}/publish`, body)),
+
+  getMilestones: (ideaId: number) =>
+    unwrap(apiClient.get<ApiResponse<Milestone[]>>(`/milestones/ideas/${ideaId}`)),
 }
