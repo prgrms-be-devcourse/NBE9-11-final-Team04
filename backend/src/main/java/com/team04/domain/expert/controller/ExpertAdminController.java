@@ -31,7 +31,20 @@ public class ExpertAdminController {
     private final ExpertVerificationService expertVerificationService;
     private final AppealStorageClient appealStorageClient;
 
-    // 격리 전문가 목록 조회
+    // 전체/상태별 전문가 목록 조회
+    @GetMapping
+    public ResponseEntity<ApiResponse<Page<AdminExpertSuspendedResponse>>> getExperts(
+            @RequestParam(required = false) ExpertStatus status,
+            @PageableDefault(size = 10) Pageable pageable
+    ) {
+        Page<AdminExpertSuspendedResponse> response = (status != null
+                ? expertProfileRepository.findProfilesByStatus(status, pageable)
+                : expertProfileRepository.findAllProfiles(pageable))
+                .map(AdminExpertSuspendedResponse::from);
+        return ResponseEntity.ok(ApiResponse.ofSuccess(response));
+    }
+
+    // 격리 전문가 목록 조회 (하위호환)
     @GetMapping("/suspended")
     public ResponseEntity<ApiResponse<Page<AdminExpertSuspendedResponse>>> getSuspendedExperts(
             @PageableDefault(size = 10) Pageable pageable

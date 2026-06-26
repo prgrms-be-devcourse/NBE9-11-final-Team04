@@ -56,6 +56,22 @@ public class AdminExpertController {
         return null;
     }
 
+    @GetMapping
+    public ResponseEntity<?> getExperts(
+            HttpServletRequest request,
+            @RequestParam(required = false) String status,
+            @PageableDefault(size = 10) Pageable pageable
+    ) {
+        StringBuilder uri = new StringBuilder(expertAdminBase())
+                .append("?page=").append(pageable.getPageNumber())
+                .append("&size=").append(pageable.getPageSize());
+        if (StringUtils.hasText(status)) {
+            uri.append("&status=").append(status);
+        }
+        return withAuth(restClient.get().uri(uri.toString()), request)
+                .retrieve().toEntity(new ParameterizedTypeReference<ApiResponse<?>>() {});
+    }
+
     @GetMapping("/suspended")
     public ResponseEntity<?> getSuspendedExperts(
             HttpServletRequest request,
