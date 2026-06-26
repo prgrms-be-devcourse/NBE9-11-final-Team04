@@ -62,7 +62,7 @@ public class PreSettlementService {
         // 선정산 한도는 ideaId 기준 누적액으로 검증하므로, 동시 요청도 같은 ideaId 단위로 직렬화한다.
         ideaRepository.findByIdForUpdate(ideaId)
                 .orElseThrow(() -> new CustomException(ErrorCode.IDEA_NOT_FOUND));
-        milestoneRepository.findByIdeaIdAndStatusWithPessimisticLock(ideaId, MilestoneStatus.IN_PROGRESS)
+        milestoneRepository.findByIdeaIdAndStatus(ideaId, MilestoneStatus.IN_PROGRESS)
                 .orElseThrow(() -> new CustomException(ErrorCode.PRE_SETTLEMENT_MILESTONE_NOT_IN_PROGRESS));
 
         IdeaResponse idea = ideaService.getIdea(ideaId);
