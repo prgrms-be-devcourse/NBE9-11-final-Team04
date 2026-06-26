@@ -235,10 +235,10 @@ public class MilestoneService {
      */
     @Transactional
     public CompletionReportResponse rejectReport(Long milestoneId) {
-        findMilestone(milestoneId);
+        Milestone milestone = findMilestone(milestoneId);
         CompletionReport report = findLatestReport(milestoneId);
         report.reject();
-        notifyReportRejected(milestoneId, report);
+        notifyReportRejected(milestone, report);
         return CompletionReportResponse.from(report);
     }
 
@@ -351,8 +351,7 @@ public class MilestoneService {
                 title, message, report.getId());
     }
 
-    private void notifyReportRejected(Long milestoneId, CompletionReport report) {
-        Milestone milestone = findMilestone(milestoneId);
+    private void notifyReportRejected(Milestone milestone, CompletionReport report) {
         IdeaResponse idea = ideaService.getIdea(milestone.getIdeaId());
         String reportName = report.getType() == CompletionReportType.APPEAL ? "소명 보고서" : "완료 보고서";
         String title = "마일스톤 " + milestone.getStep() + "단계 " + reportName + "가 반려되었습니다";
