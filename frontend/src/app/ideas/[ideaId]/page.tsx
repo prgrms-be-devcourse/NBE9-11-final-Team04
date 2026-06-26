@@ -213,7 +213,7 @@ export default function IdeaDetailPage() {
   const currentAmount = liveProgress?.currentAmount ?? idea.currentAmount
   const goalAmount = liveProgress?.goalAmount ?? idea.goalAmount
   const supporterCount = liveProgress?.sponsorCount ?? idea.sponsorCount
-  const rate = liveProgress?.achievementRate ?? calcAchievementRate(currentAmount, goalAmount)
+  const rate = calcAchievementRate(currentAmount, goalAmount)
   const daysLeft = getDaysRemaining(idea.fundingEndAt)
   const isOwner = user?.id === idea.userId
   const isFunding = idea.status === 'OPEN' || idea.status === 'IN_PROGRESS'

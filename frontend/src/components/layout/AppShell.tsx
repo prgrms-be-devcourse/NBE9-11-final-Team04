@@ -306,6 +306,26 @@ export function Gnb() {
                 )}
               </div>
 
+              {/* 전문가 신청 버튼 (USER 전용) */}
+              {user?.role === 'USER' && (
+                <Link
+                  href="/expert-apply"
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '5px',
+                    fontSize: '13px', fontWeight: 700,
+                    color: 'var(--brand-dark)',
+                    background: '#fff',
+                    padding: '6px 14px',
+                    borderRadius: '99px',
+                    textDecoration: 'none',
+                    whiteSpace: 'nowrap',
+                    transition: 'background 0.2s',
+                  }}
+                >
+                  🎓 전문가 신청
+                </Link>
+              )}
+
               {/* 관리자 버튼 */}
               {user?.role === 'ADMIN' && (
                 <Link
