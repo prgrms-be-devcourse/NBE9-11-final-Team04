@@ -86,6 +86,8 @@ class SettlementPaymentServiceTest {
     private RefundService refundService;
     @Mock
     private SettlementService settlementService;
+    @Mock
+    private VbankLedgerService vbankLedgerService;
 
     @Test
     @DisplayName("선정산 지급 성공 시 complete 콜백 호출")

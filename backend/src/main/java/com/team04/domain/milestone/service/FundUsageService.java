@@ -9,6 +9,8 @@ import com.team04.domain.milestone.entity.FundUsage;
 import com.team04.domain.milestone.entity.MilestoneStatus;
 import com.team04.domain.milestone.repository.FundUsageRepository;
 import com.team04.domain.milestone.repository.MilestoneRepository;
+import com.team04.domain.payment.entity.VbankLedgerType;
+import com.team04.domain.payment.service.VbankLedgerService;
 import com.team04.domain.settlement.entity.PreSettlementStatus;
 import com.team04.domain.settlement.repository.PreSettlementRepository;
 import com.team04.domain.user.entity.Role;
@@ -29,6 +31,7 @@ public class FundUsageService {
     private final PreSettlementRepository preSettlementRepository;
     private final FundingRepository fundingRepository;
     private final IdeaService ideaService;
+    private final VbankLedgerService vbankLedgerService;
 
     /**
      * 자금 사용 내역 입력 (Append Only)
@@ -69,7 +72,18 @@ public class FundUsageService {
                 .usedAt(request.usedAt())
                 .build();
 
-        return FundUsageResponse.from(fundUsageRepository.save(fundUsage));
+        FundUsage saved = fundUsageRepository.save(fundUsage);
+        // 자금 사용 내역은 선정산 지급액 사용을 공개하는 목적이라 가상계좌 잔액은 다시 차감하지 않는다.
+        vbankLedgerService.recordDisclosureOut(
+                ideaId,
+                VbankLedgerType.FUND_USAGE_RECORDED,
+                saved.getAmount(),
+                "fund-usage-" + saved.getId(),
+                "FundUsage",
+                saved.getId(),
+                saved.getItemName()
+        );
+        return FundUsageResponse.from(saved);
     }
 
     /**

@@ -103,6 +103,7 @@ public enum ErrorCode {
     PAYMENT_AMOUNT_MISMATCH(400, "P005", "결제 금액이 일치하지 않습니다"),
     PAYMENT_ALREADY_DONE(409, "P006", "이미 완료된 결제입니다"),
     PAYMENT_NOT_READY(400, "P007", "결제를 진행할 수 없는 상태입니다"),
+    VBANK_LEDGER_INSUFFICIENT_BALANCE(409, "P008", "가상계좌 장부 잔액이 부족합니다"),
 
     // 분쟁
     DISPUTE_NOT_FOUND(404, "D001", "존재하지 않는 분쟁입니다"),
