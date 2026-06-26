@@ -29,10 +29,14 @@ public class AdminExpertService {
     @Transactional(readOnly = true)
     public Page<AdminExpertSuspendedResponse> getExperts(String status, Pageable pageable) {
         if (StringUtils.hasText(status)) {
-            ExpertStatus expertStatus = ExpertStatus.valueOf(status.toUpperCase());
-            return expertProfileRepository
-                    .findProfilesByStatus(expertStatus, pageable)
-                    .map(AdminExpertSuspendedResponse::from);
+            try {
+                ExpertStatus expertStatus = ExpertStatus.valueOf(status.toUpperCase());
+                return expertProfileRepository
+                        .findProfilesByStatus(expertStatus, pageable)
+                        .map(AdminExpertSuspendedResponse::from);
+            } catch (IllegalArgumentException e) {
+                throw new CustomException(ErrorCode.INVALID_INPUT);
+            }
         }
         return expertProfileRepository
                 .findAllProfiles(pageable)

@@ -93,6 +93,14 @@ public class IdeaAdminService {
                 .orElse(null);
     }
 
+    /** 아이디어 ID 목록을 IN 쿼리로 한 번에 조회하여 Map으로 반환합니다. */
+    @Transactional(readOnly = true)
+    public Map<Long, IdeaStatus> getIdeaStatusMap(List<Long> ideaIds) {
+        if (ideaIds == null || ideaIds.isEmpty()) return Map.of();
+        return ideaRepository.findByIdInAndDeletedAtIsNull(ideaIds).stream()
+                .collect(java.util.stream.Collectors.toMap(Idea::getId, Idea::getStatus));
+    }
+
     /** 소프트 삭제되지 않은 아이디어를 조회하고 없으면 공통 예외를 발생시킵니다. */
     private Idea findActiveIdea(Long ideaId) {
         return ideaRepository.findByIdAndDeletedAtIsNull(ideaId)
