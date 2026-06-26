@@ -232,6 +232,7 @@ public class MilestoneService {
     /**
      * 완료/소명 보고서 반려
      * 관리자만 가능
+     * 최신 보고서를 반려하고 제안자에게 반려 알림을 예약합니다.
      */
     @Transactional
     public CompletionReportResponse rejectReport(Long milestoneId) {
@@ -327,6 +328,10 @@ public class MilestoneService {
         notifyMilestoneStarted(nextMilestone);
     }
 
+    /**
+     * 새 단계가 시작되면 제안자와 실제 결제 성공 후원자에게 진행 단계 변경을 알립니다.
+     * 후원자 중복 발송을 막기 위해 sponsorId를 DISTINCT로 조회합니다.
+     */
     private void notifyMilestoneStarted(Milestone milestone) {
         IdeaResponse idea = ideaService.getIdea(milestone.getIdeaId());
         Set<Long> targetUserIds = new LinkedHashSet<>();
@@ -340,6 +345,10 @@ public class MilestoneService {
         notifyUsers(targetUserIds, NotificationType.MILESTONE_STARTED, title, message, milestone.getId());
     }
 
+    /**
+     * 완료/소명 보고서 승인 결과는 실제 작업 당사자인 제안자에게만 알립니다.
+     * 보고서 타입은 알림 메시지에서 완료 보고서/소명 보고서로 구분합니다.
+     */
     private void notifyReportApproved(Milestone milestone, CompletionReport report) {
         IdeaResponse idea = ideaService.getIdea(milestone.getIdeaId());
         String reportName = report.getType() == CompletionReportType.APPEAL ? "소명 보고서" : "완료 보고서";
@@ -351,6 +360,10 @@ public class MilestoneService {
                 title, message, report.getId());
     }
 
+    /**
+     * 완료/소명 보고서 반려 결과는 제안자에게만 알립니다.
+     * 반려 사유 컬럼은 아직 없으므로 사유 확인 문구는 넣지 않습니다.
+     */
     private void notifyReportRejected(Milestone milestone, CompletionReport report) {
         IdeaResponse idea = ideaService.getIdea(milestone.getIdeaId());
         String reportName = report.getType() == CompletionReportType.APPEAL ? "소명 보고서" : "완료 보고서";
@@ -362,6 +375,10 @@ public class MilestoneService {
                 title, message, report.getId());
     }
 
+    /**
+     * 알림 발송 자체는 outbox 스케줄러에 맡깁니다.
+     * 현재 트랜잭션이 실패하면 이벤트로 생성되는 outbox 기록도 함께 롤백됩니다.
+     */
     private void notifyUsers(Set<Long> userIds, NotificationType type, String title, String message, Long referenceId) {
         for (Long userId : userIds) {
             if (userId != null) {
