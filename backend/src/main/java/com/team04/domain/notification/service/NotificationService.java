@@ -7,12 +7,14 @@ import com.team04.domain.notification.repository.NotificationRepository;
 import com.team04.domain.user.entity.Role;
 import com.team04.domain.user.entity.User;
 import com.team04.domain.user.repository.UserRepository;
+import com.team04.domain.user.status.UserStatus;
 import com.team04.global.exception.CustomException;
 import com.team04.global.exception.ErrorCode;
 import com.team04.global.sse.SseEmitterStorage;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -20,16 +22,19 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import java.io.IOException;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class NotificationService {
+
+    private static final int BATCH_SIZE = 100;
 
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
     private final SseEmitterStorage sseEmitterStorage;
 
     @Transactional(readOnly = true)
-    public Page<NotificationResponse> getMyNotifications(Long userId, Pageable pageable){
+    public Slice<NotificationResponse> getMyNotifications(Long userId, Pageable pageable){
         return notificationRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable)
                 .map(NotificationResponse::new);
     }
@@ -37,7 +42,7 @@ public class NotificationService {
     @Transactional
     public void markAsRead(Long userId, Long notificationId){
 
-        Notification notification = notificationRepository.findById(notificationId)
+        Notification notification = notificationRepository.findByIdWithUser(notificationId)
                 .orElseThrow(() -> new CustomException(ErrorCode.NOTIFICATION_NOT_FOUND));
 
         if (!userId.equals(notification.getUser().getId())) {
@@ -73,32 +78,53 @@ public class NotificationService {
     }
 
 
-    public void createNotificationsToAdmins(NotificationType type, String title,
-                                            String message, Long referenceId) {
-        List<User> admins = userRepository.findByRole(Role.ADMIN);
+    public void createAnnouncementToRole(Role targetRole, NotificationType type,
+                                         String title, String message, Long referenceId) {
+        List<User> targets = (targetRole == null)
+                ? userRepository.findByStatus(UserStatus.ACTIVE)
+                : userRepository.findByRoleAndStatus(targetRole, UserStatus.ACTIVE);
 
-        List<Notification> notifications = admins.stream()
-                .map(admin -> Notification.create(admin, type, title, message, referenceId))
-                .toList();
+        if (targets.isEmpty()) {
+            log.warn("[Notification] 공지 대상 사용자가 없습니다. targetRole={}", targetRole);
+            return;
+        }
 
-        notificationRepository.saveAll(notifications);
+        List<List<User>> batches = partition(targets, BATCH_SIZE);
+        for (List<User> batch : batches) {
+            List<Notification> notifications = batch.stream()
+                    .map(user -> Notification.create(user, type, title, message, referenceId))
+                    .toList();
 
-        for (Notification notification : notifications) {
-            Long userId = notification.getUser().getId();
-            SseEmitter emitter = sseEmitterStorage.get(userId);
-            if (emitter != null) {
-                try {
-                    emitter.send(SseEmitter.event().name("notification").data(new NotificationResponse(notification)));
-                } catch (IOException e) {
-                    sseEmitterStorage.remove(userId);
+            notificationRepository.saveAll(notifications);
+
+            for (Notification notification : notifications) {
+                Long userId = notification.getUser().getId();
+                SseEmitter emitter = sseEmitterStorage.get(userId);
+                if (emitter != null) {
+                    try {
+                        emitter.send(SseEmitter.event().name("notification").data(new NotificationResponse(notification)));
+                    } catch (IOException e) {
+                        sseEmitterStorage.remove(userId);
+                    }
                 }
             }
         }
     }
 
+    private <T> List<List<T>> partition(List<T> list, int size) {
+        List<List<T>> result = new java.util.ArrayList<>();
+        for (int i = 0; i < list.size(); i += size) {
+            result.add(list.subList(i, Math.min(i + size, list.size())));
+        }
+        return result;
+    }
+
 
     public SseEmitter subscribe(Long userId) {
-        SseEmitter emitter = new SseEmitter(30 * 60 * 1000L);
+        SseEmitter emitter = new SseEmitter(3 * 60 * 1000L);
+
+        SseEmitter old = sseEmitterStorage.get(userId);
+        if (old != null) old.complete();
 
         sseEmitterStorage.add(userId, emitter);
 

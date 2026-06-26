@@ -9,24 +9,24 @@ import java.time.LocalDateTime;
 public record SettlementResponse(
         Long settlementId,
         Long ideaId,
-        Long milestoneId,
         SettlementType type,
         Long totalAmount,
         Long platformFee,
         Long payoutAmount,
         SettlementStatus status,
+        String memo,
         LocalDateTime createdAt
 ) {
     public static SettlementResponse from(Settlement settlement) {
         return new SettlementResponse(
                 settlement.getId(),
                 settlement.getIdeaId(),
-                settlement.getMilestoneId(),
                 settlement.getType(),
                 settlement.getTotalAmount(),
                 settlement.getPlatformFee(),
                 settlement.getPayoutAmount(),
                 settlement.getStatus(),
+                settlement.getMemo(),
                 settlement.getCreatedAt()
         );
     }

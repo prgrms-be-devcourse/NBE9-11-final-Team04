@@ -73,9 +73,9 @@ public class OpenAiVerificationService {
         return "제목: " + request.title() + "\n"
                 + "설명: " + request.description() + "\n"
                 + "마일스톤 목록: " + formatMilestones(request.milestones()) + "\n"
-                + "해당 아이디어와 유사한 서비스가 시장에 존재하는지 판단하라. "
-                + "탐지 결과는 참고용이며 단독으로 거절 사유가 되지 않는다.\n"
-                + "decision은 PASS, NEEDS_REVISION, REJECT, PENDING_ADMIN_REVIEW 중 하나입니다.";
+                + "과대광고, 유사서비스, 마일스톤 구체성을 판단하라. "
+                + "탐지 결과는 참고용이며 단독으로 반려 또는 보완 사유가 되지 않는다.\n"
+                + "decision은 항상 INFO로 응답합니다.";
     }
 
     /** 마일스톤 목록을 목표, 기대 결과, 예정일, 예치 금액 중심의 문자열로 변환합니다. */
@@ -99,7 +99,7 @@ public class OpenAiVerificationService {
                 "additionalProperties", false,
                 "required", List.of("decision", "checks", "reason"),
                 "properties", Map.of(
-                        "decision", Map.of("type", "string", "enum", List.of("PASS", "NEEDS_REVISION", "REJECT", "PENDING_ADMIN_REVIEW")),
+                        "decision", Map.of("type", "string", "enum", List.of("INFO")),
                         "reason", Map.of("type", "string"),
                         "checks", Map.of(
                                 "type", "array",

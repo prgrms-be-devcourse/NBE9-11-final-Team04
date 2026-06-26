@@ -1,24 +1,20 @@
 package com.team04.domain.idea.controller;
 
-import com.team04.domain.idea.dto.request.IdeaDraftRequest;
-import com.team04.domain.idea.dto.response.IdeaDraftResponse;
-import com.team04.domain.idea.dto.response.IdeaSummaryResponse;
+import com.team04.domain.idea.dto.request.*;
+import com.team04.domain.idea.dto.response.*;
 import com.team04.domain.idea.entity.IdeaCategory;
 import com.team04.global.response.ApiResponse;
-import com.team04.domain.idea.dto.request.CreateIdeaRequest;
-import com.team04.domain.idea.dto.request.ReportIdeaRequest;
-import com.team04.domain.idea.dto.request.UpdateIdeaRequest;
-import com.team04.domain.idea.dto.response.IdeaResponse;
-import com.team04.domain.idea.dto.response.ReportIdeaResponse;
 import com.team04.domain.idea.service.IdeaService;
 import com.team04.global.security.CustomUserDetails;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -41,23 +37,29 @@ public class IdeaController {
 
     /** 카테고리와 마감임박 필터, 정렬 조건으로 프로젝트 목록을 제공합니다. */
     @GetMapping
-    public ApiResponse<Slice<IdeaSummaryResponse>> getProjects(
+    public ApiResponse<Page<IdeaSummaryResponse>> getProjects(
             @RequestParam(required = false) IdeaCategory category,
             @RequestParam(required = false, defaultValue = "false") Boolean closingSoon,
+            @RequestParam(required = false) String keyword,
             @RequestParam(required = false, defaultValue = "latest") String sort,
             @PageableDefault(size = 20) Pageable pageable
     ) {
-        return ApiResponse.ofSuccess(ideaService.getProjects(category, closingSoon, sort, pageable));
+        return ApiResponse.ofSuccess(ideaService.getProjects(category, closingSoon, keyword, sort, pageable));
     }
 
-    /** 프로젝트명을 기준으로 로그인 사용자에게 프로젝트 검색 결과를 제공합니다. */
-    @GetMapping("/search")
-    public ApiResponse<Slice<IdeaSummaryResponse>> searchProjects(
-            @RequestParam String keyword,
-            @RequestParam(required = false, defaultValue = "latest") String sort,
+    /** 신뢰도와 펀딩 지표 기반 인기 프로젝트 Top5를 제공합니다. */
+    @GetMapping("/top5")
+    public ApiResponse<List<IdeaResponse>> getTop5Ideas() {
+        return ApiResponse.ofSuccess(ideaService.getTop5Ideas());
+    }
+
+    /** 로그인 사용자의 관심 프로젝트 목록을 Page 페이지네이션으로 제공합니다. */
+    @GetMapping("/bookmarks")
+    public ApiResponse<Page<IdeaResponse>> getBookmarks(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @PageableDefault(size = 20) Pageable pageable
     ) {
-        return ApiResponse.ofSuccess(ideaService.searchProjects(keyword, sort, pageable));
+        return ApiResponse.ofSuccess(ideaService.getBookmarks(userDetails.getUserId(), pageable));
     }
 
     /** 보관 기간 내 로그인 사용자 본인의 임시저장 목록을 조회합니다. */
@@ -107,6 +109,14 @@ public class IdeaController {
         return ApiResponse.ofSuccess(ideaService.publishDraft(draftId, userDetails.getUserId(), request));
     }
 
+    /** 로그인 제안자가 아이디어 본문 이미지를 사전 업로드합니다. */
+    @PostMapping("/images")
+    public ApiResponse<List<String>> uploadContentImages(
+            @RequestPart("images") List<MultipartFile> images
+    ) {
+        return ApiResponse.ofSuccess(ideaService.uploadContentImages(images));
+    }
+
     /** 로그인 사용자만 접근 가능한 아이디어 상세 정보를 조회합니다. */
     @GetMapping("/{ideaId}")
     public ApiResponse<IdeaResponse> getIdea(
@@ -125,6 +135,37 @@ public class IdeaController {
         return ApiResponse.ofSuccess(ideaService.updateIdea(ideaId, userDetails.getUserId(), request));
     }
 
+    /** 로그인 제안자가 본인의 심사 대기 아이디어 대표 이미지를 업로드합니다. */
+    @PostMapping("/{ideaId}/image")
+    public ApiResponse<IdeaResponse> uploadIdeaImage(
+            @PathVariable Long ideaId,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestPart("image") MultipartFile image
+    ) {
+        return ApiResponse.ofSuccess(ideaService.uploadIdeaImage(ideaId, userDetails.getUserId(), image));
+    }
+
+    /** 로그인 제안자가 관리자 최종 승인 전 정산 및 환불 계좌를 등록하거나 수정합니다. */
+    @PutMapping("/{ideaId}/settlement-account")
+    public ApiResponse<IdeaSettlementAccountResponse> upsertSettlementAccount(
+            @PathVariable Long ideaId,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @Valid @RequestBody IdeaSettlementAccountRequest request
+    ) {
+        return ApiResponse.ofSuccess(
+                ideaService.upsertSettlementAccount(ideaId, userDetails.getUserId(), request)
+        );
+    }
+
+    /** 로그인 제안자가 본인 아이디어의 정산 및 환불 계좌 정보를 조회합니다. */
+    @GetMapping("/{ideaId}/settlement-account")
+    public ApiResponse<IdeaSettlementAccountResponse> getSettlementAccount(
+            @PathVariable Long ideaId,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        return ApiResponse.ofSuccess(ideaService.getSettlementAccount(ideaId, userDetails.getUserId()));
+    }
+
     /** 로그인 사용자가 본인의 심사 대기 아이디어를 소프트 삭제합니다. */
     @DeleteMapping("/{ideaId}")
     public ApiResponse<Void> deleteIdea(
@@ -132,6 +173,36 @@ public class IdeaController {
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         ideaService.deleteIdea(ideaId, userDetails.getUserId());
+        return ApiResponse.ofSuccessWithoutBody();
+    }
+
+    /** 로그인 사용자가 본인의 진행 중인 아이디어에 대해 취소를 신청합니다. */
+    @PostMapping("/{ideaId}/cancel")
+    public ApiResponse<Void> requestCancellation(
+            @PathVariable Long ideaId,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        ideaService.requestCancellation(ideaId, userDetails.getUserId());
+        return ApiResponse.ofSuccessWithoutBody();
+    }
+
+    /** 로그인 사용자가 아이디어를 관심 프로젝트로 저장합니다. */
+    @PostMapping("/{ideaId}/bookmark")
+    public ApiResponse<Void> addBookmark(
+            @PathVariable Long ideaId,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        ideaService.addBookmark(ideaId, userDetails.getUserId());
+        return ApiResponse.ofSuccessWithoutBody();
+    }
+
+    /** 로그인 사용자가 저장한 관심 프로젝트를 삭제합니다. */
+    @DeleteMapping("/{ideaId}/bookmark")
+    public ApiResponse<Void> deleteBookmark(
+            @PathVariable Long ideaId,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        ideaService.deleteBookmark(ideaId, userDetails.getUserId());
         return ApiResponse.ofSuccessWithoutBody();
     }
 
@@ -143,5 +214,13 @@ public class IdeaController {
             @Valid @RequestBody ReportIdeaRequest request
     ) {
         return ApiResponse.ofSuccess(ideaService.reportIdea(ideaId, userDetails.getUserId(), request));
+    }
+
+    /** 로그인 사용자가 등록한 본인 아이디어 목록을 조회합니다. */
+    @GetMapping("/me")
+    public ApiResponse<List<IdeaSummaryResponse>> getMyIdeas(
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        return ApiResponse.ofSuccess(ideaService.getMyIdeas(userDetails.getUserId()));
     }
 }

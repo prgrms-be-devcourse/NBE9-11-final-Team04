@@ -15,6 +15,9 @@ public enum IdeaStatus {
     /** 관리자 심사 대기 상태입니다. */
     ADMIN_PENDING,
 
+    /** 심사 또는 검증에서 반려된 상태입니다. */
+    REJECTED,
+
     /** 펀딩 공개 전환이 완료된 상태입니다. */
     OPEN,
 
@@ -24,8 +27,16 @@ public enum IdeaStatus {
     /** 펀딩 또는 아이디어 진행이 완료된 상태입니다. */
     COMPLETED,
 
+    /** 펀딩 오픈 이후 제안자가 취소를 신청한 상태입니다. */
+    CANCELLATION_REQUESTED,
+
     /** 아이디어 진행이 취소된 상태입니다. */
-    CANCELLED;
+    CANCELLED,
+
+    // 분쟁 신고 처리 중 관리자가 프로젝트를 일시 중단할 때 사용합니다.
+    // 소명 수용(REJECTED) 시 이전 상태로 복원, 신고 인정(RESOLVED) 시 CANCELLED로 전환됩니다.
+    /** 관리자가 일시 중단한 상태입니다. */
+    SUSPENDED;
 
     /** 아이디어 내용을 수정할 수 있는 심사 대기 상태인지 확인합니다. */
     public boolean isEditable() {
@@ -40,12 +51,41 @@ public enum IdeaStatus {
     /** 현재 상태에서 목표 상태로 전이할 수 있는지 확인합니다. */
     public boolean canTransitionTo(IdeaStatus targetStatus) {
         return switch (this) {
-            case AI_PENDING -> targetStatus == EXPERT_PENDING || targetStatus == CANCELLED;
-            case EXPERT_PENDING -> targetStatus == ADMIN_PENDING || targetStatus == CANCELLED;
-            case ADMIN_PENDING -> targetStatus == OPEN || targetStatus == CANCELLED;
-            case OPEN -> targetStatus == IN_PROGRESS || targetStatus == CANCELLED;
-            case IN_PROGRESS -> targetStatus == COMPLETED || targetStatus == CANCELLED;
-            case COMPLETED, CANCELLED -> false;
+            case AI_PENDING ->
+                    targetStatus == EXPERT_PENDING
+                            || targetStatus == CANCELLED;
+
+            case EXPERT_PENDING ->
+                    targetStatus == ADMIN_PENDING
+                            || targetStatus == CANCELLED;
+
+            case ADMIN_PENDING ->
+                    targetStatus == OPEN
+                            || targetStatus == REJECTED
+                            || targetStatus == CANCELLED;
+
+            case OPEN ->
+                    targetStatus == IN_PROGRESS
+                            || targetStatus == SUSPENDED // 분쟁 신고 처리 중 관리자 일시 중단
+                            || targetStatus == CANCELLED;
+
+            case IN_PROGRESS ->
+                    targetStatus == COMPLETED
+                            || targetStatus == CANCELLATION_REQUESTED
+                            || targetStatus == SUSPENDED // 분쟁 신고 처리 중 관리자 일시 중단
+                            || targetStatus == CANCELLED;
+
+            case CANCELLATION_REQUESTED ->
+                    targetStatus == CANCELLED
+                            || targetStatus == IN_PROGRESS;
+
+            case SUSPENDED -> // 소명 수용 시 이전 상태 복원, 신고 인정 시 CANCELLED 전환
+                    targetStatus == OPEN
+                            || targetStatus == IN_PROGRESS
+                            || targetStatus == CANCELLED;
+
+            case COMPLETED, CANCELLED, REJECTED ->
+                    false;
         };
     }
 

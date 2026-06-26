@@ -5,6 +5,9 @@ spring:
     password: ${DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
 
+app:
+  base-url: https://api.seedlink.com
+
   jpa:
     hibernate:
       ddl-auto: update
@@ -49,10 +52,43 @@ management:
   endpoint:
     health:
       show-details: never
-  health:
-    mail:
-      enabled: false
+
+expert:
+  scheduler:
+    reverify-cron: "0 0 0 * * MON"   # 운영: 매주 월요일 자정 00:00:00 가동
+    national-cron: "0 0 0 1 1,7 *"   # 운영: 매년 1월 1일, 7월 1일 자정 00:00:00 가동
+    demote-cron: "0 0 0 * * *"       # 운영: 매일 자정 00:00:00 가동
+
+cloud:
+  aws:
+    s3:
+      bucket: ${AWS_S3_BUCKET}
+      region: ${AWS_S3_REGION:ap-northeast-2}
+    credentials:
+      access-key: ${AWS_ACCESS_KEY_ID}
+      secret-key: ${AWS_SECRET_ACCESS_KEY}
 
 server:
   servlet:
     context-path: /api
+
+payment:
+  gateway:
+    type: ${PAYMENT_GATEWAY_TYPE:mock}
+  toss:
+    secret-key: ${TOSS_SECRET_KEY:}
+    client-key: ${TOSS_CLIENT_KEY:}
+  webhook:
+    secret: ${PAYMENT_WEBHOOK_SECRET:dev-webhook-secret}
+
+oauth:
+  google:
+    client-id: ${GOOGLE_CLIENT_ID}
+    client-secret: ${GOOGLE_CLIENT_SECRET}
+  kakao:
+    client-id: ${KAKAO_CLIENT_ID}
+
+admin:
+  internal:
+    base-url: ${ADMIN_INTERNAL_BASE_URL}
+

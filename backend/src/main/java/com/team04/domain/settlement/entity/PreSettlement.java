@@ -22,9 +22,6 @@ public class PreSettlement {
     private Long id;
 
     @Column(nullable = false)
-    private Long milestoneId;
-
-    @Column(nullable = false)
     private Long ideaId;
 
     @Column(nullable = false)
@@ -38,8 +35,7 @@ public class PreSettlement {
     private LocalDateTime requestedAt;
 
     @Builder
-    private PreSettlement(Long milestoneId, Long ideaId, Long amount) {
-        this.milestoneId = milestoneId;
+    private PreSettlement(Long ideaId, Long amount) {
         this.ideaId = ideaId;
         this.amount = amount;
         this.status = PreSettlementStatus.REQUESTED;
@@ -51,6 +47,9 @@ public class PreSettlement {
      * REQUESTED 상태에서만 가능합니다.
      */
     public void complete() {
+        if (this.status == PreSettlementStatus.COMPLETED) {
+            return;
+        }
         if (this.status != PreSettlementStatus.REQUESTED) {
             throw new CustomException(ErrorCode.SETTLEMENT_INVALID_STATUS_TRANSITION);
         }
@@ -62,9 +61,21 @@ public class PreSettlement {
      * REQUESTED 상태에서만 가능합니다.
      */
     public void fail() {
+        if (this.status == PreSettlementStatus.FAILED) {
+            return;
+        }
         if (this.status != PreSettlementStatus.REQUESTED) {
             throw new CustomException(ErrorCode.SETTLEMENT_INVALID_STATUS_TRANSITION);
         }
         this.status = PreSettlementStatus.FAILED;
+    }
+
+    /** 지급 실패 건을 스케줄러가 다시 처리할 수 있도록 대기 상태로 되돌립니다. */
+    public void retry() {
+        // 스케줄러 재처리는 실패 건만 대상으로 하여 완료 건의 중복 지급을 막는다.
+        if (this.status != PreSettlementStatus.FAILED) {
+            throw new CustomException(ErrorCode.SETTLEMENT_INVALID_STATUS_TRANSITION);
+        }
+        this.status = PreSettlementStatus.REQUESTED;
     }
 }

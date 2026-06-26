@@ -1,8 +1,15 @@
 spring:
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 25MB
   application:
     name: backend
   profiles:
     active: local
+
+app:
+  base-url: http://localhost:8080
 
   jpa:
     open-in-view: false
@@ -12,8 +19,24 @@ spring:
       hibernate:
         format_sql: true
 
+  task:
+    scheduling:
+      pool:
+        size: 2
+
 server:
   port: 8080
+
+payment:
+  payout:
+    auto-complete: true
+    bank-code: "088"
+    account-number: "000000000000"
+    destination-seller-id: ""
+    retry:
+      max-attempts: 3
+      delay-ms: 1000
+      scheduler-delay-ms: 60000
 
 verification:
   forbidden-keywords:

@@ -1,6 +1,8 @@
 package com.team04.domain.payment.entity;
 
 import com.team04.global.entity.BaseEntity;
+import com.team04.global.exception.CustomException;
+import com.team04.global.exception.ErrorCode;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -25,7 +27,7 @@ public class Payment extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
+    /** 후원 결제(SPONSORSHIP)일 때만 사용. 보증금(DEPOSIT)은 null */
     private Long fundingId;
 
     @Column(unique = true)
@@ -41,11 +43,25 @@ public class Payment extends BaseEntity {
     @Column(nullable = false)
     private Long amount;
 
+    /** 후원 결제 vs 제안자 보증금 결제 */
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private PaymentTypes.PaymentPurpose purpose = PaymentTypes.PaymentPurpose.SPONSORSHIP;
+
+    /** 보증금(DEPOSIT) 결제 시 대상 아이디어 */
+    private Long ideaId;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private PaymentTypes.PaymentStatus status;
 
     private LocalDateTime approvedAt;
+
+    private LocalDateTime refundedAt;
+
+    /** 가상계좌 confirm 응답 secret — DEPOSIT_CALLBACK 웹훅 검증용 */
+    @Column(length = 128)
+    private String tossWebhookSecret;
 
     public static Payment createPending(
             Long fundingId,
@@ -58,8 +74,41 @@ public class Payment extends BaseEntity {
         payment.orderId = orderId;
         payment.amount = amount;
         payment.method = method;
+        payment.purpose = PaymentTypes.PaymentPurpose.SPONSORSHIP;
         payment.status = PaymentTypes.PaymentStatus.PENDING;
         return payment;
+    }
+
+    /** 제안자 보증금 PG 결제용 PENDING 레코드 */
+    public static Payment createDepositPending(
+            Long ideaId,
+            String orderId,
+            Long amount,
+            PaymentTypes.PaymentMethod method
+    ) {
+        Payment payment = new Payment();
+        payment.ideaId = ideaId;
+        payment.orderId = orderId;
+        payment.amount = amount;
+        payment.method = method;
+        payment.purpose = PaymentTypes.PaymentPurpose.DEPOSIT;
+        payment.status = PaymentTypes.PaymentStatus.PENDING;
+        return payment;
+    }
+
+    public boolean isDepositPayment() {
+        return this.purpose == PaymentTypes.PaymentPurpose.DEPOSIT;
+    }
+
+    public void registerVirtualAccountPending(String paymentKey, String tossWebhookSecret) {
+        if (this.method != PaymentTypes.PaymentMethod.VIRTUAL_ACCOUNT) {
+            throw new CustomException(ErrorCode.PAYMENT_NOT_READY);
+        }
+        if (this.status != PaymentTypes.PaymentStatus.PENDING) {
+            throw new CustomException(ErrorCode.PAYMENT_NOT_READY);
+        }
+        this.paymentKey = paymentKey;
+        this.tossWebhookSecret = tossWebhookSecret;
     }
 
     public void complete(String paymentKey) {
@@ -68,7 +117,26 @@ public class Payment extends BaseEntity {
         this.approvedAt = LocalDateTime.now();
     }
 
+    public void completeIfPending() {
+        if (this.status == PaymentTypes.PaymentStatus.SUCCESS) {
+            return;
+        }
+        if (this.status != PaymentTypes.PaymentStatus.PENDING) {
+            throw new CustomException(ErrorCode.PAYMENT_NOT_READY);
+        }
+        this.status = PaymentTypes.PaymentStatus.SUCCESS;
+        this.approvedAt = LocalDateTime.now();
+    }
+
     public void fail() {
         this.status = PaymentTypes.PaymentStatus.FAILED;
+    }
+
+    public void markAsRefunded() {
+        if (this.status != PaymentTypes.PaymentStatus.SUCCESS) {
+            throw new CustomException(ErrorCode.PAYMENT_NOT_READY);
+        }
+        this.status = PaymentTypes.PaymentStatus.REFUNDED;
+        this.refundedAt = LocalDateTime.now();
     }
 }

@@ -1,34 +1,39 @@
 package com.team04.domain.idea.service;
 
-import com.team04.domain.idea.dto.request.IdeaDraftRequest;
-import com.team04.domain.idea.dto.response.IdeaDraftResponse;
-import com.team04.domain.idea.dto.response.IdeaSummaryResponse;
-import com.team04.domain.idea.entity.IdeaCategory;
-import com.team04.domain.idea.entity.IdeaDraft;
+import com.team04.domain.dispute.dto.request.CreateDisputeRequest;
+import com.team04.domain.dispute.entity.DisputeCategory;
+import com.team04.domain.dispute.entity.TargetType;
+import com.team04.domain.dispute.service.DisputeService;
+import com.team04.domain.idea.dto.request.*;
+import com.team04.domain.idea.dto.response.*;
+import com.team04.domain.idea.entity.*;
+import com.team04.domain.idea.repository.IdeaBookmarkRepository;
 import com.team04.domain.idea.repository.IdeaDraftRepository;
+import com.team04.domain.idea.repository.IdeaSettlementAccountRepository;
+import com.team04.domain.milestone.dto.response.MilestoneResponse;
+import com.team04.domain.milestone.entity.Milestone;
+import com.team04.domain.milestone.repository.MilestoneRepository;
+import com.team04.domain.verification.dto.request.VerificationRequest;
+import com.team04.domain.verification.entity.VerificationStatus;
+import com.team04.domain.verification.repository.ProjectVerificationRepository;
+import com.team04.domain.verification.service.VerificationService;
 import com.team04.global.exception.CustomException;
 import com.team04.global.exception.ErrorCode;
-import com.team04.domain.idea.dto.request.CreateIdeaRequest;
-import com.team04.domain.idea.dto.request.ReportIdeaRequest;
-import com.team04.domain.idea.dto.request.UpdateIdeaRequest;
-import com.team04.domain.idea.dto.response.IdeaResponse;
-import com.team04.domain.idea.dto.response.ReportIdeaResponse;
-import com.team04.domain.idea.entity.Idea;
-import com.team04.domain.idea.event.IdeaCreatedEvent;
-import com.team04.domain.idea.event.IdeaPlagiarismReportedEvent;
-import com.team04.domain.idea.event.IdeaReportNotificationEvent;
 import com.team04.domain.idea.repository.IdeaRepository;
+import com.team04.global.storage.StorageClient;
+import com.team04.global.util.ImageUrlConverter;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /** 아이디어 등록, 조회, 수정, 삭제, 신고 비즈니스 로직을 처리하는 서비스입니다. */
 @Service
@@ -41,9 +46,15 @@ public class IdeaService {
 
     private final IdeaRepository ideaRepository;
     private final IdeaDraftRepository ideaDraftRepository;
-    private final ApplicationEventPublisher eventPublisher;
+    private final IdeaBookmarkRepository ideaBookmarkRepository;
+    private final MilestoneRepository milestoneRepository;
+    private final DisputeService disputeService;
+    private final StorageClient storageClient;
+    private final VerificationService verificationService;
+    private final ProjectVerificationRepository projectVerificationRepository;
+    private final IdeaSettlementAccountRepository ideaSettlementAccountRepository;
 
-    /** 아이디어를 등록하고 마일스톤 생성 이벤트를 발행합니다. */
+    /** 아이디어를 등록하고 마일스톤을 함께 저장합니다. */
     @Transactional
     public IdeaResponse createIdea(Long userId, CreateIdeaRequest request) {
         validateMilestones(request);
@@ -60,35 +71,135 @@ public class IdeaService {
                 request.competitor(),
                 request.teamIntro(),
                 request.goalAmount(),
+                request.depositAmount(),
                 request.fundingStartAt(),
                 request.fundingEndAt(),
-                request.rewardType()
+                request.rewardType(),
+                request.imageUrl(),
+                ImageUrlConverter.join(request.imageUrls())
         );
         Idea savedIdea = ideaRepository.save(idea);
 
-        // 마일스톤 도메인 담당자가 핸들러 구현 후 처리
-        eventPublisher.publishEvent(new IdeaCreatedEvent(savedIdea.getId(), request.milestones()));
+        milestoneRepository.saveAll(
+                request.milestones().stream()
+                        .map(m -> Milestone.builder()
+                                .ideaId(savedIdea.getId())
+                                .step(m.step())
+                                .goal(m.goal())
+                                .expectedResult(m.expectedResult())
+                                .expectedDate(m.expectedDate())
+                                .build())
+                        .toList()
+        );
+
+        verificationService.requestVerification(
+                new VerificationRequest(
+                        savedIdea.getId(),
+                        request.title(),
+                        buildVerificationDescription(request),
+                        request.milestones().stream()
+                                .map(m -> new VerificationRequest.MilestoneInfo(
+                                        m.goal(),
+                                        m.expectedResult(),
+                                        m.expectedDate(),
+                                        null
+                                ))
+                                .toList()
+                ),
+                userId
+        );
 
         return IdeaResponse.of(savedIdea);
     }
 
-    /** 프로젝트 목록을 카테고리, 마감임박 필터, 정렬 조건에 따라 Slice로 조회합니다. */
+    /** AI 검증에 전달할 아이디어 상세 설명을 생성합니다. */
+    private String buildVerificationDescription(CreateIdeaRequest request) {
+        return Stream.of(
+                        request.oneLineIntro(),
+                        request.problemDefinition(),
+                        request.solution(),
+                        request.goal(),
+                        request.targetCustomer(),
+                        request.competitor(),
+                        request.teamIntro()
+                )
+                .filter(Objects::nonNull)
+                .collect(Collectors.joining("\n"));
+    }
+
+    /** 프로젝트 목록을 카테고리, 마감임박 필터, 정렬 조건에 따라 Page로 조회합니다. */
     @Transactional(readOnly = true)
-    public Slice<IdeaSummaryResponse> getProjects(
+    public Page<IdeaSummaryResponse> getProjects(
             IdeaCategory category,
             Boolean closingSoonOnly,
+            String keyword,
             String sort,
             Pageable pageable
     ) {
-        return ideaRepository.searchProjects(category, closingSoonOnly, null, sort, pageable)
+        return ideaRepository.searchProjects(category, closingSoonOnly, keyword, sort, pageable)
                 .map(IdeaSummaryResponse::of);
     }
 
-    /** 프로젝트명을 기준으로 LIKE 검색하고 목록 조회와 동일한 Slice 응답 구조로 반환합니다. */
+    /** 신뢰도와 펀딩 달성률, 후원자 수를 합산한 인기 프로젝트 Top5를 조회합니다. */
     @Transactional(readOnly = true)
-    public Slice<IdeaSummaryResponse> searchProjects(String keyword, String sort, Pageable pageable) {
-        return ideaRepository.searchProjects(null, false, keyword, sort, pageable)
-                .map(IdeaSummaryResponse::of);
+    public List<IdeaResponse> getTop5Ideas() {
+        return ideaRepository.findTop5PopularIdeas()
+                .stream()
+                .map(IdeaResponse::of)
+                .toList();
+    }
+
+    /** 진행 중인 본인 아이디어를 취소 신청 상태로 전이합니다. */
+    @Transactional
+    public void requestCancellation(Long ideaId, Long userId) {
+        Idea idea = findActiveIdea(ideaId);
+        idea.validateOwner(userId);
+        idea.requestCancellation();
+        projectVerificationRepository.findByIdeaId(ideaId)
+                .filter(v -> v.getStatus() == VerificationStatus.AI_VERIFYING)
+                .ifPresent(v -> v.changeStatus(VerificationStatus.CANCELLED));
+    }
+
+    /** 중복 여부를 확인한 뒤 로그인 사용자의 관심 프로젝트를 저장합니다. */
+    @Transactional
+    public void addBookmark(Long ideaId, Long userId) {
+        findActiveIdea(ideaId);
+        if (ideaBookmarkRepository.existsByUserIdAndIdeaId(userId, ideaId)) {
+            throw new CustomException(ErrorCode.IDEA_BOOKMARK_ALREADY_EXISTS);
+        }
+        ideaBookmarkRepository.save(new IdeaBookmark(userId, ideaId));
+    }
+
+    /** 존재 여부를 확인한 뒤 로그인 사용자의 관심 프로젝트를 삭제합니다. */
+    @Transactional
+    public void deleteBookmark(Long ideaId, Long userId) {
+        int deleted = ideaBookmarkRepository.deleteByUserIdAndIdeaIdBulk(userId, ideaId);
+        if (deleted == 0) {
+            throw new CustomException(ErrorCode.IDEA_BOOKMARK_NOT_FOUND);
+        }
+    }
+
+    /** 로그인 사용자의 관심 프로젝트 목록을 Page 페이지네이션으로 조회합니다. */
+    @Transactional(readOnly = true)
+    public Page<IdeaResponse> getBookmarks(Long userId, Pageable pageable) {
+        Page<IdeaBookmark> bookmarks = ideaBookmarkRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable);
+        List<Long> ideaIds = bookmarks.stream()
+                .map(IdeaBookmark::getIdeaId)
+                .toList();
+        if (ideaIds.isEmpty()) {
+            return Page.empty(pageable);
+        }
+        Map<Long, Idea> ideasById = ideaRepository.findByIdInAndDeletedAtIsNull(ideaIds)
+                .stream()
+                .collect(Collectors.toMap(Idea::getId, Function.identity()));
+
+        return bookmarks.map(bookmark -> {
+            Idea idea = ideasById.get(bookmark.getIdeaId());
+            if (idea == null) {
+                throw new CustomException(ErrorCode.IDEA_NOT_FOUND);
+            }
+            return IdeaResponse.of(idea);
+        });
     }
 
     /** 보관 기간 내 본인 임시저장 목록을 최신 수정순으로 조회합니다. */
@@ -116,10 +227,13 @@ public class IdeaService {
                 request.competitor(),
                 request.teamIntro(),
                 request.goalAmount(),
+                request.depositAmount(),
                 request.fundingStartAt(),
                 request.fundingEndAt(),
-                request.rewardType()
+                request.rewardType(),
+                request.imageUrl()
         );
+        draft.updateImageUrls(ImageUrlConverter.join(request.imageUrls()));
         return IdeaDraftResponse.of(ideaDraftRepository.save(draft));
     }
 
@@ -138,10 +252,13 @@ public class IdeaService {
                 request.competitor(),
                 request.teamIntro(),
                 request.goalAmount(),
+                request.depositAmount(),
                 request.fundingStartAt(),
                 request.fundingEndAt(),
-                request.rewardType()
+                request.rewardType(),
+                request.imageUrl()
         );
+        draft.updateImageUrls(ImageUrlConverter.join(request.imageUrls()));
         return IdeaDraftResponse.of(draft);
     }
 
@@ -161,11 +278,24 @@ public class IdeaService {
         return response;
     }
 
+    /** 로그인 사용자가 등록한 아이디어 목록을 조회합니다. */
+    @Transactional(readOnly = true)
+    public List<IdeaSummaryResponse> getMyIdeas(Long userId) {
+        return ideaRepository.findByUserIdAndDeletedAtIsNullOrderByCreatedAtDesc(userId)
+                .stream()
+                .map(IdeaSummaryResponse::of)
+                .toList();
+    }
+
     /** 삭제되지 않은 아이디어 상세 정보를 조회합니다. */
     @Transactional(readOnly = true)
     public IdeaResponse getIdea(Long ideaId) {
         Idea idea = findActiveIdea(ideaId);
-        return IdeaResponse.of(idea);
+        List<MilestoneResponse> milestones = milestoneRepository.findByIdeaIdOrderByStep(ideaId)
+                .stream()
+                .map(MilestoneResponse::from)
+                .toList();
+        return IdeaResponse.of(idea, milestones);
     }
 
     /** 작성자 본인이고 심사 대기 상태인 경우에만 아이디어 정보를 수정합니다. */
@@ -173,6 +303,8 @@ public class IdeaService {
     public IdeaResponse updateIdea(Long ideaId, Long userId, UpdateIdeaRequest request) {
         Idea idea = findActiveIdea(ideaId);
         idea.validateOwner(userId);
+        // 수정 흐름에서도 엔티티 변경 전에 상태를 명시 검증해 승인 이후 수정을 차단합니다.
+        idea.validateEditable();
         idea.update(
                 request.title(),
                 request.category(),
@@ -186,9 +318,84 @@ public class IdeaService {
                 request.goalAmount(),
                 request.fundingStartAt(),
                 request.fundingEndAt(),
-                request.rewardType()
+                request.rewardType(),
+                request.imageUrl()
         );
+        idea.updateImageUrls(ImageUrlConverter.join(request.imageUrls()));
         return IdeaResponse.of(idea);
+    }
+
+    /** 제안자가 본문 이미지를 아이디어 등록 전에 사전 업로드하고 URL 목록을 반환합니다. */
+    public List<String> uploadContentImages(List<MultipartFile> images) {
+        validateImageFiles(images);
+        return images.stream()
+                .map(image -> storageClient.upload(image, "ideas/content"))
+                .toList();
+    }
+
+    /** 작성자 본인이고 심사 대기 상태인 경우에만 대표 이미지를 업로드하고 URL을 저장합니다. */
+    @Transactional
+    public IdeaResponse uploadIdeaImage(Long ideaId, Long userId, MultipartFile image) {
+        validateImageFile(image);
+        Idea idea = findActiveIdea(ideaId);
+        idea.validateOwner(userId);
+        idea.validateEditable();
+
+        String imageUrl = storageClient.upload(image, "ideas/thumbnail");
+
+        try {
+            // 업로드와 DB 저장을 단일 서비스 흐름으로 묶고, 저장 실패 시 업로드 파일을 보상 삭제합니다.
+            idea.updateImageUrl(imageUrl);
+            ideaRepository.flush();
+            return IdeaResponse.of(idea);
+        } catch (RuntimeException e) {
+            storageClient.delete(imageUrl);
+            throw e;
+        }
+    }
+
+    /** 제안자가 관리자 최종 승인 전에 정산 및 환불에 사용할 계좌 정보를 등록하거나 수정합니다. */
+    @Transactional
+    public IdeaSettlementAccountResponse upsertSettlementAccount(
+            Long ideaId,
+            Long userId,
+            IdeaSettlementAccountRequest request
+    ) {
+        Idea idea = findActiveIdea(ideaId);
+        idea.validateOwner(userId);
+        validateSettlementAccountEditable(idea);
+
+        IdeaSettlementAccount account = ideaSettlementAccountRepository.findByIdeaId(ideaId)
+                .map(existingAccount -> {
+                    existingAccount.update(
+                            request.bankName(),
+                            request.accountNumber(),
+                            request.accountHolderName()
+                    );
+                    return existingAccount;
+                })
+                .orElseGet(() -> ideaSettlementAccountRepository.save(
+                        IdeaSettlementAccount.create(
+                                ideaId,
+                                request.bankName(),
+                                request.accountNumber(),
+                                request.accountHolderName()
+                        )
+                ));
+
+        return IdeaSettlementAccountResponse.of(account);
+    }
+
+    /** 제안자 본인이 등록한 정산 및 환불 계좌 정보를 조회합니다. */
+    @Transactional(readOnly = true)
+    public IdeaSettlementAccountResponse getSettlementAccount(Long ideaId, Long userId) {
+        Idea idea = findActiveIdea(ideaId);
+        idea.validateOwner(userId);
+
+        IdeaSettlementAccount account = ideaSettlementAccountRepository.findByIdeaId(ideaId)
+                .orElseThrow(() -> new CustomException(ErrorCode.SETTLEMENT_ACCOUNT_NOT_REGISTERED));
+
+        return IdeaSettlementAccountResponse.of(account);
     }
 
     /** 작성자 본인이고 심사 대기 상태인 경우에만 아이디어를 소프트 삭제합니다. */
@@ -199,19 +406,23 @@ public class IdeaService {
         idea.softDelete();
     }
 
-    /** 아이디어 도용 신고 이벤트와 관리자 알림 이벤트를 발행합니다. */
+    /** 아이디어 도용 신고를 접수하고 분쟁을 생성합니다. */
     @Transactional
     public ReportIdeaResponse reportIdea(Long ideaId, Long reporterUserId, ReportIdeaRequest request) {
         Idea idea = findActiveIdea(ideaId);
         if (idea.getUserId().equals(reporterUserId)) {
             throw new CustomException(ErrorCode.SELF_REPORT_NOT_ALLOWED);
         }
-        eventPublisher.publishEvent(
-                new IdeaPlagiarismReportedEvent(idea.getId(), idea.getUserId(), reporterUserId, request.reason())
-        );
-        eventPublisher.publishEvent(
-                new IdeaReportNotificationEvent(idea.getId(), reporterUserId, request.reason())
-        );
+        disputeService.createDispute(reporterUserId,
+                new CreateDisputeRequest(
+                        TargetType.IDEA,
+                        ideaId,
+                        idea.getUserId(),
+                        DisputeCategory.IDEA_THEFT,
+                        "아이디어 도용 신고",
+                        request.reason(),
+                        null
+                ));
         return new ReportIdeaResponse(idea.getId(), reporterUserId, "아이디어 도용 신고가 접수되었습니다.");
     }
 
@@ -227,15 +438,46 @@ public class IdeaService {
         }
     }
 
+    /** 업로드할 이미지 파일 목록이 비어 있지 않은지 검증합니다. */
+    private void validateImageFiles(List<MultipartFile> images) {
+        if (images == null || images.isEmpty()) {
+            throw new CustomException(ErrorCode.INVALID_INPUT);
+        }
+        images.forEach(this::validateImageFile);
+    }
+
+    /** 업로드할 이미지 파일이 비어 있지 않은지 검증합니다. */
+    private void validateImageFile(MultipartFile image) {
+        if (image == null || image.isEmpty()) {
+            throw new CustomException(ErrorCode.INVALID_INPUT);
+        }
+    }
+
+    /** 관리자 최종 승인 전까지만 제안자 계좌 등록/수정을 허용합니다. */
+    private void validateSettlementAccountEditable(Idea idea) {
+        if (idea.getStatus() == IdeaStatus.OPEN) {
+            throw new CustomException(ErrorCode.IDEA_STATUS_NOT_EDITABLE);
+        }
+        idea.validateEditable();
+    }
+
     /** 임시저장을 조회하고 작성자 본인 접근인지 검증합니다. */
     private IdeaDraft findDraft(Long draftId, Long userId) {
         IdeaDraft draft = ideaDraftRepository.findById(draftId)
                 .orElseThrow(() -> new CustomException(ErrorCode.IDEA_DRAFT_NOT_FOUND));
         draft.validateOwner(userId);
-        if (draft.getCreatedAt().isBefore(draftRetentionStartAt())) {
+        if (draft.getUpdatedAt().isBefore(draftRetentionStartAt())) {
             throw new CustomException(ErrorCode.IDEA_DRAFT_NOT_FOUND);
         }
         return draft;
+    }
+
+    /** 관리자 일시 중단 상태인 경우 예외를 발생시킵니다. */
+    public void validateNotSuspended(Long ideaId) {
+        Idea idea = findActiveIdea(ideaId);
+        if (idea.getStatus() == IdeaStatus.SUSPENDED) {
+            throw new CustomException(ErrorCode.IDEA_SUSPENDED);
+        }
     }
 
     /** 소프트 삭제되지 않은 아이디어를 조회하고 없으면 공통 예외를 발생시킵니다. */
@@ -252,6 +494,9 @@ public class IdeaService {
 
         Set<Integer> steps = new HashSet<>();
         for (var milestone : request.milestones()) {
+            if (milestone == null) {
+                throw new CustomException(ErrorCode.INVALID_INPUT);
+            }
             steps.add(milestone.step());
         }
 

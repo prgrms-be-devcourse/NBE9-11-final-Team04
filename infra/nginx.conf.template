@@ -1,0 +1,39 @@
+server {
+    listen 80;
+    server_name seedlink.site;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name seedlink.site;
+
+    ssl_certificate /etc/letsencrypt/live/seedlink.site/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/seedlink.site/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    root /home/ubuntu/seedlink/frontend/out;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # 토스 웹훅 — nginx가 서버 시크릿 헤더 주입 (토스는 커스텀 헤더 미전송)
+    location /api/payments/webhooks/ {
+        proxy_pass http://localhost:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Webhook-Secret "${PAYMENT_WEBHOOK_SECRET}";
+    }
+
+    # 백엔드 API 프록시
+    location /api/ {
+        proxy_pass http://localhost:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+}

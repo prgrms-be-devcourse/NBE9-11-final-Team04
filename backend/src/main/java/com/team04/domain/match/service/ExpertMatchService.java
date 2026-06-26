@@ -1,6 +1,7 @@
 package com.team04.domain.match.service;
 
 import com.team04.domain.expert.entity.ExpertProfile;
+import com.team04.domain.expert.entity.ExpertStatus;
 import com.team04.domain.expert.repository.ExpertProfileRepository;
 import com.team04.domain.idea.entity.Idea;
 import com.team04.domain.idea.repository.IdeaRepository;
@@ -77,6 +78,10 @@ public class ExpertMatchService {
 
         if (!expertProfile.isVerified()) {
             throw new CustomException(ErrorCode.EXPERT_NOT_VERIFIED);
+        }
+
+        if (expertProfile.getStatus() != ExpertStatus.ACTIVE) {
+            throw new CustomException(ErrorCode.EXPERT_SUSPENDED);
         }
 
         // 동일한 아이디어-전문가 조합 중복 요청 방어

@@ -46,7 +46,7 @@ class UserServiceTest {
     @Test
     @DisplayName("내 정보 조회 성공")
     void getMe_성공() {
-        User user = User.create("test@test.com", "encodedPassword", "홍길동", "길동이", 25, Role.PROPOSER);
+        User user = User.create("test@test.com", "encodedPassword", "홍길동", "길동이", 25, Role.USER);
         Profile profile = Profile.create(user);
 
         given(userRepository.findById(1L)).willReturn(Optional.of(user));
@@ -72,7 +72,7 @@ class UserServiceTest {
     @Test
     @DisplayName("내 정보 조회 실패 - 탈퇴한 유저")
     void getMe_탈퇴한유저() {
-        User user = User.create("test@test.com", "encodedPassword", "홍길동", "길동이", 25, Role.PROPOSER);
+        User user = User.create("test@test.com", "encodedPassword", "홍길동", "길동이", 25, Role.USER);
         user.withdraw();
 
         given(userRepository.findById(1L)).willReturn(Optional.of(user));
@@ -86,7 +86,7 @@ class UserServiceTest {
     @Test
     @DisplayName("내 정보 조회 성공 - 프로필 없음")
     void getMe_프로필없음() {
-        User user = User.create("test@test.com", "encodedPassword", "홍길동", "길동이", 25, Role.PROPOSER);
+        User user = User.create("test@test.com", "encodedPassword", "홍길동", "길동이", 25, Role.USER);
 
         given(userRepository.findById(1L)).willReturn(Optional.of(user));
         given(profileRepository.findByUserId(1L)).willReturn(Optional.empty());
@@ -100,7 +100,7 @@ class UserServiceTest {
     @Test
     @DisplayName("내 정보 수정 성공")
     void updateMe_성공() {
-        User user = User.create("test@test.com", "encodedPassword", "홍길동", "길동이", 25, Role.PROPOSER);
+        User user = User.create("test@test.com", "encodedPassword", "홍길동", "길동이", 25, Role.USER);
         Profile profile = Profile.create(user);
         UserUpdateRequest request = new UserUpdateRequest("새닉네임", "소개글", "https://portfolio.com");
 
@@ -130,7 +130,7 @@ class UserServiceTest {
     @Test
     @DisplayName("내 정보 수정 실패 - 탈퇴한 유저")
     void updateMe_탈퇴한유저() {
-        User user = User.create("test@test.com", "encodedPassword", "홍길동", "길동이", 25, Role.PROPOSER);
+        User user = User.create("test@test.com", "encodedPassword", "홍길동", "길동이", 25, Role.USER);
         user.withdraw();
         UserUpdateRequest request = new UserUpdateRequest("새닉네임", "소개글", "https://portfolio.com");
 
@@ -145,7 +145,7 @@ class UserServiceTest {
     @Test
     @DisplayName("내 정보 수정 성공 - 프로필 없음")
     void updateMe_프로필없음() {
-        User user = User.create("test@test.com", "encodedPassword", "홍길동", "길동이", 25, Role.PROPOSER);
+        User user = User.create("test@test.com", "encodedPassword", "홍길동", "길동이", 25, Role.USER);
         UserUpdateRequest request = new UserUpdateRequest("새닉네임", "소개글", "https://portfolio.com");
 
         given(userRepository.findById(1L)).willReturn(Optional.of(user));
@@ -159,7 +159,7 @@ class UserServiceTest {
     @Test
     @DisplayName("비밀번호 변경 성공")
     void changePassword_성공() {
-        User user = User.create("test@test.com", "encodedCurrent", "홍길동", "길동이", 25, Role.PROPOSER);
+        User user = User.create("test@test.com", "encodedCurrent", "홍길동", "길동이", 25, Role.USER);
         PasswordChangeRequest request = new PasswordChangeRequest("current1!", "newPass1!");
 
         given(userRepository.findById(1L)).willReturn(Optional.of(user));
@@ -174,7 +174,7 @@ class UserServiceTest {
     @Test
     @DisplayName("비밀번호 변경 실패 - 현재 비밀번호 불일치")
     void changePassword_현재비밀번호불일치() {
-        User user = User.create("test@test.com", "encodedCurrent", "홍길동", "길동이", 25, Role.PROPOSER);
+        User user = User.create("test@test.com", "encodedCurrent", "홍길동", "길동이", 25, Role.USER);
         PasswordChangeRequest request = new PasswordChangeRequest("wrongPass1!", "newPass1!");
 
         given(userRepository.findById(1L)).willReturn(Optional.of(user));
@@ -202,7 +202,7 @@ class UserServiceTest {
     @Test
     @DisplayName("회원 탈퇴 성공")
     void withdraw_성공() {
-        User user = User.create("test@test.com", "encodedPassword", "홍길동", "길동이", 25, Role.PROPOSER);
+        User user = User.create("test@test.com", "encodedPassword", "홍길동", "길동이", 25, Role.USER);
 
         given(userRepository.findById(1L)).willReturn(Optional.of(user));
 

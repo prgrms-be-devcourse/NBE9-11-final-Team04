@@ -12,6 +12,7 @@ import jakarta.validation.constraints.Size;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 
 /** 아이디어 기본 정보를 수정하기 위한 요청 DTO입니다. */
 public record UpdateIdeaRequest(
@@ -27,7 +28,9 @@ public record UpdateIdeaRequest(
         @NotNull @Min(1_000_000) @Max(100_000_000) Long goalAmount,
         @NotNull @Future LocalDateTime fundingStartAt,
         @NotNull @Future LocalDateTime fundingEndAt,
-        @NotNull RewardType rewardType
+        @NotNull RewardType rewardType,
+        @Size(max = 2048) String imageUrl,
+        List<@Size(max = 2048) String> imageUrls
 ) {
 
     /** 펀딩 종료일이 시작일보다 이후인지 검증합니다. */

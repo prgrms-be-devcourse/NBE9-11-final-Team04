@@ -16,15 +16,22 @@ public enum ErrorCode {
     // 회원
     USER_NOT_FOUND(404, "U001", "존재하지 않는 사용자입니다"),
     DUPLICATE_EMAIL(409, "U002", "이미 사용 중인 이메일입니다"),
-    INVALID_PASSWORD(400, "U003", "비밀번호가 올바르지 않습니다"),
-    ACCOUNT_SUSPENDED(403, "U004", "정지된 계정입니다"),
+    DUPLICATE_NICKNAME(409, "U003", "이미 사용 중인 닉네임입니다"),
+    INVALID_PASSWORD(400, "U004", "비밀번호가 올바르지 않습니다"),
+    ACCOUNT_SUSPENDED(403, "U005", "정지된 계정입니다"),
+    ACCOUNT_WITHDRAWN(403, "U006", "탈퇴한 계정입니다"),
+    INVALID_USER_STATUS_TRANSITION(400, "U007", "유효하지 않은 상태 전이입니다"),
 
     // 인증
     INVALID_REFRESH_TOKEN(401, "A001", "유효하지 않은 리프레시 토큰입니다"),
     INVALID_OTP(400, "A002", "인증 코드가 올바르지 않습니다"),
     OTP_EXPIRED(400, "A003", "인증 코드가 만료되었습니다"),
-    ACCOUNT_WITHDRAWN(403, "U005", "탈퇴한 계정입니다"),
-    UNDERAGE(403, "U006", "만 19세 미만은 가입할 수 없습니다"),
+    OAUTH_AUTHENTICATION_FAILED(400, "A004", "소셜 로그인에 실패했습니다"),
+    INVALID_OAUTH_TOKEN(400, "A005", "유효하지 않거나 만료된 소셜 인증 토큰입니다"),
+    UNDERAGE(403, "A006", "만 19세 미만은 가입할 수 없습니다"),
+    INVALID_OAUTH_STATE(400, "A007", "유효하지 않은 OAuth state 값입니다"),
+    EMAIL_NOT_VERIFIED(400, "A008", "이메일 인증이 완료되지 않았습니다"),
+    INVALID_INVITE_TOKEN(400, "A009", "유효하지 않거나 만료된 초대 토큰입니다"),
 
     // 사업자검증
     BUSINESS_VERIFICATION_UNAVAILABLE(503, "B001", "사업자 인증 서비스가 일시적으로 불안정합니다. 잠시 후 다시 시도해주세요"),
@@ -37,9 +44,13 @@ public enum ErrorCode {
     IDEA_STATUS_NOT_EDITABLE(400, "I004", "현재 상태에서는 아이디어를 수정할 수 없습니다"),
     IDEA_STATUS_NOT_DELETABLE(400, "I005", "현재 상태에서는 아이디어를 삭제할 수 없습니다"),
     INVALID_IDEA_STATUS_TRANSITION(400, "I006", "유효하지 않은 아이디어 상태 전이입니다"),
+    IDEA_SUSPENDED(403, "I013", "관리자에 의해 일시 중단된 프로젝트입니다"),
     IDEA_DRAFT_NOT_FOUND(404, "I007", "존재하지 않는 아이디어 임시저장입니다"),
     IDEA_DRAFT_LIMIT_EXCEEDED(409, "I008", "아이디어 임시저장은 최대 50개까지 가능합니다"),
     SELF_REPORT_NOT_ALLOWED(400, "I009", "본인 아이디어는 신고할 수 없습니다"),
+    IDEA_BOOKMARK_ALREADY_EXISTS(409, "I010", "이미 관심 프로젝트로 저장한 아이디어입니다"),
+    IDEA_BOOKMARK_NOT_FOUND(404, "I011", "존재하지 않는 관심 프로젝트입니다"),
+    INVALID_SETTLEMENT_ACCOUNT(400, "I012", "정산 계좌 정보가 올바르지 않습니다"),
 
     // 검증
     INVALID_VERIFICATION_STATUS_TRANSITION(400, "V001", "유효하지 않은 검증 상태 전이입니다"),
@@ -70,6 +81,10 @@ public enum ErrorCode {
     INVALID_FUNDING_AMOUNT(400, "F007", "후원 금액이 올바르지 않습니다"),
     PROJECT_FEE_NOT_FOUND(404, "F008", "존재하지 않는 프로젝트 수수료입니다"),
     PROJECT_FEE_ALREADY_PAID(409, "F009", "이미 수수료가 결제된 프로젝트입니다"),
+    DEPOSIT_NOT_FOUND(404, "F010", "존재하지 않는 보증금입니다"),
+    DEPOSIT_AMOUNT_MISMATCH(400, "F010", "보증금 금액이 아이디어에 등록된 금액과 일치하지 않습니다"),
+    DEPOSIT_EXCEEDS_LIMIT(400, "F011", "보증금은 목표 펀딩액의 30%를 초과할 수 없습니다"),
+    FUNDING_LOCKED_BY_MILESTONE(409, "F012", "이미 완료된 마일스톤 단계의 후원은 직접 취소할 수 없습니다"),
 
     // 마일스톤
     MILESTONE_NOT_FOUND(404, "M001", "존재하지 않는 마일스톤입니다"),
@@ -77,6 +92,8 @@ public enum ErrorCode {
     INVALID_MILESTONE_COUNT(400, "M003", "현재 상태에서 해당 상태로 전이할 수 없습니다"),
     INVALID_MILESTONE_STEP(400, "M004", "유효하지 않은 마일스톤 단계입니다"),
     INVALID_MILESTONE_STATUS_TRANSITION(400, "M005", "현재 상태에서 해당 상태로 전이할 수 없습니다"),
+    COMPLETION_REPORT_NOT_FOUND(404, "M006", "존재하지 않는 완료/소명 보고서입니다"),
+    COMPLETION_REPORT_MISMATCH(400, "M007", "요청한 마일스톤의 완료/소명 보고서가 아닙니다"),
 
     // 결제
     PAYMENT_NOT_FOUND(404, "P001", "존재하지 않는 결제입니다"),
@@ -86,10 +103,19 @@ public enum ErrorCode {
     PAYMENT_AMOUNT_MISMATCH(400, "P005", "결제 금액이 일치하지 않습니다"),
     PAYMENT_ALREADY_DONE(409, "P006", "이미 완료된 결제입니다"),
     PAYMENT_NOT_READY(400, "P007", "결제를 진행할 수 없는 상태입니다"),
+    VBANK_LEDGER_INSUFFICIENT_BALANCE(409, "P008", "가상계좌 장부 잔액이 부족합니다"),
 
     // 분쟁
     DISPUTE_NOT_FOUND(404, "D001", "존재하지 않는 분쟁입니다"),
     DISPUTE_ALREADY_RESOLVED(400, "D002", "이미 처리된 분쟁입니다"),
+    DISPUTE_APPEAL_ALREADY_EXISTS(409, "D003", "이미 이의제기를 제출했습니다."),
+    DISPUTE_CANNOT_REPORT_YOURSELF(400, "D004", "자기 자신을 신고할 수 없습니다."),
+    DISPUTE_REPORTED_NOT_PARTICIPANT(400, "D005", "신고 대상이 해당 도메인의 관계자가 아닙니다"),
+    DISPUTE_INVALID_STATUS_TRANSITION(400, "D006", "유효하지 않은 분쟁 상태 전이입니다"),
+    DISPUTE_ALREADY_PENDING(409, "D007", "이미 처리 중인 신고가 존재합니다"),
+    DISPUTE_APPEAL_NOT_ALLOWED(400, "D008", "소명을 제출할 수 없는 상태입니다"),
+    DISPUTE_APPEAL_LIMIT_EXCEEDED(400, "D009", "소명 제출 횟수(3회)를 초과했습니다"),
+    DISPUTE_APPEAL_PERIOD_EXPIRED(400, "D010", "소명 가능 기간(7일)이 만료되었습니다"),
 
     //정산
     SETTLEMENT_NOT_FOUND(404, "S001", "존재하지 않는 정산입니다"),
@@ -105,6 +131,10 @@ public enum ErrorCode {
     PRE_SETTLEMENT_MILESTONE_NOT_IN_PROGRESS(400, "PS003", "진행 중인 마일스톤에서만 선정산 신청이 가능합니다"),
     PRE_SETTLEMENT_NOT_FOUND(404, "PS004", "존재하지 않는 선정산입니다"),
     PRE_SETTLEMENT_REQUEST_FAILED(500, "PS005", "선정산 신청에 실패했습니다. 잠시 후 다시 시도해주세요"),
+    PRE_SETTLEMENT_INSUFFICIENT_AVAILABLE(400, "PS006", "가용 모금 잔액이 부족합니다"),
+    PRE_SETTLEMENT_NOT_REQUESTED(400, "PS007", "검토 대기 중인 정산 신청이 아닙니다"),
+    PRE_SETTLEMENT_INSUFFICIENT_VIRTUAL_DEPOSIT(400, "PS008", "가상 보증금 잔액이 부족합니다. 정산 신청금의 50%를 보증금에서 차감합니다"),
+    SETTLEMENT_ACCOUNT_NOT_REGISTERED(400, "PS008", "아이디어 등록 시 입력한 정산 계좌가 없습니다"),
 
     // 매칭
     MATCH_NOT_FOUND(404, "MA001", "존재하지 않는 매칭입니다"),
@@ -120,7 +150,19 @@ public enum ErrorCode {
     FUND_USAGE_INVALID_AMOUNT(400, "FU002", "자금 사용 금액은 0보다 커야 합니다"),
     FUND_USAGE_NO_IN_PROGRESS_MILESTONE(400, "FU003", "진행 중인 마일스톤이 없어 자금 사용 내역을 입력할 수 없습니다"),
     FUND_USAGE_EXCEEDS_RECEIVED(400, "FU004", "실제 지급받은 금액을 초과하는 지출은 등록할 수 없습니다"),
-    FUND_USAGE_INVALID_DATE(400, "FU005", "자금 사용일은 펀딩 시작일 이후여야 합니다");
+    FUND_USAGE_INVALID_DATE(400, "FU005", "자금 사용일은 펀딩 시작일 이후여야 합니다"),
+
+    // 환불
+    REFUND_NOT_FOUND(404, "RF001", "존재하지 않는 환불 내역입니다"),
+    REFUND_ALREADY_COMPLETED(409, "RF002", "이미 완료된 환불입니다"),
+
+    // 파일 업로드
+    FILE_UPLOAD_FAILED(500, "FL001", "파일 업로드에 실패했습니다"),
+
+    // 소명
+    APPEAL_LIMIT_EXCEEDED(400, "AP001", "소명 자료 제출 횟수를 초과했습니다 (최대 3회)"),
+    APPEAL_PERIOD_EXPIRED(400, "AP002", "소명 자료 제출 기한이 만료되었습니다 (7일 이내)"),
+    EXPERT_NOT_SUSPENDED(400, "AP003", "격리된 계정이 아닙니다");
 
     private final int status;
     private final String code;

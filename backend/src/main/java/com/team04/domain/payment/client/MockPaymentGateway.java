@@ -1,22 +1,27 @@
 package com.team04.domain.payment.client;
 
+import com.team04.domain.payment.dto.request.PayoutRequest;
 import com.team04.domain.payment.dto.response.PaymentConfirmResult;
+import com.team04.domain.payment.dto.response.PaymentRefundResult;
 import com.team04.domain.payment.dto.response.PaymentSessionResult;
 import com.team04.domain.payment.dto.response.PaymentVerifyResult;
+import com.team04.domain.payment.dto.response.PayoutResult;
 import com.team04.domain.payment.dto.response.VirtualAccountIssueResult;
 import com.team04.domain.payment.entity.PaymentTypes.PaymentMethod;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * 테스트용 Mock PG.
- * 토스 키 발급 전까지 카드 승인·가상계좌 발급을 흉내 냅니다.
+ * 테스트·로컬용 Mock PG.
+ * 카드 승인, 가상계좌 발급·입금 검증, 환불, 선정산 지급을 흉내 냅니다.
  */
 @Slf4j
 @Component
+@ConditionalOnProperty(name = "payment.gateway.type", havingValue = "mock", matchIfMissing = true)
 public class MockPaymentGateway implements PaymentGateway {
 
     public static final String MOCK_CLIENT_KEY = "test_ck_mock_seedlink";
@@ -51,10 +56,6 @@ public class MockPaymentGateway implements PaymentGateway {
         );
     }
 
-    /**
-     * Mock 환경: PG 조회 API 대체.
-     * 실제 연동 시 Toss GET /v1/payments/orders/{orderId} 등으로 교체합니다.
-     */
     @Override
     public PaymentVerifyResult verifyVirtualAccountDeposit(String orderId, long amount) {
         log.info("[MockPG] 가상계좌 입금 검증 orderId={}, amount={}", orderId, amount);
@@ -62,5 +63,22 @@ public class MockPaymentGateway implements PaymentGateway {
             return PaymentVerifyResult.failure("유효하지 않은 검증 요청");
         }
         return PaymentVerifyResult.success();
+    }
+
+    @Override
+    public PaymentRefundResult refund(String paymentKey, String orderId, long amount, String cancelReason) {
+        log.info("[MockPG] 환불 paymentKey={}, orderId={}, amount={}, reason={}",
+                paymentKey, orderId, amount, cancelReason);
+        if (paymentKey != null && paymentKey.startsWith("fail-refund-")) {
+            return PaymentRefundResult.failure("Mock PG 환불 실패");
+        }
+        return PaymentRefundResult.success("mock-cancel-" + orderId);
+    }
+
+    @Override
+    public PayoutResult payout(PayoutRequest request) {
+        log.info("[MockPG] 지급대행 type={}, targetId={}, ideaId={}, amount={}",
+                request.payoutTargetType(), request.payoutTargetId(), request.ideaId(), request.amount());
+        return PayoutResult.success("mock-payout-" + request.payoutTargetType() + "-" + request.payoutTargetId());
     }
 }

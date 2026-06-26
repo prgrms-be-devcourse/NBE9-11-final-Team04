@@ -61,7 +61,7 @@ jobs:
       - name: 프론트엔드 빌드
         working-directory: frontend
         env:
-          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
+          NEXT_PUBLIC_API_BASE_URL: ${{ secrets.NEXT_PUBLIC_API_BASE_URL }}
         run: |
           npm ci
           npm run build
@@ -72,7 +72,7 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
-          source: "seedlink-app.tar.gz,infra/docker-compose.yml,infra/nginx.conf,frontend/dist"
+          source: "seedlink-app.tar.gz,infra/docker-compose.yml,infra/nginx.conf.template,infra/payment.env,frontend/out"
           target: "/home/${{ secrets.EC2_USER }}/seedlink"
 
       - name: EC2 배포
@@ -85,6 +85,7 @@ jobs:
             cd /home/${{ secrets.EC2_USER }}/seedlink
             docker load < seedlink-app.tar.gz
             cp infra/docker-compose.yml docker-compose.yml
+            cp infra/payment.env payment.env
 
             cat > .env << EOF
             DB_HOST=mysql
@@ -100,22 +101,34 @@ jobs:
             JWT_REFRESH_EXPIRY=${{ secrets.JWT_REFRESH_EXPIRY }}
             NTS_API_SERVICE_KEY=${{ secrets.NTS_API_SERVICE_KEY }}
             OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+            GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+            GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
+            KAKAO_CLIENT_ID=${{ secrets.KAKAO_CLIENT_ID }}
+            AWS_S3_BUCKET=${{ secrets.AWS_S3_BUCKET }}
+            AWS_S3_REGION=${{ secrets.AWS_S3_REGION }}
+            AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}
+            AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}
             MAIL_USERNAME=${{ secrets.MAIL_USERNAME }}
             MAIL_PASSWORD=${{ secrets.MAIL_PASSWORD }}
+            ADMIN_INTERNAL_BASE_URL=${{ secrets.ADMIN_INTERNAL_BASE_URL }}
             EOF
+            cat infra/payment.env >> .env
 
             # nginx 설치 및 설정 적용
             if ! command -v nginx &> /dev/null; then
               sudo apt-get update && sudo apt-get install -y nginx
             fi
-            sudo cp infra/nginx.conf /etc/nginx/sites-available/seedlink
+            set -a
+            source infra/payment.env
+            set +a
+            envsubst '${PAYMENT_WEBHOOK_SECRET}' < infra/nginx.conf.template | sudo tee /etc/nginx/sites-available/seedlink > /dev/null
             sudo ln -sf /etc/nginx/sites-available/seedlink /etc/nginx/sites-enabled/seedlink
             sudo rm -f /etc/nginx/sites-enabled/default
             sudo nginx -t && sudo systemctl reload nginx
 
-            # 프론트엔드 dist 복사
+            # 프론트엔드 out 복사
             mkdir -p /home/${{ secrets.EC2_USER }}/seedlink/frontend
-            cp -r frontend/dist /home/${{ secrets.EC2_USER }}/seedlink/frontend/
+            cp -r frontend/out /home/${{ secrets.EC2_USER }}/seedlink/frontend/
 
             docker compose down
             docker compose up -d

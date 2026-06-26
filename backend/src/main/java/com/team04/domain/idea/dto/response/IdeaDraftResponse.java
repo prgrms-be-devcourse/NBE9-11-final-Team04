@@ -1,8 +1,11 @@
 package com.team04.domain.idea.dto.response;
 
 import com.team04.domain.idea.entity.IdeaDraft;
+import com.team04.global.util.ImageUrlConverter;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.List;
 
 /** 아이디어 임시저장 상세 정보를 반환하는 응답 DTO입니다. */
 public record IdeaDraftResponse(
@@ -18,9 +21,12 @@ public record IdeaDraftResponse(
         String competitor,
         String teamIntro,
         Long goalAmount,
+        Long depositAmount,
         LocalDateTime fundingStartAt,
         LocalDateTime fundingEndAt,
         String rewardType,
+        String imageUrl,
+        List<String> imageUrls,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {
@@ -40,9 +46,12 @@ public record IdeaDraftResponse(
                 draft.getCompetitor(),
                 draft.getTeamIntro(),
                 draft.getGoalAmount(),
+                draft.getDepositAmount(),
                 draft.getFundingStartAt(),
                 draft.getFundingEndAt(),
                 draft.getRewardType() == null ? null : draft.getRewardType().name(),
+                draft.getImageUrl(),
+                ImageUrlConverter.parse(draft.getImageUrls()),
                 draft.getCreatedAt(),
                 draft.getUpdatedAt()
         );

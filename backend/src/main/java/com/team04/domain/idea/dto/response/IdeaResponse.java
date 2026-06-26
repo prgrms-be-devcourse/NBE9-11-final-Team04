@@ -1,8 +1,12 @@
 package com.team04.domain.idea.dto.response;
 
 import com.team04.domain.idea.entity.Idea;
+import com.team04.domain.milestone.dto.response.MilestoneResponse;
+import com.team04.global.util.ImageUrlConverter;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.List;
 
 /** 아이디어 전체 정보와 마일스톤 목록을 반환하는 응답 DTO입니다. */
 public record IdeaResponse(
@@ -18,20 +22,25 @@ public record IdeaResponse(
         String competitor,
         String teamIntro,
         Long goalAmount,
+        Long depositAmount,
         Long currentAmount,
-        Long supporterCount,
+        int sponsorCount,
         LocalDateTime fundingStartAt,
         LocalDateTime fundingEndAt,
         String rewardType,
+        String imageUrl,
+        List<String> imageUrls,
         String status,
+        String rejectReason,
         Integer trustScore,
         String badge,
         LocalDateTime createdAt,
-        LocalDateTime updatedAt
+        LocalDateTime updatedAt,
+        List<MilestoneResponse> milestones
 ) {
 
     /** 아이디어 엔티티와 마일스톤 응답 목록을 조합해 응답 DTO를 생성합니다. */
-    public static IdeaResponse of(Idea idea) {
+    public static IdeaResponse of(Idea idea, List<MilestoneResponse> milestones) {
         return new IdeaResponse(
                 idea.getId(),
                 idea.getUserId(),
@@ -45,16 +54,25 @@ public record IdeaResponse(
                 idea.getCompetitor(),
                 idea.getTeamIntro(),
                 idea.getGoalAmount(),
+                idea.getDepositAmount(),
                 idea.getCurrentAmount(),
-                idea.getSupporterCount(),
+                idea.getSponsorCount(),
                 idea.getFundingStartAt(),
                 idea.getFundingEndAt(),
                 idea.getRewardType().name(),
+                idea.getImageUrl(),
+                ImageUrlConverter.parse(idea.getImageUrls()),
                 idea.getStatus().name(),
+                idea.getRejectReason(),
                 idea.getTrustScore(),
                 idea.getBadge().name(),
                 idea.getCreatedAt(),
-                idea.getUpdatedAt()
+                idea.getUpdatedAt(),
+                milestones
         );
+    }
+
+    public static IdeaResponse of(Idea idea) {
+        return of(idea, List.of());
     }
 }
