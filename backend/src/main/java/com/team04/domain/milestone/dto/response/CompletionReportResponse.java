@@ -14,6 +14,7 @@ public record CompletionReportResponse(
         CompletionReportType type,
         String content,
         String fileUrl,
+        String rejectReason,
         CompletionReportStatus status,
         LocalDateTime submittedAt
 ) {
@@ -36,6 +37,7 @@ public record CompletionReportResponse(
                 report.getType(),
                 report.getContent(),
                 accessUrl,
+                report.getRejectReason(),
                 report.getStatus(),
                 report.getSubmittedAt()
         );

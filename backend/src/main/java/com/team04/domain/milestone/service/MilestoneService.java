@@ -5,6 +5,7 @@ import com.team04.domain.funding.service.FundingService;
 import com.team04.domain.idea.dto.response.IdeaResponse;
 import com.team04.domain.idea.service.IdeaService;
 import com.team04.domain.milestone.dto.request.CompletionReportRequest;
+import com.team04.domain.milestone.dto.request.RejectReportRequest;
 import com.team04.domain.milestone.dto.response.CompletionReportResponse;
 import com.team04.domain.milestone.dto.response.MilestoneResponse;
 import com.team04.domain.milestone.entity.CompletionReport;
@@ -38,6 +39,7 @@ public class MilestoneService {
 
     private static final String COMPLETION_REPORT_DIR = "completion";
     private static final String APPEAL_REPORT_DIR = "appeal";
+    private static final int MAX_APPEAL_REPORT_COUNT = 3;
 
     private final MilestoneRepository milestoneRepository;
     private final CompletionReportRepository completionReportRepository;
@@ -137,8 +139,8 @@ public class MilestoneService {
 
     /**
      * 소명 보고서 제출
-     * 제안자만 가능, 완료 보고서가 REJECTED 상태여야 함
-     * 소명 보고서가 이미 존재하면 중복 제출 불가
+     * 제안자만 가능, 최신 완료/소명 보고서가 REJECTED 상태여야 함
+     * 소명 보고서가 반려된 뒤에는 최대 3회까지 다시 제출할 수 있음
      * 소명 보고서 제출 시 overdueAt 초기화 — 먹튀 아님으로 판단
      * 파일 첨부는 선택 사항
      */
@@ -147,17 +149,11 @@ public class MilestoneService {
             Long milestoneId, CompletionReportRequest request, MultipartFile file) {
         Milestone milestone = findMilestone(milestoneId);
 
-        CompletionReport completionReport = completionReportRepository
-                .findByMilestoneIdAndType(milestoneId, CompletionReportType.COMPLETION)
-                .orElseThrow(() -> new CustomException(ErrorCode.INVALID_MILESTONE_STATUS_TRANSITION));
-
-        if (completionReport.getStatus() != CompletionReportStatus.REJECTED) {
+        CompletionReport latestReport = findLatestReport(milestoneId);
+        if (latestReport.getStatus() != CompletionReportStatus.REJECTED) {
             throw new CustomException(ErrorCode.INVALID_MILESTONE_STATUS_TRANSITION);
         }
-
-        if (completionReportRepository.findByMilestoneIdAndType(milestoneId, CompletionReportType.APPEAL).isPresent()) {
-            throw new CustomException(ErrorCode.INVALID_MILESTONE_STATUS_TRANSITION);
-        }
+        validateAppealReportLimit(milestoneId);
 
         String fileKey = uploadFileIfPresent(file, APPEAL_REPORT_DIR);
         milestone.clearOverdue();
@@ -170,6 +166,16 @@ public class MilestoneService {
                 .build();
 
         return CompletionReportResponse.from(completionReportRepository.save(appealReport), milestoneReportStorageClient);
+    }
+
+    private void validateAppealReportLimit(Long milestoneId) {
+        long appealCount = completionReportRepository.countByMilestoneIdAndType(
+                milestoneId,
+                CompletionReportType.APPEAL
+        );
+        if (appealCount >= MAX_APPEAL_REPORT_COUNT) {
+            throw new CustomException(ErrorCode.MILESTONE_APPEAL_LIMIT_EXCEEDED);
+        }
     }
 
     /**
@@ -212,7 +218,7 @@ public class MilestoneService {
                 .orElseThrow(() -> new CustomException(ErrorCode.MILESTONE_NOT_FOUND));
 
         CompletionReport report = completionReportRepository
-                .findByMilestoneIdAndType(milestoneId, CompletionReportType.APPEAL)
+                .findTopByMilestoneIdAndTypeOrderBySubmittedAtDesc(milestoneId, CompletionReportType.APPEAL)
                 .orElseThrow(() -> new CustomException(ErrorCode.INVALID_MILESTONE_STATUS_TRANSITION));
 
         report.approve();
@@ -236,10 +242,10 @@ public class MilestoneService {
      * 최신 보고서를 반려하고 제안자에게 반려 알림을 예약합니다.
      */
     @Transactional
-    public CompletionReportResponse rejectReport(Long milestoneId) {
+    public CompletionReportResponse rejectReport(Long milestoneId, RejectReportRequest request) {
         Milestone milestone = findMilestone(milestoneId);
         CompletionReport report = findLatestReport(milestoneId);
-        report.reject();
+        report.reject(request.reason());
         notifyReportRejected(milestone, report);
         return CompletionReportResponse.from(report, milestoneReportStorageClient);
     }
@@ -365,14 +371,14 @@ public class MilestoneService {
 
     /**
      * 완료/소명 보고서 반려 결과는 제안자에게만 알립니다.
-     * 반려 사유 컬럼은 아직 없으므로 사유 확인 문구는 넣지 않습니다.
+     * 반려 사유는 응답 상세에서 확인할 수 있도록 별도 필드로 내려줍니다.
      */
     private void notifyReportRejected(Milestone milestone, CompletionReport report) {
         IdeaResponse idea = ideaService.getIdea(milestone.getIdeaId());
         String reportName = report.getType() == CompletionReportType.APPEAL ? "소명 보고서" : "완료 보고서";
         String title = "마일스톤 " + milestone.getStep() + "단계 " + reportName + "가 반려되었습니다";
         String message = "'" + idea.title() + "' 프로젝트의 " + milestone.getStep()
-                + "단계 " + reportName + "가 반려되었습니다. 내용을 확인해 주세요.";
+                + "단계 " + reportName + "가 반려되었습니다. 반려 사유를 확인해 주세요.";
 
         notifyUsers(Set.of(idea.userId()), NotificationType.MILESTONE_REPORT_REJECTED,
                 title, message, report.getId());
@@ -399,9 +405,7 @@ public class MilestoneService {
 
     private CompletionReport findLatestReport(Long milestoneId) {
         return completionReportRepository
-                .findByMilestoneIdAndType(milestoneId, CompletionReportType.APPEAL)
-                .orElseGet(() -> completionReportRepository
-                        .findByMilestoneIdAndType(milestoneId, CompletionReportType.COMPLETION)
-                        .orElseThrow(() -> new CustomException(ErrorCode.INVALID_MILESTONE_STATUS_TRANSITION)));
+                .findTopByMilestoneIdOrderBySubmittedAtDesc(milestoneId)
+                .orElseThrow(() -> new CustomException(ErrorCode.INVALID_MILESTONE_STATUS_TRANSITION));
     }
 }

@@ -14,6 +14,15 @@ public interface CompletionReportRepository extends JpaRepository<CompletionRepo
 
     Optional<CompletionReport> findByMilestoneIdAndType(Long milestoneId, CompletionReportType type);
 
+    Optional<CompletionReport> findTopByMilestoneIdAndTypeOrderBySubmittedAtDesc(
+            Long milestoneId,
+            CompletionReportType type
+    );
+
+    Optional<CompletionReport> findTopByMilestoneIdOrderBySubmittedAtDesc(Long milestoneId);
+
+    long countByMilestoneIdAndType(Long milestoneId, CompletionReportType type);
+
     /** 마일스톤 단건의 완료/소명 보고서 전체 조회 */
     List<CompletionReport> findByMilestoneIdOrderBySubmittedAtDesc(Long milestoneId);
 }
