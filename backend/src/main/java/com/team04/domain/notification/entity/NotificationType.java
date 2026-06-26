@@ -13,8 +13,9 @@ public enum NotificationType {
     MATCH_ACCEPTED,                     // 매칭 수락됨 → 제안자
     MATCH_REJECTED,                     // 매칭 거절됨 → 제안자
 
-    MILESTONE_APPROVED,                 // 마일스톤 승인 → 제안자
-    MILESTONE_REJECTED,                 // 마일스톤 반려 → 제안자
+    MILESTONE_STARTED,                  // 새 마일스톤 단계 시작 → 제안자 + 후원자
+    MILESTONE_REPORT_APPROVED,          // 완료/소명 보고서 승인 → 제안자
+    MILESTONE_REPORT_REJECTED,          // 완료/소명 보고서 반려 → 제안자
 
     REPORT_RECEIVED,                   // 신고 접수됨 → 관리자
     DISPUTE_REPORTED,                  // 신고 접수됨 → 피신고자
