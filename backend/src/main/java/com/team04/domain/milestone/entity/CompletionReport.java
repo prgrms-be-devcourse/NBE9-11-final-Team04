@@ -42,6 +42,10 @@ public class CompletionReport {
     @Column
     private String fileUrl;
 
+    /** 보고서 반려 사유 — 반려 상태가 아닐 때는 null입니다. */
+    @Column(columnDefinition = "TEXT")
+    private String rejectReason;
+
     @Builder
     private CompletionReport(Long milestoneId, CompletionReportType type, String content, String fileUrl) {
         this.milestoneId = milestoneId;
@@ -60,11 +64,15 @@ public class CompletionReport {
         this.status = CompletionReportStatus.APPROVED;
     }
 
-    /** 보고서를 반려합니다. SUBMITTED 상태에서만 가능합니다. */
-    public void reject() {
+    /** 보고서를 반려합니다. SUBMITTED 상태에서만 가능하며, 관리자 반려 사유를 함께 저장합니다. */
+    public void reject(String reason) {
         if (this.status != CompletionReportStatus.SUBMITTED) {
             throw new CustomException(ErrorCode.INVALID_MILESTONE_STATUS_TRANSITION);
         }
+        if (reason == null || reason.isBlank()) {
+            throw new CustomException(ErrorCode.INVALID_INPUT);
+        }
         this.status = CompletionReportStatus.REJECTED;
+        this.rejectReason = reason;
     }
 }

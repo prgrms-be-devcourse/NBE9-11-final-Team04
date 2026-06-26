@@ -93,7 +93,6 @@ public class SecurityConfig {
                         .requestMatchers("/experts/verify").authenticated()
                         .requestMatchers(HttpMethod.POST, "/matches/experts/{expertProfileId}").hasRole("USER")
                         .requestMatchers(HttpMethod.GET, "/experts").authenticated()
-                        .requestMatchers("/experts/admin/**").hasRole("ADMIN")
                         .requestMatchers("/experts/**").hasRole("EXPERT")
                         .requestMatchers("/matches/**").hasRole("EXPERT")
                         .requestMatchers("/admin/**").hasRole("ADMIN")
