@@ -1,6 +1,8 @@
 package com.team04.domain.milestone.service;
 
+import com.team04.domain.funding.repository.FundingRepository;
 import com.team04.domain.funding.service.FundingService;
+import com.team04.domain.idea.dto.response.IdeaResponse;
 import com.team04.domain.idea.service.IdeaService;
 import com.team04.domain.milestone.dto.request.CompletionReportRequest;
 import com.team04.domain.milestone.dto.response.CompletionReportResponse;
@@ -12,18 +14,23 @@ import com.team04.domain.milestone.entity.Milestone;
 import com.team04.domain.milestone.entity.MilestoneStatus;
 import com.team04.domain.milestone.repository.CompletionReportRepository;
 import com.team04.domain.milestone.repository.MilestoneRepository;
+import com.team04.domain.notification.entity.NotificationType;
 import com.team04.domain.settlement.service.RefundService;
 import com.team04.domain.settlement.service.SettlementService;
+import com.team04.global.event.NotificationEvent;
 import com.team04.global.exception.CustomException;
 import com.team04.global.exception.ErrorCode;
 import com.team04.global.storage.StorageClient;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -37,6 +44,8 @@ public class MilestoneService {
     private final SettlementService settlementService;
     private final RefundService refundService;
     private final FundingService fundingService;
+    private final FundingRepository fundingRepository;
+    private final ApplicationEventPublisher eventPublisher;
     private final StorageClient storageClient;
 
     /**
@@ -179,6 +188,7 @@ public class MilestoneService {
 
         report.approve();
         milestone.complete();
+        notifyReportApproved(milestone, report);
 
         if (milestone.getStep() == 3) {
             settlementService.createFinalSettlement(milestone.getIdeaId());
@@ -206,6 +216,7 @@ public class MilestoneService {
 
         report.approve();
         milestone.complete();
+        notifyReportApproved(milestone, report);
 
         if (milestone.getStep() == 3) {
             // 3단계 소명 승인 = 최종 완성으로 처리
@@ -221,12 +232,14 @@ public class MilestoneService {
     /**
      * 완료/소명 보고서 반려
      * 관리자만 가능
+     * 최신 보고서를 반려하고 제안자에게 반려 알림을 예약합니다.
      */
     @Transactional
     public CompletionReportResponse rejectReport(Long milestoneId) {
-        findMilestone(milestoneId);
+        Milestone milestone = findMilestone(milestoneId);
         CompletionReport report = findLatestReport(milestoneId);
         report.reject();
+        notifyReportRejected(milestone, report);
         return CompletionReportResponse.from(report);
     }
 
@@ -312,6 +325,68 @@ public class MilestoneService {
         Milestone nextMilestone = milestoneRepository.findByIdeaIdAndStep(ideaId, step)
                 .orElseThrow(() -> new CustomException(ErrorCode.MILESTONE_NOT_FOUND));
         nextMilestone.start();
+        notifyMilestoneStarted(nextMilestone);
+    }
+
+    /**
+     * 새 단계가 시작되면 제안자와 실제 결제 성공 후원자에게 진행 단계 변경을 알립니다.
+     * 후원자 중복 발송을 막기 위해 sponsorId를 DISTINCT로 조회합니다.
+     */
+    private void notifyMilestoneStarted(Milestone milestone) {
+        IdeaResponse idea = ideaService.getIdea(milestone.getIdeaId());
+        Set<Long> targetUserIds = new LinkedHashSet<>();
+        targetUserIds.add(idea.userId());
+        targetUserIds.addAll(fundingRepository.findPaidSponsorIdsByIdeaId(milestone.getIdeaId()));
+
+        String title = "마일스톤 " + milestone.getStep() + "단계가 시작되었습니다";
+        String message = "'" + idea.title() + "' 프로젝트의 " + milestone.getStep()
+                + "단계가 시작되었습니다. 목표: " + milestone.getGoal();
+
+        notifyUsers(targetUserIds, NotificationType.MILESTONE_STARTED, title, message, milestone.getId());
+    }
+
+    /**
+     * 완료/소명 보고서 승인 결과는 실제 작업 당사자인 제안자에게만 알립니다.
+     * 보고서 타입은 알림 메시지에서 완료 보고서/소명 보고서로 구분합니다.
+     */
+    private void notifyReportApproved(Milestone milestone, CompletionReport report) {
+        IdeaResponse idea = ideaService.getIdea(milestone.getIdeaId());
+        String reportName = report.getType() == CompletionReportType.APPEAL ? "소명 보고서" : "완료 보고서";
+        String title = "마일스톤 " + milestone.getStep() + "단계 " + reportName + "가 승인되었습니다";
+        String message = "'" + idea.title() + "' 프로젝트의 " + milestone.getStep()
+                + "단계 " + reportName + "가 승인되었습니다.";
+
+        notifyUsers(Set.of(idea.userId()), NotificationType.MILESTONE_REPORT_APPROVED,
+                title, message, report.getId());
+    }
+
+    /**
+     * 완료/소명 보고서 반려 결과는 제안자에게만 알립니다.
+     * 반려 사유 컬럼은 아직 없으므로 사유 확인 문구는 넣지 않습니다.
+     */
+    private void notifyReportRejected(Milestone milestone, CompletionReport report) {
+        IdeaResponse idea = ideaService.getIdea(milestone.getIdeaId());
+        String reportName = report.getType() == CompletionReportType.APPEAL ? "소명 보고서" : "완료 보고서";
+        String title = "마일스톤 " + milestone.getStep() + "단계 " + reportName + "가 반려되었습니다";
+        String message = "'" + idea.title() + "' 프로젝트의 " + milestone.getStep()
+                + "단계 " + reportName + "가 반려되었습니다. 내용을 확인해 주세요.";
+
+        notifyUsers(Set.of(idea.userId()), NotificationType.MILESTONE_REPORT_REJECTED,
+                title, message, report.getId());
+    }
+
+    /**
+     * 알림 발송 자체는 outbox 스케줄러에 맡깁니다.
+     * 현재 트랜잭션이 실패하면 이벤트로 생성되는 outbox 기록도 함께 롤백됩니다.
+     */
+    private void notifyUsers(Set<Long> userIds, NotificationType type, String title, String message, Long referenceId) {
+        for (Long userId : userIds) {
+            if (userId != null) {
+                // 알림은 현재 트랜잭션 커밋 전에 outbox로만 기록하고, 실제 발송은 커밋 이후 스케줄러가 처리한다.
+                // 뒤쪽 정산/마일스톤 작업이 실패했는데 사용자에게 먼저 알림이 보이는 상황을 막기 위함이다.
+                eventPublisher.publishEvent(new NotificationEvent(userId, type, title, message, referenceId));
+            }
+        }
     }
 
     private Milestone findMilestone(Long milestoneId) {
