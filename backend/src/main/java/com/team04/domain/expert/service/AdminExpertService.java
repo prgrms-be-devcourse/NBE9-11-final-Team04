@@ -13,6 +13,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.util.List;
 
@@ -24,6 +25,19 @@ public class AdminExpertService {
     private final ExpertAppealRepository expertAppealRepository;
     private final ExpertVerificationService expertVerificationService;
     private final AppealStorageClient appealStorageClient;
+
+    @Transactional(readOnly = true)
+    public Page<AdminExpertSuspendedResponse> getExperts(String status, Pageable pageable) {
+        if (StringUtils.hasText(status)) {
+            ExpertStatus expertStatus = ExpertStatus.valueOf(status.toUpperCase());
+            return expertProfileRepository
+                    .findProfilesByStatus(expertStatus, pageable)
+                    .map(AdminExpertSuspendedResponse::from);
+        }
+        return expertProfileRepository
+                .findAllProfiles(pageable)
+                .map(AdminExpertSuspendedResponse::from);
+    }
 
     @Transactional(readOnly = true)
     public Page<AdminExpertSuspendedResponse> getSuspendedExperts(Pageable pageable) {
