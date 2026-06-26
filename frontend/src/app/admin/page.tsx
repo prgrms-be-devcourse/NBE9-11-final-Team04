@@ -89,6 +89,7 @@ const STATUS_BADGE_VARIANT: Record<IdeaStatus, 'gray' | 'orange' | 'green' | 're
   CANCELLED:              'red',
   REJECTED:               'red',
   CANCELLATION_REQUESTED: 'orange',
+  SUSPENDED:              'red',
 }
 
 const STATUS_TABS: { value: IdeaStatus | ''; label: string }[] = [

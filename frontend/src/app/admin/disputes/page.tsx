@@ -23,6 +23,7 @@ interface AdminDisputeItem {
   reportedId: number
   reportedNickname: string
   createdAt: string
+  ideaStatus?: string | null
 }
 
 interface DisputeStats {
@@ -57,6 +58,13 @@ const adminDisputeApi = {
     unwrap(apiClient.post<ApiResponse<void>>(`/admin/disputes/${disputeId}/force-refund`, { paymentId })),
 }
 
+const adminIdeaApi = {
+  suspend: (ideaId: number) =>
+    unwrap(apiClient.patch<ApiResponse<void>>(`/admin/ideas/${ideaId}/suspend`)),
+  restore: (ideaId: number) =>
+    unwrap(apiClient.patch<ApiResponse<void>>(`/admin/ideas/${ideaId}/restore`)),
+}
+
 const STATUS_VARIANT: Record<DisputeStatus, 'gray' | 'orange' | 'green' | 'red'> = {
   RECEIVED: 'gray',
   PENDING:  'orange',
@@ -79,6 +87,90 @@ const CATEGORY_TABS: { value: DisputeCategory | ''; label: string }[] = [
     label,
   })),
 ]
+
+function ResolveConfirmModal({
+  disputeId,
+  disputeTitle,
+  targetType,
+  onConfirm,
+  onClose,
+  isPending,
+}: {
+  disputeId: number
+  disputeTitle: string
+  targetType: string
+  onConfirm: () => void
+  onClose: () => void
+  isPending: boolean
+}) {
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 1000,
+      background: 'rgba(0,0,0,0.45)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      padding: '24px',
+    }}>
+      <div style={{
+        background: '#fff', borderRadius: '16px', padding: '28px 32px',
+        width: '100%', maxWidth: '460px',
+        boxShadow: '0 8px 40px rgba(0,0,0,0.18)',
+        display: 'flex', flexDirection: 'column', gap: '16px',
+      }}>
+        <h2 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--fg)', margin: 0 }}>
+          ⚠️ 신고 승인 확인
+        </h2>
+        <p style={{ fontSize: '14px', color: 'var(--fg-muted)', margin: 0 }}>
+          분쟁 <strong style={{ color: 'var(--fg)' }}>#{disputeId} — {disputeTitle}</strong>을 승인하시겠습니까?
+        </p>
+
+        {targetType === 'IDEA' && (
+          <div style={{
+            padding: '14px 16px', borderRadius: '10px',
+            background: '#fef2f2', border: '1px solid #fecaca',
+            display: 'flex', flexDirection: 'column', gap: '8px',
+          }}>
+            <div style={{ fontSize: '13px', fontWeight: 700, color: '#dc2626' }}>
+              승인 시 다음 작업이 즉시 실행됩니다
+            </div>
+            <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '13px', color: '#b91c1c', lineHeight: 1.7 }}>
+              <li>아이디어가 강제 취소됩니다</li>
+              <li>전체 후원금이 환불 처리됩니다</li>
+            </ul>
+          </div>
+        )}
+
+        <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '4px' }}>
+          <button
+            onClick={onClose}
+            disabled={isPending}
+            style={{
+              padding: '9px 20px', borderRadius: '8px',
+              border: '1.5px solid var(--border)', background: '#fff',
+              color: 'var(--fg-muted)', fontWeight: 600, fontSize: '14px',
+              cursor: isPending ? 'not-allowed' : 'pointer',
+              opacity: isPending ? 0.6 : 1,
+            }}
+          >
+            취소
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={isPending}
+            style={{
+              padding: '9px 20px', borderRadius: '8px',
+              border: 'none',
+              background: isPending ? '#86efac' : '#059669',
+              color: '#fff', fontWeight: 700, fontSize: '14px',
+              cursor: isPending ? 'not-allowed' : 'pointer',
+            }}
+          >
+            {isPending ? '처리 중...' : '승인 확정'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 function ForceRefundModal({
   disputeId,
@@ -167,13 +259,19 @@ function ForceRefundModal({
 
 function StatusActionButtons({
   dispute,
+  onResolve,
   onAction,
   onForceRefund,
+  onSuspendIdea,
+  onRestoreIdea,
   disabled,
 }: {
   dispute: AdminDisputeItem
+  onResolve: () => void
   onAction: (status: DisputeStatus, label: string) => void
   onForceRefund: () => void
+  onSuspendIdea: () => void
+  onRestoreIdea: () => void
   disabled: boolean
 }) {
   const btnBase: React.CSSProperties = {
@@ -182,7 +280,7 @@ function StatusActionButtons({
     opacity: disabled ? 0.6 : 1,
   }
 
-  // RECEIVED: 피신고자가 소명을 제출하지 않은 상태 → 검토 시작만 가능
+  // RECEIVED: 검토 시작만 가능
   if (dispute.status === 'RECEIVED') {
     return (
       <button
@@ -195,12 +293,12 @@ function StatusActionButtons({
     )
   }
 
-  // PENDING: 소명 제출 완료 → 승인(신고 인정) / 반려(신고 기각) / 소명 재요청 가능
+  // PENDING: 승인/반려/소명 재요청 + 아이디어면 프로젝트 중단
   if (dispute.status === 'PENDING') {
     return (
       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
         <button
-          onClick={() => onAction('RESOLVED', '신고 인정 (승인)')}
+          onClick={onResolve}
           disabled={disabled}
           style={{ ...btnBase, background: '#059669', color: '#fff' }}
         >
@@ -220,11 +318,30 @@ function StatusActionButtons({
         >
           🔄 소명 재요청
         </button>
+        {dispute.targetType === 'IDEA' && (
+          dispute.ideaStatus === 'SUSPENDED' ? (
+            <button
+              onClick={onRestoreIdea}
+              disabled={disabled}
+              style={{ ...btnBase, background: '#fff', border: '1.5px solid #6ee7b7', color: '#059669' }}
+            >
+              ▶ 프로젝트 재시작
+            </button>
+          ) : (
+            <button
+              onClick={onSuspendIdea}
+              disabled={disabled}
+              style={{ ...btnBase, background: '#fff', border: '1.5px solid #d1d5db', color: '#6b7280' }}
+            >
+              ⏸ 프로젝트 중단
+            </button>
+          )
+        )}
       </div>
     )
   }
 
-  // RESOLVED: 종료 상태 — 아이디어 분쟁이면 강제 환불만 가능
+  // RESOLVED: 아이디어면 강제 환불 가능
   if (dispute.status === 'RESOLVED' && dispute.targetType === 'IDEA') {
     return (
       <button
@@ -237,7 +354,6 @@ function StatusActionButtons({
     )
   }
 
-  // REJECTED 또는 RESOLVED(비아이디어): 종료 상태, 액션 없음
   return null
 }
 
@@ -247,6 +363,9 @@ export default function AdminDisputesPage() {
   const [categoryFilter, setCategoryFilter] = useState<DisputeCategory | ''>('')
   const [page, setPage] = useState(0)
   const [forceRefundTarget, setForceRefundTarget] = useState<{ disputeId: number; disputeTitle: string } | null>(null)
+  const [resolveTarget, setResolveTarget] = useState<{
+    disputeId: number; disputeTitle: string; targetType: string
+  } | null>(null)
 
   const { data: stats } = useQuery({
     queryKey: ['admin', 'disputes', 'stats'],
@@ -268,6 +387,34 @@ export default function AdminDisputesPage() {
     onError: () => alert('처리 중 오류가 발생했습니다.'),
   })
 
+  const resolveMutation = useMutation({
+    mutationFn: (disputeId: number) =>
+      adminDisputeApi.updateStatus(disputeId, 'RESOLVED'),
+    onSuccess: () => {
+      setResolveTarget(null)
+      queryClient.invalidateQueries({ queryKey: ['admin', 'disputes'] })
+    },
+    onError: () => alert('승인 처리 중 오류가 발생했습니다.'),
+  })
+
+  const suspendMutation = useMutation({
+    mutationFn: (ideaId: number) => adminIdeaApi.suspend(ideaId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'disputes'] })
+      alert('프로젝트가 중단되었습니다.')
+    },
+    onError: () => alert('프로젝트 중단 처리 중 오류가 발생했습니다.'),
+  })
+
+  const restoreMutation = useMutation({
+    mutationFn: (ideaId: number) => adminIdeaApi.restore(ideaId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'disputes'] })
+      alert('프로젝트가 재시작되었습니다.')
+    },
+    onError: () => alert('프로젝트 재시작 처리 중 오류가 발생했습니다.'),
+  })
+
   const forceRefundMutation = useMutation({
     mutationFn: ({ disputeId, paymentId }: { disputeId: number; paymentId: number }) =>
       adminDisputeApi.forceRefund(disputeId, paymentId),
@@ -281,7 +428,7 @@ export default function AdminDisputesPage() {
   const items = data?.content ?? []
   const totalPages = data?.totalPages ?? 1
   const totalElements = data?.totalElements ?? 0
-  const isMutating = updateMutation.isPending || forceRefundMutation.isPending
+  const isMutating = updateMutation.isPending || resolveMutation.isPending || suspendMutation.isPending || restoreMutation.isPending || forceRefundMutation.isPending
 
   const handleStatusChange = (value: DisputeStatus | '') => {
     setStatusFilter(value)
@@ -305,7 +452,7 @@ export default function AdminDisputesPage() {
         </p>
       </div>
 
-      {/* 통계 카드 — 클릭으로 상태 필터 적용 */}
+      {/* 통계 카드 */}
       {stats && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '12px', marginBottom: '24px' }}>
           {STATS_CONFIG.map((s) => {
@@ -333,10 +480,7 @@ export default function AdminDisputesPage() {
       )}
 
       {/* 카테고리 필터 */}
-      <div style={{
-        display: 'flex', gap: '6px', marginBottom: '20px',
-        flexWrap: 'wrap',
-      }}>
+      <div style={{ display: 'flex', gap: '6px', marginBottom: '20px', flexWrap: 'wrap' }}>
         {CATEGORY_TABS.map((tab) => {
           const isActive = categoryFilter === tab.value
           return (
@@ -388,10 +532,7 @@ export default function AdminDisputesPage() {
                       <Link
                         href={`/disputes/${d.id}`}
                         target="_blank"
-                        style={{
-                          fontSize: '15px', fontWeight: 700, color: 'var(--fg)',
-                          textDecoration: 'none',
-                        }}
+                        style={{ fontSize: '15px', fontWeight: 700, color: 'var(--fg)', textDecoration: 'none' }}
                         onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--brand)')}
                         onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--fg)')}
                       >
@@ -401,7 +542,6 @@ export default function AdminDisputesPage() {
                         {DISPUTE_STATUS_LABELS[d.status]}
                       </Badge>
                     </div>
-                    {/* 카테고리 + 대상 */}
                     <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', fontSize: '13px', color: 'var(--fg-muted)' }}>
                       <span style={{
                         padding: '2px 8px', borderRadius: '99px', fontSize: '12px',
@@ -438,12 +578,23 @@ export default function AdminDisputesPage() {
                   </div>
                   <StatusActionButtons
                     dispute={d}
+                    onResolve={() => setResolveTarget({ disputeId: d.id, disputeTitle: d.title, targetType: d.targetType })}
                     onAction={(status, label) => {
                       if (confirm(`분쟁 #${d.id}을 [${label}] 처리하시겠습니까?`)) {
                         updateMutation.mutate({ id: d.id, status })
                       }
                     }}
                     onForceRefund={() => setForceRefundTarget({ disputeId: d.id, disputeTitle: d.title })}
+                    onSuspendIdea={() => {
+                      if (confirm(`아이디어 #${d.targetId}를 일시 중단하시겠습니까?`)) {
+                        suspendMutation.mutate(d.targetId)
+                      }
+                    }}
+                    onRestoreIdea={() => {
+                      if (confirm(`아이디어 #${d.targetId}를 다시 재시작하시겠습니까?`)) {
+                        restoreMutation.mutate(d.targetId)
+                      }
+                    }}
                     disabled={isMutating}
                   />
                 </div>
@@ -484,6 +635,18 @@ export default function AdminDisputesPage() {
             다음
           </button>
         </div>
+      )}
+
+      {/* 승인 확인 모달 */}
+      {resolveTarget && (
+        <ResolveConfirmModal
+          disputeId={resolveTarget.disputeId}
+          disputeTitle={resolveTarget.disputeTitle}
+          targetType={resolveTarget.targetType}
+          onConfirm={() => resolveMutation.mutate(resolveTarget.disputeId)}
+          onClose={() => setResolveTarget(null)}
+          isPending={resolveMutation.isPending}
+        />
       )}
 
       {/* 강제 환불 모달 */}

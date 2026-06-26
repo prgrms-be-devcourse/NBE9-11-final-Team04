@@ -85,6 +85,14 @@ public class IdeaAdminService {
         return ideaRepository.countByStatus();
     }
 
+    /** 아이디어 현재 상태를 조회합니다. 존재하지 않으면 null을 반환합니다. */
+    @Transactional(readOnly = true)
+    public IdeaStatus getIdeaStatus(Long ideaId) {
+        return ideaRepository.findByIdAndDeletedAtIsNull(ideaId)
+                .map(Idea::getStatus)
+                .orElse(null);
+    }
+
     /** 소프트 삭제되지 않은 아이디어를 조회하고 없으면 공통 예외를 발생시킵니다. */
     private Idea findActiveIdea(Long ideaId) {
         return ideaRepository.findByIdAndDeletedAtIsNull(ideaId)
