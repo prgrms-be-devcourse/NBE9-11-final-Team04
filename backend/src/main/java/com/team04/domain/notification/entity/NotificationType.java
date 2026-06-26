@@ -3,6 +3,7 @@ package com.team04.domain.notification.entity;
 public enum NotificationType {
     IDEA_AI_APPROVED,                   // AI 검증 통과 → 제안자
     IDEA_AI_REJECTED,                   // AI 검증 반려 → 제안자
+    IDEA_EXPERT_APPROVED,               // 전문가 검증서 제출 완료 → 제안자
     IDEA_ADMIN_APPROVED,                // 관리자 최종 승인 → 제안자
     IDEA_ADMIN_REJECTED,                // 관리자 반려 → 제안자
     IDEA_FUNDING_GOAL_MET,              // 목표금액 달성 → 제안자
