@@ -38,7 +38,7 @@ public class CompletionReport {
     @Column(nullable = false)
     private LocalDateTime submittedAt;
 
-    /** 첨부 파일 URL — null 허용 (파일 첨부는 선택 사항) */
+    /** 첨부 파일 객체 key — null 허용 (파일 첨부는 선택 사항) */
     @Column
     private String fileUrl;
 
