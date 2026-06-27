@@ -47,6 +47,10 @@ public class IdeaService {
     private static final int DRAFT_RETENTION_DAYS = 30;
     private static final int MAX_DRAFT_COUNT = 50;
 
+    private static final long MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
+    private static final List<String> ALLOWED_MIME_TYPES = List.of("image/jpeg", "image/png", "image/webp");
+    private static final int MAX_CONTENT_IMAGE_COUNT = 10;
+
     private final IdeaRepository ideaRepository;
     private final IdeaDraftRepository ideaDraftRepository;
     private final IdeaBookmarkRepository ideaBookmarkRepository;
@@ -62,6 +66,7 @@ public class IdeaService {
     @Transactional
     public IdeaResponse createIdea(Long userId, CreateIdeaRequest request) {
         validateMilestones(request);
+        validateDepositAmount(request.depositAmount(), request.goalAmount());
 
         Idea idea = new Idea(
                 userId,
@@ -114,6 +119,12 @@ public class IdeaService {
         );
 
         return IdeaResponse.of(savedIdea);
+    }
+
+    private void validateDepositAmount(Long depositAmount, Long goalAmount) {
+        if (depositAmount > goalAmount * 0.3) {
+            throw new CustomException(ErrorCode.INVALID_DEPOSIT_AMOUNT);
+        }
     }
 
     /** AI 검증에 전달할 아이디어 상세 설명을 생성합니다. */
@@ -351,6 +362,7 @@ public class IdeaService {
     public IdeaResponse updateIdea(Long ideaId, Long userId, UpdateIdeaRequest request) {
         Idea idea = findActiveIdea(ideaId);
         idea.validateOwner(userId);
+        validateDepositAmount(request.depositAmount(), request.goalAmount());
         // 수정 흐름에서도 엔티티 변경 전에 상태를 명시 검증해 승인 이후 수정을 차단합니다.
         idea.validateEditable();
         idea.update(
@@ -498,6 +510,9 @@ public class IdeaService {
         if (images == null || images.isEmpty()) {
             throw new CustomException(ErrorCode.INVALID_INPUT);
         }
+        if (images.size() > MAX_CONTENT_IMAGE_COUNT) {
+            throw new CustomException(ErrorCode.IMAGE_COUNT_EXCEEDED);
+        }
         images.forEach(this::validateImageFile);
     }
 
@@ -505,6 +520,12 @@ public class IdeaService {
     private void validateImageFile(MultipartFile image) {
         if (image == null || image.isEmpty()) {
             throw new CustomException(ErrorCode.INVALID_INPUT);
+        }
+        if (image.getSize() > MAX_IMAGE_SIZE) {
+            throw new CustomException(ErrorCode.IMAGE_SIZE_EXCEEDED);
+        }
+        if (!ALLOWED_MIME_TYPES.contains(image.getContentType())) {
+            throw new CustomException(ErrorCode.INVALID_IMAGE_TYPE);
         }
     }
 
