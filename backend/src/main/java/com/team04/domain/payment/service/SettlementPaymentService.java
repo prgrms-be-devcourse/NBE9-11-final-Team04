@@ -74,7 +74,7 @@ public class SettlementPaymentService {
     @EventListener
     public void onPreSettlementPayoutRequested(PreSettlementPayoutRequestedEvent event) {
         try {
-            runInNewTransaction(() -> processPreSettlementPayout(event.preSettlementId()));
+            processPreSettlementPayout(event.preSettlementId());
         } catch (Exception e) {
             log.error("선정산 지급 처리 실패 - preSettlementId: {}, error: {}",
                     event.preSettlementId(), e.getMessage(), e);
@@ -86,7 +86,7 @@ public class SettlementPaymentService {
     @EventListener
     public void onSettlementPayoutRequested(SettlementPayoutRequestedEvent event) {
         try {
-            runInNewTransaction(() -> processSettlementPayout(event.settlementId(), event.successStatus()));
+            processSettlementPayout(event.settlementId(), event.successStatus());
         } catch (Exception e) {
             log.error("정산 지급 처리 실패 - settlementId: {}, error: {}",
                     event.settlementId(), e.getMessage(), e);
@@ -164,11 +164,9 @@ public class SettlementPaymentService {
 
     public void retryPreSettlementPayout(Long preSettlementId) {
         try {
-            runInNewTransaction(() -> {
-                // FAILED 상태는 payout 처리 대상이 아니므로 REQUESTED로 되돌린 뒤 재처리한다.
-                preSettlementService.retryPreSettlementPayout(preSettlementId);
-                processPreSettlementPayout(preSettlementId);
-            });
+            // FAILED 상태는 payout 처리 대상이 아니므로 REQUESTED로 먼저 커밋한 뒤, 트랜잭션 밖에서 지급을 재처리한다.
+            runInNewTransaction(() -> preSettlementService.retryPreSettlementPayout(preSettlementId));
+            processPreSettlementPayout(preSettlementId);
         } catch (Exception e) {
             log.error("선정산 재시도 실패 - preSettlementId: {}, error: {}",
                     preSettlementId, e.getMessage(), e);
@@ -178,11 +176,9 @@ public class SettlementPaymentService {
 
     public void retrySettlementPayout(Long settlementId, SettlementStatus successStatus) {
         try {
-            runInNewTransaction(() -> {
-                // FAILED 상태는 payout 처리 대상이 아니므로 PENDING으로 되돌린 뒤 원래 성공 상태로 재처리한다.
-                settlementService.retrySettlementPayout(settlementId);
-                processSettlementPayout(settlementId, successStatus);
-            });
+            // FAILED 상태는 payout 처리 대상이 아니므로 PENDING으로 먼저 커밋한 뒤, 트랜잭션 밖에서 지급을 재처리한다.
+            runInNewTransaction(() -> settlementService.retrySettlementPayout(settlementId));
+            processSettlementPayout(settlementId, successStatus);
         } catch (Exception e) {
             log.error("정산 재시도 실패 - settlementId: {}, error: {}",
                     settlementId, e.getMessage(), e);
