@@ -632,4 +632,11 @@ public class IdeaService {
     public List<Long> getFailedFundingIdeaIds() {
         return ideaRepository.findFailedFundingIdeaIds(LocalDateTime.now());
     }
+
+    /** 펀딩 목표 미달성 시 아이디어를 취소 상태로 전이합니다. */
+    @Transactional
+    public void cancelIdea(Long ideaId) {
+        Idea idea = findActiveIdea(ideaId);
+        idea.changeStatus(IdeaStatus.CANCELLED);
+    }
 }
