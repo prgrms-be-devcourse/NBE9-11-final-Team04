@@ -28,8 +28,6 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class ExpertReviewService {
 
-    private static final int EXPERT_MATCHING_SCORE = 20;
-
     private final ExpertMatchRepository expertMatchRepository;
     private final ExpertProfileRepository expertProfileRepository;
     private final ExpertReviewRepository expertReviewRepository;
@@ -78,12 +76,16 @@ public class ExpertReviewService {
             ideaRepository.save(idea);
         }
 
-        // 신뢰도 점수 반영 (전문가 매칭 20점)
+        // 신뢰도 점수 반영 (Feasibility 기반)
         trustScoreRepository.findByIdeaId(idea.getId()).ifPresent(trustScore -> {
+            int score = switch (request.feasibility()) {
+                case POSSIBLE -> 20;
+                case IMPOSSIBLE -> 10;
+            };
             trustScore.updateScores(
                     trustScore.getAiVerificationScore(),
                     trustScore.getMilestoneSpecificityScore(),
-                    EXPERT_MATCHING_SCORE,
+                    score,
                     trustScore.getAdminApprovalScore(),
                     trustScore.getProposerHistoryScore()
             );
