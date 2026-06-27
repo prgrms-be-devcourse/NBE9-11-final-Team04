@@ -39,7 +39,9 @@ class BusinessRegistrationServiceTest {
     private BusinessRegistrationService businessRegistrationService;
 
     private User activeUser() {
-        return User.create("test@test.com", "pw", "홍길동", "길동이", 25, Role.USER);
+        User user = User.create("test@test.com", "pw", "홍길동", "길동이", 25, Role.USER);
+        ReflectionTestUtils.setField(user, "id", 1L);
+        return user;
     }
 
     private BusinessRegistration verifiedRegistration(User user) {

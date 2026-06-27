@@ -99,6 +99,7 @@ class NotificationEventListenerTest {
         assertThat(saved.getNotificationType()).isEqualTo(NotificationType.REPORT_RECEIVED);
         assertThat(saved.getMessage()).isEqualTo("새 신고가 접수되었습니다");
         assertThat(saved.getReferenceId()).isEqualTo(5L);
+        assertThat(saved.getPriority()).isEqualTo(NotificationPriority.NORMAL);
     }
 
     @Test
