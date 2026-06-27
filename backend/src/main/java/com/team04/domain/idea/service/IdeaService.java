@@ -21,6 +21,7 @@ import com.team04.global.exception.CustomException;
 import com.team04.global.exception.ErrorCode;
 import com.team04.domain.idea.repository.IdeaRepository;
 import com.team04.global.storage.StorageClient;
+import com.team04.global.util.IdeaDraftMilestoneConverter;
 import com.team04.global.util.ImageUrlConverter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -234,6 +235,7 @@ public class IdeaService {
                 request.imageUrl()
         );
         draft.updateImageUrls(ImageUrlConverter.join(request.imageUrls()));
+        draft.updateMilestones(IdeaDraftMilestoneConverter.join(request.milestones()));
         return IdeaDraftResponse.of(ideaDraftRepository.save(draft));
     }
 
@@ -259,6 +261,7 @@ public class IdeaService {
                 request.imageUrl()
         );
         draft.updateImageUrls(ImageUrlConverter.join(request.imageUrls()));
+        draft.updateMilestones(IdeaDraftMilestoneConverter.join(request.milestones()));
         return IdeaDraftResponse.of(draft);
     }
 
@@ -316,12 +319,15 @@ public class IdeaService {
                 request.competitor(),
                 request.teamIntro(),
                 request.goalAmount(),
+                request.depositAmount(),
                 request.fundingStartAt(),
                 request.fundingEndAt(),
                 request.rewardType(),
                 request.imageUrl()
         );
         idea.updateImageUrls(ImageUrlConverter.join(request.imageUrls()));
+        replaceMilestones(ideaId, request.milestones());
+        resubmitRejectedIdea(idea);
         return IdeaResponse.of(idea);
     }
 
@@ -403,6 +409,9 @@ public class IdeaService {
     public void deleteIdea(Long ideaId, Long userId) {
         Idea idea = findActiveIdea(ideaId);
         idea.validateOwner(userId);
+        milestoneRepository.deleteByIdeaIdBulk(ideaId);
+        ideaBookmarkRepository.deleteByIdeaIdBulk(ideaId);
+        ideaSettlementAccountRepository.deleteByIdeaIdBulk(ideaId);
         idea.softDelete();
     }
 
@@ -453,12 +462,67 @@ public class IdeaService {
         }
     }
 
-    /** 관리자 최종 승인 전까지만 제안자 계좌 등록/수정을 허용합니다. */
+    /** 관리자 최종 승인 전 또는 반려 시 제안자 계좌 등록/수정을 허용합니다. */
     private void validateSettlementAccountEditable(Idea idea) {
-        if (idea.getStatus() == IdeaStatus.OPEN) {
-            throw new CustomException(ErrorCode.IDEA_STATUS_NOT_EDITABLE);
-        }
         idea.validateEditable();
+    }
+
+    /** 수정 요청에 마일스톤이 포함되면 기존 마일스톤을 삭제하고 새 목록으로 교체합니다. */
+    private void replaceMilestones(Long ideaId, List<CreateMilestoneRequest> milestones) {
+        if (milestones == null) {
+            return;
+        }
+        validateMilestones(milestones);
+        milestoneRepository.deleteByIdeaIdBulk(ideaId);
+        milestoneRepository.saveAll(
+                milestones.stream()
+                        .map(m -> Milestone.builder()
+                                .ideaId(ideaId)
+                                .step(m.step())
+                                .goal(m.goal())
+                                .expectedResult(m.expectedResult())
+                                .expectedDate(m.expectedDate())
+                                .build())
+                        .toList()
+        );
+    }
+
+    /** 관리자 반려 상태의 아이디어를 수정하면 AI 재심사 대기 상태로 되돌립니다. */
+    private void resubmitRejectedIdea(Idea idea) {
+        if (idea.getStatus() == IdeaStatus.REJECTED) {
+            idea.changeStatus(IdeaStatus.AI_PENDING);
+            verificationService.requestVerification(
+                    new VerificationRequest(
+                            idea.getId(),
+                            idea.getTitle(),
+                            buildVerificationDescription(idea),
+                            milestoneRepository.findByIdeaIdOrderByStep(idea.getId()).stream()
+                                    .map(m -> new VerificationRequest.MilestoneInfo(
+                                            m.getGoal(),
+                                            m.getExpectedResult(),
+                                            m.getExpectedDate(),
+                                            null
+                                    ))
+                                    .toList()
+                    ),
+                    idea.getUserId()
+            );
+        }
+    }
+
+    /** AI 검증에 전달할 아이디어 상세 설명을 Idea 엔티티에서 생성합니다. */
+    private String buildVerificationDescription(Idea idea) {
+        return Stream.of(
+                        idea.getOneLineIntro(),
+                        idea.getProblemDefinition(),
+                        idea.getSolution(),
+                        idea.getGoal(),
+                        idea.getTargetCustomer(),
+                        idea.getCompetitor(),
+                        idea.getTeamIntro()
+                )
+                .filter(Objects::nonNull)
+                .collect(Collectors.joining("\n"));
     }
 
     /** 임시저장을 조회하고 작성자 본인 접근인지 검증합니다. */
@@ -486,14 +550,19 @@ public class IdeaService {
                 .orElseThrow(() -> new CustomException(ErrorCode.IDEA_NOT_FOUND));
     }
 
-    /** 마일스톤 개수와 단계 값이 정확히 1, 2, 3인지 검증합니다. */
+    /** 아이디어 생성 요청에서 마일스톤을 추출해 검증합니다. */
     private void validateMilestones(CreateIdeaRequest request) {
-        if (request.milestones() == null || request.milestones().size() != REQUIRED_MILESTONE_COUNT) {
+        validateMilestones(request.milestones());
+    }
+
+    /** 마일스톤 개수와 단계 값이 정확히 1, 2, 3인지 검증합니다. */
+    private void validateMilestones(List<CreateMilestoneRequest> milestones) {
+        if (milestones == null || milestones.size() != REQUIRED_MILESTONE_COUNT) {
             throw new CustomException(ErrorCode.INVALID_MILESTONE_COUNT);
         }
 
         Set<Integer> steps = new HashSet<>();
-        for (var milestone : request.milestones()) {
+        for (var milestone : milestones) {
             if (milestone == null) {
                 throw new CustomException(ErrorCode.INVALID_INPUT);
             }

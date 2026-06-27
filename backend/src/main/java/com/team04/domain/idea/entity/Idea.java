@@ -169,6 +169,7 @@ public class Idea extends BaseEntity {
             String competitor,
             String teamIntro,
             Long goalAmount,
+            Long depositAmount,
             LocalDateTime fundingStartAt,
             LocalDateTime fundingEndAt,
             RewardType rewardType,
@@ -185,6 +186,7 @@ public class Idea extends BaseEntity {
         this.competitor = competitor;
         this.teamIntro = teamIntro;
         this.goalAmount = goalAmount;
+        this.depositAmount = depositAmount;
         this.fundingStartAt = fundingStartAt;
         this.fundingEndAt = fundingEndAt;
         this.rewardType = rewardType;

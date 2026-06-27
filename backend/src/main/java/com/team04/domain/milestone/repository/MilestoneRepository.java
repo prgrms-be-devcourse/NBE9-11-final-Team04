@@ -5,6 +5,7 @@ import com.team04.domain.milestone.entity.MilestoneStatus;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -16,6 +17,10 @@ import java.util.Optional;
 public interface MilestoneRepository extends JpaRepository<Milestone, Long> {
 
     List<Milestone> findByIdeaIdOrderByStep(Long ideaId);
+
+    @Modifying
+    @Query("DELETE FROM Milestone m WHERE m.ideaId = :ideaId")
+    int deleteByIdeaIdBulk(@Param("ideaId") Long ideaId);
 
     /** 기한 초과 마일스톤 배치 처리용 — expectedDate가 기준일 이전이고 overdueAt이 null이며, 검토 대기 중인 보고서가 없는 마일스톤 조회 */
     @Query("SELECT m FROM Milestone m WHERE m.status = :status AND m.expectedDate < :date AND m.overdueAt IS NULL " +

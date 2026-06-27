@@ -51,6 +51,7 @@ class IdeaTest {
                 "수정 경쟁사",
                 "수정 팀",
                 200000L,
+                30000L,  // depositAmount 추가
                 LocalDateTime.now().plusDays(2),
                 LocalDateTime.now().plusMonths(2),
                 RewardType.PAYBACK,
