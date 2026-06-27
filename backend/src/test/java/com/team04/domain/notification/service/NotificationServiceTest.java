@@ -22,14 +22,13 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 
 @ExtendWith(MockitoExtension.class)
@@ -73,26 +72,36 @@ class NotificationServiceTest {
 
     @Test
     @DisplayName("알림 생성 성공 - SSE emitter 있으면 실시간 전송")
-    void createNotification_성공_SSE전송() throws Exception {
+    void createNotification_성공_SSE전송() {
         User user = activeUser(1L);
-        SseEmitter emitter = mock(SseEmitter.class);
+        AtomicBoolean sent = new AtomicBoolean(false);
+        SseEmitter emitter = new SseEmitter() {
+            @Override
+            public void send(SseEventBuilder builder) {
+                sent.set(true);
+            }
+        };
         given(userRepository.findById(1L)).willReturn(Optional.of(user));
         given(sseEmitterStorage.get(1L)).willReturn(emitter);
 
         notificationService.createNotification(1L, NotificationType.DISPUTE_RESOLVED, "제목", "메시지", 10L);
 
         then(notificationRepository).should().save(any(Notification.class));
-        then(emitter).should().send(any(SseEmitter.SseEventBuilder.class));
+        assertThat(sent.get()).isTrue();
     }
 
     @Test
     @DisplayName("알림 생성 중 SSE 전송 실패 시 emitter 제거")
-    void createNotification_SSE오류시_emitter제거() throws Exception {
+    void createNotification_SSE오류시_emitter제거() {
         User user = activeUser(1L);
-        SseEmitter emitter = mock(SseEmitter.class);
+        SseEmitter emitter = new SseEmitter() {
+            @Override
+            public void send(SseEventBuilder builder) throws IOException {
+                throw new IOException("연결 끊김");
+            }
+        };
         given(userRepository.findById(1L)).willReturn(Optional.of(user));
         given(sseEmitterStorage.get(1L)).willReturn(emitter);
-        doThrow(new IOException("연결 끊김")).when(emitter).send(any(SseEmitter.SseEventBuilder.class));
 
         notificationService.createNotification(1L, NotificationType.DISPUTE_RESOLVED, "제목", "메시지", 10L);
 
