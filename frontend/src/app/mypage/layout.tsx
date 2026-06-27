@@ -19,9 +19,9 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { path: '/mypage',               label: '내 정보',    icon: '📊', exact: true },
-  { path: '/mypage/ideas',         label: '내 아이디어', icon: '💡', roles: ['USER'] },
-  { path: '/mypage/matches',       label: '매칭 목록',  icon: '🤝', roles: ['EXPERT'] },
+  { path: '/mypage',                label: '내 정보',      icon: '📊', exact: true },
+  { path: '/mypage/expert-status',  label: '전문가 프로필', icon: '🎓', roles: ['EXPERT'] },
+  { path: '/mypage/ideas',          label: '내 아이디어',  icon: '💡', roles: ['USER'] },
   { path: '/mypage/payments',      label: '결제 내역',  icon: '💰', roles: ['USER'] },
   { path: '/mypage/refunds',       label: '환불 내역',  icon: '↩️', roles: ['USER'] },
   { path: '/mypage/notifications', label: '알림',       icon: '🔔' },
@@ -30,8 +30,9 @@ const navItems: NavItem[] = [
 ]
 
 const settingItems: NavItem[] = [
-  { path: '/mypage/account',  label: '계정 설정',  icon: '⚙️' },
-  { path: '/mypage/business', label: '사업자 정보', icon: '🏢' },
+  { path: '/mypage/account',       label: '계정 설정',   icon: '⚙️' },
+  { path: '/mypage/expert-status', label: '전문가 신청',  icon: '🎓', roles: ['USER'] },
+  { path: '/mypage/business',      label: '사업자 정보',  icon: '🏢' },
 ]
 
 function Sidebar() {
@@ -40,6 +41,9 @@ function Sidebar() {
   const { user, logout } = useAuthStore()
 
   const visibleItems = navItems.filter(
+    (item) => !item.roles || (user?.role && item.roles.includes(user.role as Role))
+  )
+  const visibleSettingItems = settingItems.filter(
     (item) => !item.roles || (user?.role && item.roles.includes(user.role as Role))
   )
 
@@ -128,7 +132,7 @@ function Sidebar() {
 
           <div style={{ height: '1px', background: 'var(--border)', margin: '8px 24px' }} />
 
-          {settingItems.map((item) => {
+          {visibleSettingItems.map((item) => {
             const active = pathname.startsWith(item.path)
             return (
               <Link

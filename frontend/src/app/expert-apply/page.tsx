@@ -74,7 +74,7 @@ function StepIndicator({ current }: { current: number }) {
 
 function ExpertApplyContent() {
   const router = useRouter()
-  const { user, setUser } = useAuthStore()
+  const { user } = useAuthStore()
   const [type, setType] = useState<QualificationType | ''>('')
   const [form, setForm] = useState({
     qualificationNumber: '',
@@ -100,8 +100,7 @@ function ExpertApplyContent() {
       }
       return unwrap(apiClient.post<ApiResponse<ExpertVerifyResponse>>('/experts/verify', body))
     },
-    onSuccess: (data) => {
-      if (data.verified && user) setUser({ ...user, role: 'EXPERT' })
+    onSuccess: () => {
       setSuccess(true)
       setError('')
     },

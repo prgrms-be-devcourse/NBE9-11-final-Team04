@@ -38,14 +38,22 @@ export default function ProfileSection() {
     onError: (err) => setError(getErrorMessage(err)),
   })
 
-  const saveMutation = useMutation({
-    mutationFn: async () => {
-      await usersApi.updateMe({ nickname: form.nickname })
-      return usersApi.updateProfile({
-        intro: form.intro || undefined,
-        portfolioUrl: form.portfolioUrl || undefined,
-      })
+  const deleteImageMutation = useMutation({
+    mutationFn: () => usersApi.deleteProfileImage(),
+    onSuccess: (updated) => {
+      setUser(updated)
+      setImagePreview(null)
+      queryClient.invalidateQueries({ queryKey: ['users', 'me'] })
     },
+    onError: (err) => setError(getErrorMessage(err)),
+  })
+
+  const saveMutation = useMutation({
+    mutationFn: () => usersApi.updateMe({
+      nickname: form.nickname,
+      intro: form.intro || undefined,
+      portfolioUrl: form.portfolioUrl || undefined,
+    }),
     onSuccess: (updated) => {
       setUser(updated)
       setSuccess(true)
@@ -59,6 +67,7 @@ export default function ProfileSection() {
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
+    e.target.value = ''
     setImagePreview(URL.createObjectURL(file))
     imageMutation.mutate(file)
   }
@@ -106,12 +115,24 @@ export default function ProfileSection() {
           <div>
             <div style={{ fontSize: '16px', fontWeight: 700, color: 'var(--fg)' }}>{user.nickname}</div>
             <div style={{ fontSize: '13px', color: 'var(--fg-muted)', marginTop: '2px' }}>{user.email}</div>
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              style={{ fontSize: '13px', color: 'var(--brand-dark)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, marginTop: '6px' }}
-            >
-              프로필 사진 변경
-            </button>
+            <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={imageMutation.isPending || deleteImageMutation.isPending}
+                style={{ fontSize: '13px', color: 'var(--brand-dark)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+              >
+                {imageMutation.isPending ? '업로드 중...' : (imagePreview ? '사진 변경' : '사진 등록')}
+              </button>
+              {imagePreview && (
+                <button
+                  onClick={() => deleteImageMutation.mutate()}
+                  disabled={imageMutation.isPending || deleteImageMutation.isPending}
+                  style={{ fontSize: '13px', color: 'var(--error)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                >
+                  {deleteImageMutation.isPending ? '삭제 중...' : '사진 삭제'}
+                </button>
+              )}
+            </div>
           </div>
         </div>
 

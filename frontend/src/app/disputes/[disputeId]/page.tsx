@@ -14,7 +14,7 @@ import { formatDateTime, getErrorMessage } from '@/utils/format'
 const STATUS_STEPS: DisputeStatus[] = ['RECEIVED', 'PENDING', 'RESOLVED']
 
 const STATUS_VARIANT: Record<DisputeStatus, 'blue' | 'green' | 'orange' | 'red' | 'gray'> = {
-  RECEIVED: 'blue',
+  RECEIVED: 'gray',
   PENDING:  'orange',
   RESOLVED: 'green',
   REJECTED: 'red',
@@ -232,7 +232,12 @@ function DisputeDetail({ disputeId }: { disputeId: number }) {
 
   const isReporter = user?.id === dispute.reporterId
   const isReported = user?.id === dispute.reportedId
-  const canAppeal  = isReported && dispute.status === 'RECEIVED'
+  const appealDeadline = dispute.createdAt
+    ? new Date(new Date(dispute.createdAt).getTime() + 7 * 24 * 60 * 60 * 1000)
+    : null
+  const isWithinDeadline = appealDeadline ? appealDeadline > new Date() : false
+  const appealLimitExceeded = dispute.appeal !== null && (dispute.appeal?.appealCount ?? 0) >= 3
+  const canAppeal = isReported && dispute.status === 'RECEIVED' && isWithinDeadline && !appealLimitExceeded
 
   return (
     <div style={{ maxWidth: '680px', margin: '0 auto', padding: '48px 24px' }}>
@@ -372,6 +377,22 @@ function DisputeDetail({ disputeId }: { disputeId: number }) {
         </div>
       )}
 
+      {/* 소명 불가 안내 — 마감 또는 횟수 초과 */}
+      {isReported && dispute.status === 'RECEIVED' && !canAppeal && (
+        <div style={{
+          padding: '16px 20px', background: '#fff5f5', border: '1px solid #fecaca',
+          borderRadius: '12px', fontSize: '14px', color: '#991b1b',
+          display: 'flex', alignItems: 'center', gap: '10px',
+        }}>
+          <span style={{ fontSize: '20px' }}>⛔</span>
+          <span>
+            {appealLimitExceeded
+              ? '소명 횟수(3회)를 초과하여 더 이상 제출할 수 없습니다.'
+              : '소명 접수 기간(7일)이 만료되었습니다.'}
+          </span>
+        </div>
+      )}
+
       {/* 소명 제출 폼 — 피신고자, status=RECEIVED일 때만 */}
       {canAppeal && (
         <div style={{
@@ -391,11 +412,11 @@ function DisputeDetail({ disputeId }: { disputeId: number }) {
               display: 'flex', alignItems: 'center', gap: '8px',
             }}>
               <span>⚠️</span>
-              <span>관리자가 소명을 반려했습니다. 내용을 보완하여 다시 제출해 주세요.</span>
+              <span>관리자가 소명을 반려했습니다. 내용을 보완하여 다시 제출해 주세요. ({dispute.appeal.appealCount}/3회 사용)</span>
             </div>
           ) : (
             <p style={{ fontSize: '13px', color: 'var(--fg-muted)', marginBottom: '20px' }}>
-              신고가 접수되었습니다. 7일 이내에 소명 자료를 제출해 주세요.
+              신고가 접수되었습니다.{appealDeadline && ` 소명 마감: ${appealDeadline.toLocaleDateString('ko-KR')} (7일 이내)`}
             </p>
           )}
           <AppealSection disputeId={disputeId} />
