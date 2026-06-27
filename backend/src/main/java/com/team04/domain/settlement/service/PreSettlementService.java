@@ -53,7 +53,6 @@ public class PreSettlementService {
      */
     @Retryable(
             retryFor = PessimisticLockingFailureException.class,
-            noRetryFor = CustomException.class,
             maxAttempts = 3,
             backoff = @Backoff(delay = 500)
     )
@@ -98,20 +97,6 @@ public class PreSettlementService {
         });
 
         return PreSettlementResponse.from(saved);
-    }
-
-    /**
-     * 비즈니스 예외는 Retry fallback으로 감싸지 않고 그대로 전파합니다.
-     * 예: 선정산 한도 초과, 권한 없음, 진행 중 마일스톤 없음 등
-     */
-    @Recover
-    public PreSettlementResponse recover(
-            CustomException e,
-            Long ideaId,
-            PreSettlementRequest request,
-            Long userId
-    ) {
-        throw e;
     }
 
     /**

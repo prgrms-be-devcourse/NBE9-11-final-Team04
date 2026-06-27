@@ -111,8 +111,13 @@ public class SettlementPaymentService {
         PayoutResult result = paymentPayoutService.payout(request);
 
         if (result.success() && shouldAutoCompletePayout(result)) {
-            // 상태 변경과 가상계좌 장부 기록은 payout 호출 이후 별도 트랜잭션에서 확정한다.
-            runInNewTransaction(() -> preSettlementService.completePreSettlement(preSettlementId));
+            try {
+                // 상태 변경과 가상계좌 장부 기록은 payout 호출 이후 별도 트랜잭션에서 확정한다.
+                runInNewTransaction(() -> preSettlementService.completePreSettlement(preSettlementId));
+            } catch (Exception e) {
+                log.error("CRITICAL: 선정산 외부 지급은 성공했으나 DB 완료 처리에 실패했습니다. 수동 확인이 필요합니다. preSettlementId={}, payoutId={}",
+                        preSettlementId, result.payoutId(), e);
+            }
             return;
         }
         if (!result.success()) {
@@ -142,8 +147,13 @@ public class SettlementPaymentService {
         PayoutResult result = paymentPayoutService.payout(request);
 
         if (result.success() && shouldAutoCompletePayout(result)) {
-            // 상태 변경과 가상계좌 장부 기록은 payout 호출 이후 별도 트랜잭션에서 확정한다.
-            runInNewTransaction(() -> settlementService.completeSettlementPayout(settlementId, successStatus));
+            try {
+                // 상태 변경과 가상계좌 장부 기록은 payout 호출 이후 별도 트랜잭션에서 확정한다.
+                runInNewTransaction(() -> settlementService.completeSettlementPayout(settlementId, successStatus));
+            } catch (Exception e) {
+                log.error("CRITICAL: 정산 외부 지급은 성공했으나 DB 완료 처리에 실패했습니다. 수동 확인이 필요합니다. settlementId={}, payoutId={}",
+                        settlementId, result.payoutId(), e);
+            }
             return;
         }
         if (!result.success()) {

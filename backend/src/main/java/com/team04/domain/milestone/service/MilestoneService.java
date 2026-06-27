@@ -246,7 +246,15 @@ public class MilestoneService {
     public CompletionReportResponse rejectReport(Long milestoneId, RejectReportRequest request) {
         Milestone milestone = milestoneRepository.findByIdWithPessimisticLock(milestoneId)
                 .orElseThrow(() -> new CustomException(ErrorCode.MILESTONE_NOT_FOUND));
+        if (milestone.getStatus() != MilestoneStatus.IN_PROGRESS) {
+            throw new CustomException(ErrorCode.INVALID_MILESTONE_STATUS_TRANSITION);
+        }
+
         CompletionReport report = findLatestReport(milestoneId);
+        if (report.getStatus() != CompletionReportStatus.SUBMITTED) {
+            throw new CustomException(ErrorCode.INVALID_MILESTONE_STATUS_TRANSITION);
+        }
+
         report.reject(request.reason());
         notifyReportRejected(milestone, report);
         cancelIfFinalAppealRejected(milestone, report);
