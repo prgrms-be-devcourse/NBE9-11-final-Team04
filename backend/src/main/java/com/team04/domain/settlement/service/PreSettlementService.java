@@ -53,15 +53,18 @@ public class PreSettlementService {
      */
     @Retryable(
             retryFor = PessimisticLockingFailureException.class,
+            noRetryFor = CustomException.class,
             maxAttempts = 3,
             backoff = @Backoff(delay = 500)
     )
     @Transactional
     public PreSettlementResponse requestPreSettlement(Long ideaId, PreSettlementRequest request, Long userId) {
         ideaService.validateNotSuspended(ideaId); // 분쟁 처리 중 일시 중단된 프로젝트는 선정산 신청 불가
+
         // 선정산 한도는 ideaId 기준 누적액으로 검증하므로, 동시 요청도 같은 ideaId 단위로 직렬화한다.
         ideaRepository.findByIdForUpdate(ideaId)
                 .orElseThrow(() -> new CustomException(ErrorCode.IDEA_NOT_FOUND));
+
         milestoneRepository.findByIdeaIdAndStatus(ideaId, MilestoneStatus.IN_PROGRESS)
                 .orElseThrow(() -> new CustomException(ErrorCode.PRE_SETTLEMENT_MILESTONE_NOT_IN_PROGRESS));
 
@@ -72,7 +75,8 @@ public class PreSettlementService {
 
         long limit = idea.depositAmount() * 2;
         long accumulated = preSettlementRepository.sumAmountByIdeaIdAndStatusNot(
-                ideaId, PreSettlementStatus.FAILED);
+                ideaId, PreSettlementStatus.FAILED
+        );
 
         if (accumulated + request.amount() > limit) {
             throw new CustomException(ErrorCode.PRE_SETTLEMENT_LIMIT_EXCEEDED);
@@ -97,10 +101,29 @@ public class PreSettlementService {
     }
 
     /**
-     * 선정산 신청 fallback — 3회 재시도 후 모두 실패 시 호출
+     * 비즈니스 예외는 Retry fallback으로 감싸지 않고 그대로 전파합니다.
+     * 예: 선정산 한도 초과, 권한 없음, 진행 중 마일스톤 없음 등
      */
     @Recover
-    public PreSettlementResponse requestPreSettlementRecover(PessimisticLockingFailureException e, Long ideaId, PreSettlementRequest request, Long userId) {
+    public PreSettlementResponse recover(
+            CustomException e,
+            Long ideaId,
+            PreSettlementRequest request,
+            Long userId
+    ) {
+        throw e;
+    }
+
+    /**
+     * 비관락 실패가 3회 반복되었을 때만 선정산 신청 실패로 변환합니다.
+     */
+    @Recover
+    public PreSettlementResponse recover(
+            PessimisticLockingFailureException e,
+            Long ideaId,
+            PreSettlementRequest request,
+            Long userId
+    ) {
         log.error("선정산 신청 최종 실패 ideaId={}, amount={}", ideaId, request.amount(), e);
         throw new CustomException(ErrorCode.PRE_SETTLEMENT_REQUEST_FAILED);
     }
@@ -113,7 +136,9 @@ public class PreSettlementService {
     public PreSettlementResponse completePreSettlement(Long preSettlementId) {
         PreSettlement preSettlement = preSettlementRepository.findById(preSettlementId)
                 .orElseThrow(() -> new CustomException(ErrorCode.PRE_SETTLEMENT_NOT_FOUND));
+
         preSettlement.complete();
+
         // 선정산 지급 성공이 확정된 뒤 실제 출금 내역을 아이디어 가상계좌 장부에 남긴다.
         vbankLedgerService.recordOut(
                 preSettlement.getIdeaId(),
@@ -124,6 +149,7 @@ public class PreSettlementService {
                 preSettlement.getId(),
                 "선정산 지급"
         );
+
         return PreSettlementResponse.from(preSettlement);
     }
 
@@ -136,7 +162,9 @@ public class PreSettlementService {
     public PreSettlementResponse failPreSettlement(Long preSettlementId) {
         PreSettlement preSettlement = preSettlementRepository.findById(preSettlementId)
                 .orElseThrow(() -> new CustomException(ErrorCode.PRE_SETTLEMENT_NOT_FOUND));
+
         preSettlement.fail();
+
         return PreSettlementResponse.from(preSettlement);
     }
 
@@ -148,7 +176,9 @@ public class PreSettlementService {
     public PreSettlementResponse retryPreSettlementPayout(Long preSettlementId) {
         PreSettlement preSettlement = preSettlementRepository.findById(preSettlementId)
                 .orElseThrow(() -> new CustomException(ErrorCode.PRE_SETTLEMENT_NOT_FOUND));
+
         preSettlement.retry();
+
         return PreSettlementResponse.from(preSettlement);
     }
 
@@ -164,6 +194,7 @@ public class PreSettlementService {
                 throw new CustomException(ErrorCode.SETTLEMENT_ACCESS_DENIED);
             }
         }
+
         return preSettlementRepository.findByIdeaId(ideaId).stream()
                 .map(PreSettlementResponse::from)
                 .toList();

@@ -102,20 +102,23 @@ public class SettlementPaymentService {
             return;
         }
 
-        // 실제 payout 호출 전에 장부 출금 가능 여부를 먼저 확인해 지급 성공 후 장부 실패를 줄인다.
-        vbankLedgerService.validateSufficientBalanceForOut(preSettlement.getIdeaId(), preSettlement.getAmount());
+        // afterCommit 이벤트 리스너에서는 기존 트랜잭션이 이미 종료된 상태라 비관락 조회를 새 트랜잭션에서 수행한다.
+        runInNewTransaction(() ->
+                vbankLedgerService.validateSufficientBalanceForOut(preSettlement.getIdeaId(), preSettlement.getAmount())
+        );
 
         PayoutRequest request = buildPreSettlementPayoutRequest(preSettlement);
         PayoutResult result = paymentPayoutService.payout(request);
 
         if (result.success() && shouldAutoCompletePayout(result)) {
-            preSettlementService.completePreSettlement(preSettlementId);
+            // 상태 변경과 가상계좌 장부 기록은 payout 호출 이후 별도 트랜잭션에서 확정한다.
+            runInNewTransaction(() -> preSettlementService.completePreSettlement(preSettlementId));
             return;
         }
         if (!result.success()) {
             log.error("선정산 지급 실패 preSettlementId={}, message={}",
                     preSettlementId, result.failureMessage());
-            preSettlementService.failPreSettlement(preSettlementId);
+            runInNewTransaction(() -> preSettlementService.failPreSettlement(preSettlementId));
         }
     }
 
@@ -126,24 +129,27 @@ public class SettlementPaymentService {
             return;
         }
         if (settlement.getPayoutAmount() <= 0) {
-            settlementService.completeSettlementPayout(settlementId, successStatus);
+            runInNewTransaction(() -> settlementService.completeSettlementPayout(settlementId, successStatus));
             return;
         }
 
-        // 실제 payout 호출 전에 장부 출금 가능 여부를 먼저 확인해 지급 성공 후 장부 실패를 줄인다.
-        vbankLedgerService.validateSufficientBalanceForOut(settlement.getIdeaId(), settlement.getPayoutAmount());
+        // afterCommit 이벤트 리스너에서는 기존 트랜잭션이 이미 종료된 상태라 비관락 조회를 새 트랜잭션에서 수행한다.
+        runInNewTransaction(() ->
+                vbankLedgerService.validateSufficientBalanceForOut(settlement.getIdeaId(), settlement.getPayoutAmount())
+        );
 
         PayoutRequest request = buildSettlementPayoutRequest(settlement);
         PayoutResult result = paymentPayoutService.payout(request);
 
         if (result.success() && shouldAutoCompletePayout(result)) {
-            settlementService.completeSettlementPayout(settlementId, successStatus);
+            // 상태 변경과 가상계좌 장부 기록은 payout 호출 이후 별도 트랜잭션에서 확정한다.
+            runInNewTransaction(() -> settlementService.completeSettlementPayout(settlementId, successStatus));
             return;
         }
         if (!result.success()) {
             log.error("정산 지급 실패 settlementId={}, message={}",
                     settlementId, result.failureMessage());
-            settlementService.failSettlementPayout(settlementId);
+            runInNewTransaction(() -> settlementService.failSettlementPayout(settlementId));
         }
     }
 
