@@ -34,6 +34,9 @@ public class ProposerHistoryScoreCalculator {
     private final BusinessRegistrationRepository businessRegistrationRepository;
 
     public int calculate(Long proposerUserId) {
+        if (proposerUserId == null) {
+            return BASE_SCORE;
+        }
         int score = BASE_SCORE;
 
         if (businessRegistrationRepository.existsByUserId(proposerUserId)) {

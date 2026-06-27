@@ -153,8 +153,8 @@ public class VerificationAsyncProcessor {
                         VerificationCheckCode.SIMILAR_SERVICE
                 ),
                 averageScore(result, VerificationCheckCode.MILESTONE_SPECIFICITY),
-                0,
-                0,
+                trustScore.getExpertMatchingScore(),
+                trustScore.getAdminApprovalScore(),
                 proposerHistoryScoreCalculator.calculate(proposerUserId)
         );
         return trustScoreRepository.save(trustScore);

@@ -38,6 +38,12 @@ class ProposerHistoryScoreCalculatorTest {
     // ─────────────────────────────────────────────
 
     @Test
+    @DisplayName("proposerUserId가 null이면 기본 10점 반환")
+    void calculate_null유저_기본10점() {
+        assertThat(calculator.calculate(null)).isEqualTo(10);
+    }
+
+    @Test
     @DisplayName("아무 이력 없는 신규 제안자는 기본 10점")
     void calculate_신규제안자_기본10점() {
         givenHistory(false, 0, 0);

@@ -62,6 +62,8 @@ class VerificationAsyncProcessorTest {
     private UserRepository userRepository;
     @Mock
     private TransactionTemplate transactionTemplate;
+    @Mock
+    private ProposerHistoryScoreCalculator proposerHistoryScoreCalculator;
 
     @InjectMocks
     private VerificationAsyncProcessor processor;
