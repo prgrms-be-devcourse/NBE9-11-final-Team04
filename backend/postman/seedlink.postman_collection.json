@@ -69,21 +69,15 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/admin/experts/:expertProfileId/appeals",
+              "raw": "{{base_url}}/admin/experts/{{expertProfileId}}/appeals",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "admin",
                 "experts",
-                ":expertProfileId",
+                "{{expertProfileId}}",
                 "appeals"
-              ],
-              "variable": [
-                {
-                  "key": "expertProfileId",
-                  "value": ""
-                }
               ]
             }
           },
@@ -120,21 +114,15 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/admin/experts/:expertProfileId/restore",
+              "raw": "{{base_url}}/admin/experts/{{expertProfileId}}/restore",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "admin",
                 "experts",
-                ":expertProfileId",
+                "{{expertProfileId}}",
                 "restore"
-              ],
-              "variable": [
-                {
-                  "key": "expertProfileId",
-                  "value": ""
-                }
               ]
             }
           },
@@ -171,21 +159,15 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/admin/experts/:expertProfileId/demote",
+              "raw": "{{base_url}}/admin/experts/{{expertProfileId}}/demote",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "admin",
                 "experts",
-                ":expertProfileId",
+                "{{expertProfileId}}",
                 "demote"
-              ],
-              "variable": [
-                {
-                  "key": "expertProfileId",
-                  "value": ""
-                }
               ]
             }
           },
@@ -914,21 +896,15 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/admin/disputes/:disputeId/status",
+              "raw": "{{base_url}}/admin/disputes/{{disputeId}}/status",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "admin",
                 "disputes",
-                ":disputeId",
+                "{{disputeId}}",
                 "status"
-              ],
-              "variable": [
-                {
-                  "key": "disputeId",
-                  "value": ""
-                }
               ]
             }
           },
@@ -965,21 +941,15 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/admin/disputes/:disputeId/force-refund",
+              "raw": "{{base_url}}/admin/disputes/{{disputeId}}/force-refund",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "admin",
                 "disputes",
-                ":disputeId",
+                "{{disputeId}}",
                 "force-refund"
-              ],
-              "variable": [
-                {
-                  "key": "disputeId",
-                  "value": ""
-                }
               ]
             },
             "body": {
@@ -1082,19 +1052,13 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/disputes/:disputeId",
+              "raw": "{{base_url}}/disputes/{{disputeId}}",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "disputes",
-                ":disputeId"
-              ],
-              "variable": [
-                {
-                  "key": "disputeId",
-                  "value": ""
-                }
+                "{{disputeId}}"
               ]
             }
           },
@@ -1131,20 +1095,14 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/disputes/:disputeId/appeal",
+              "raw": "{{base_url}}/disputes/{{disputeId}}/appeal",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "disputes",
-                ":disputeId",
+                "{{disputeId}}",
                 "appeal"
-              ],
-              "variable": [
-                {
-                  "key": "disputeId",
-                  "value": ""
-                }
               ]
             }
           },
@@ -1231,21 +1189,15 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/experts/admin/:expertProfileId/appeals",
+              "raw": "{{base_url}}/experts/admin/{{expertProfileId}}/appeals",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "experts",
                 "admin",
-                ":expertProfileId",
+                "{{expertProfileId}}",
                 "appeals"
-              ],
-              "variable": [
-                {
-                  "key": "expertProfileId",
-                  "value": ""
-                }
               ]
             }
           },
@@ -1282,21 +1234,15 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/experts/admin/:expertProfileId/restore",
+              "raw": "{{base_url}}/experts/admin/{{expertProfileId}}/restore",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "experts",
                 "admin",
-                ":expertProfileId",
+                "{{expertProfileId}}",
                 "restore"
-              ],
-              "variable": [
-                {
-                  "key": "expertProfileId",
-                  "value": ""
-                }
               ]
             }
           },
@@ -1333,21 +1279,15 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/experts/admin/:expertProfileId/demote",
+              "raw": "{{base_url}}/experts/admin/{{expertProfileId}}/demote",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "experts",
                 "admin",
-                ":expertProfileId",
+                "{{expertProfileId}}",
                 "demote"
-              ],
-              "variable": [
-                {
-                  "key": "expertProfileId",
-                  "value": ""
-                }
               ]
             }
           },
@@ -1442,19 +1382,13 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/experts/:expertId",
+              "raw": "{{base_url}}/experts/{{expertId}}",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "experts",
-                ":expertId"
-              ],
-              "variable": [
-                {
-                  "key": "expertId",
-                  "value": ""
-                }
+                "{{expertId}}"
               ]
             }
           },
@@ -1634,20 +1568,14 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/fundings/:ideaId/deposit",
+              "raw": "{{base_url}}/fundings/{{ideaId}}/deposit",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "fundings",
-                ":ideaId",
+                "{{ideaId}}",
                 "deposit"
-              ],
-              "variable": [
-                {
-                  "key": "ideaId",
-                  "value": ""
-                }
               ]
             },
             "body": {
@@ -1776,19 +1704,13 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/fundings/:fundingId",
+              "raw": "{{base_url}}/fundings/{{fundingId}}",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "fundings",
-                ":fundingId"
-              ],
-              "variable": [
-                {
-                  "key": "fundingId",
-                  "value": ""
-                }
+                "{{fundingId}}"
               ]
             }
           },
@@ -1825,20 +1747,14 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/fundings/:fundingId/sponsors",
+              "raw": "{{base_url}}/fundings/{{fundingId}}/sponsors",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "fundings",
-                ":fundingId",
+                "{{fundingId}}",
                 "sponsors"
-              ],
-              "variable": [
-                {
-                  "key": "fundingId",
-                  "value": ""
-                }
               ]
             },
             "body": {
@@ -1884,21 +1800,15 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/fundings/:fundingId/sponsors/me",
+              "raw": "{{base_url}}/fundings/{{fundingId}}/sponsors/me",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "fundings",
-                ":fundingId",
+                "{{fundingId}}",
                 "sponsors",
                 "me"
-              ],
-              "variable": [
-                {
-                  "key": "fundingId",
-                  "value": ""
-                }
               ]
             }
           },
@@ -1930,20 +1840,14 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/fundings/:fundingId/sse",
+              "raw": "{{base_url}}/fundings/{{fundingId}}/sse",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "fundings",
-                ":fundingId",
+                "{{fundingId}}",
                 "sse"
-              ],
-              "variable": [
-                {
-                  "key": "fundingId",
-                  "value": ""
-                }
               ]
             }
           },
@@ -2029,21 +1933,15 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/admin/ideas/:ideaId/approve",
+              "raw": "{{base_url}}/admin/ideas/{{ideaId}}/approve",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "admin",
                 "ideas",
-                ":ideaId",
+                "{{ideaId}}",
                 "approve"
-              ],
-              "variable": [
-                {
-                  "key": "ideaId",
-                  "value": ""
-                }
               ]
             }
           },
@@ -2080,21 +1978,15 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/admin/ideas/:ideaId/reject",
+              "raw": "{{base_url}}/admin/ideas/{{ideaId}}/reject",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "admin",
                 "ideas",
-                ":ideaId",
+                "{{ideaId}}",
                 "reject"
-              ],
-              "variable": [
-                {
-                  "key": "ideaId",
-                  "value": ""
-                }
               ]
             }
           },
@@ -2131,21 +2023,15 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/admin/ideas/:ideaId/suspend",
+              "raw": "{{base_url}}/admin/ideas/{{ideaId}}/suspend",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "admin",
                 "ideas",
-                ":ideaId",
+                "{{ideaId}}",
                 "suspend"
-              ],
-              "variable": [
-                {
-                  "key": "ideaId",
-                  "value": ""
-                }
               ]
             }
           },
@@ -2182,21 +2068,15 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/admin/ideas/:ideaId/restore",
+              "raw": "{{base_url}}/admin/ideas/{{ideaId}}/restore",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "admin",
                 "ideas",
-                ":ideaId",
+                "{{ideaId}}",
                 "restore"
-              ],
-              "variable": [
-                {
-                  "key": "ideaId",
-                  "value": ""
-                }
               ]
             }
           },
@@ -2547,20 +2427,14 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/ideas/drafts/:draftId",
+              "raw": "{{base_url}}/ideas/drafts/{{draftId}}",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "ideas",
                 "drafts",
-                ":draftId"
-              ],
-              "variable": [
-                {
-                  "key": "draftId",
-                  "value": ""
-                }
+                "{{draftId}}"
               ]
             },
             "body": {
@@ -2606,20 +2480,14 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/ideas/drafts/:draftId",
+              "raw": "{{base_url}}/ideas/drafts/{{draftId}}",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "ideas",
                 "drafts",
-                ":draftId"
-              ],
-              "variable": [
-                {
-                  "key": "draftId",
-                  "value": ""
-                }
+                "{{draftId}}"
               ]
             }
           },
@@ -2656,21 +2524,15 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/ideas/drafts/:draftId/publish",
+              "raw": "{{base_url}}/ideas/drafts/{{draftId}}/publish",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "ideas",
                 "drafts",
-                ":draftId",
+                "{{draftId}}",
                 "publish"
-              ],
-              "variable": [
-                {
-                  "key": "draftId",
-                  "value": ""
-                }
               ]
             },
             "body": {
@@ -2759,19 +2621,13 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/ideas/:ideaId",
+              "raw": "{{base_url}}/ideas/{{ideaId}}",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "ideas",
-                ":ideaId"
-              ],
-              "variable": [
-                {
-                  "key": "ideaId",
-                  "value": ""
-                }
+                "{{ideaId}}"
               ]
             }
           },
@@ -2808,19 +2664,13 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/ideas/:ideaId",
+              "raw": "{{base_url}}/ideas/{{ideaId}}",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "ideas",
-                ":ideaId"
-              ],
-              "variable": [
-                {
-                  "key": "ideaId",
-                  "value": ""
-                }
+                "{{ideaId}}"
               ]
             },
             "body": {
@@ -2866,20 +2716,14 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/ideas/:ideaId/image",
+              "raw": "{{base_url}}/ideas/{{ideaId}}/image",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "ideas",
-                ":ideaId",
+                "{{ideaId}}",
                 "image"
-              ],
-              "variable": [
-                {
-                  "key": "ideaId",
-                  "value": ""
-                }
               ]
             }
           },
@@ -2916,19 +2760,13 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/ideas/:ideaId",
+              "raw": "{{base_url}}/ideas/{{ideaId}}",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "ideas",
-                ":ideaId"
-              ],
-              "variable": [
-                {
-                  "key": "ideaId",
-                  "value": ""
-                }
+                "{{ideaId}}"
               ]
             }
           },
@@ -2965,20 +2803,14 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/ideas/:ideaId/cancel",
+              "raw": "{{base_url}}/ideas/{{ideaId}}/cancel",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "ideas",
-                ":ideaId",
+                "{{ideaId}}",
                 "cancel"
-              ],
-              "variable": [
-                {
-                  "key": "ideaId",
-                  "value": ""
-                }
               ]
             }
           },
@@ -3015,20 +2847,14 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/ideas/:ideaId/bookmark",
+              "raw": "{{base_url}}/ideas/{{ideaId}}/bookmark",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "ideas",
-                ":ideaId",
+                "{{ideaId}}",
                 "bookmark"
-              ],
-              "variable": [
-                {
-                  "key": "ideaId",
-                  "value": ""
-                }
               ]
             }
           },
@@ -3065,20 +2891,14 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/ideas/:ideaId/bookmark",
+              "raw": "{{base_url}}/ideas/{{ideaId}}/bookmark",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "ideas",
-                ":ideaId",
+                "{{ideaId}}",
                 "bookmark"
-              ],
-              "variable": [
-                {
-                  "key": "ideaId",
-                  "value": ""
-                }
               ]
             }
           },
@@ -3115,20 +2935,14 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/ideas/:ideaId/reports",
+              "raw": "{{base_url}}/ideas/{{ideaId}}/reports",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "ideas",
-                ":ideaId",
+                "{{ideaId}}",
                 "reports"
-              ],
-              "variable": [
-                {
-                  "key": "ideaId",
-                  "value": ""
-                }
               ]
             },
             "body": {
@@ -3265,19 +3079,13 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/matches/:matchId",
+              "raw": "{{base_url}}/matches/{{matchId}}",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "matches",
-                ":matchId"
-              ],
-              "variable": [
-                {
-                  "key": "matchId",
-                  "value": ""
-                }
+                "{{matchId}}"
               ]
             }
           },
@@ -3314,20 +3122,14 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/matches/:matchId/review",
+              "raw": "{{base_url}}/matches/{{matchId}}/review",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "matches",
-                ":matchId",
+                "{{matchId}}",
                 "review"
-              ],
-              "variable": [
-                {
-                  "key": "matchId",
-                  "value": ""
-                }
               ]
             },
             "body": {
@@ -3373,20 +3175,14 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/matches/experts/:expertProfileId",
+              "raw": "{{base_url}}/matches/experts/{{expertProfileId}}",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "matches",
                 "experts",
-                ":expertProfileId"
-              ],
-              "variable": [
-                {
-                  "key": "expertProfileId",
-                  "value": ""
-                }
+                "{{expertProfileId}}"
               ]
             },
             "body": {
@@ -3438,19 +3234,13 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/fund-usages/:ideaId",
+              "raw": "{{base_url}}/fund-usages/{{ideaId}}",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "fund-usages",
-                ":ideaId"
-              ],
-              "variable": [
-                {
-                  "key": "ideaId",
-                  "value": ""
-                }
+                "{{ideaId}}"
               ]
             },
             "body": {
@@ -3496,19 +3286,13 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/fund-usages/:ideaId",
+              "raw": "{{base_url}}/fund-usages/{{ideaId}}",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "fund-usages",
-                ":ideaId"
-              ],
-              "variable": [
-                {
-                  "key": "ideaId",
-                  "value": ""
-                }
+                "{{ideaId}}"
               ]
             }
           },
@@ -3523,7 +3307,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"fundUsageId\": 1,\n      \"ideaId\": 1,\n      \"itemName\": \"홍길동\",\n      \"amount\": 5000000,\n      \"usedAt\": \"2026-06-25\"\n    }\n  ]\n}"
+              "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"fundUsageId\": 1,\n      \"ideaId\": 10,\n      \"itemName\": \"부품 구매\",\n      \"amount\": 50000,\n      \"usedAt\": \"2026-06-25\"\n    },\n    {\n      \"fundUsageId\": 2,\n      \"ideaId\": 10,\n      \"itemName\": \"시제품 외주 제작\",\n      \"amount\": 120000,\n      \"usedAt\": \"2026-06-26\"\n    }\n  ]\n}"
             }
           ],
           "description": "FundUsageController의 /fund-usages/{ideaId} 엔드포인트를 호출합니다."
@@ -3551,20 +3335,14 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/milestones/ideas/:ideaId",
+              "raw": "{{base_url}}/milestones/ideas/{{ideaId}}",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "milestones",
                 "ideas",
-                ":ideaId"
-              ],
-              "variable": [
-                {
-                  "key": "ideaId",
-                  "value": ""
-                }
+                "{{ideaId}}"
               ]
             }
           },
@@ -3579,7 +3357,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"id\": 1,\n      \"ideaId\": 1,\n      \"step\": 1,\n      \"goal\": \"샘플 데이터\",\n      \"expectedResult\": \"샘플 데이터\",\n      \"expectedDate\": \"2026-06-25\",\n      \"status\": \"PENDING\",\n      \"createdAt\": \"2026-06-25T10:30:00\"\n    }\n  ]\n}"
+              "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"id\": 1,\n      \"ideaId\": 10,\n      \"step\": 1,\n      \"goal\": \"1차 시제품 제작\",\n      \"expectedResult\": \"시제품 제작 완료\",\n      \"expectedDate\": \"2026-07-01\",\n      \"status\": \"COMPLETED\",\n      \"createdAt\": \"2026-06-01T10:00:00\"\n    },\n    {\n      \"id\": 2,\n      \"ideaId\": 10,\n      \"step\": 2,\n      \"goal\": \"2차 기능 개선\",\n      \"expectedResult\": \"핵심 기능 개선 완료\",\n      \"expectedDate\": \"2026-08-01\",\n      \"status\": \"IN_PROGRESS\",\n      \"createdAt\": \"2026-06-01T10:00:00\"\n    },\n    {\n      \"id\": 3,\n      \"ideaId\": 10,\n      \"step\": 3,\n      \"goal\": \"최종 제품 제작\",\n      \"expectedResult\": \"최종 제품 납품\",\n      \"expectedDate\": \"2026-09-01\",\n      \"status\": \"PENDING\",\n      \"createdAt\": \"2026-06-01T10:00:00\"\n    }\n  ]\n}"
             }
           ],
           "description": "MilestoneController의 /milestones/ideas/{ideaId} 엔드포인트를 호출합니다."
@@ -3601,19 +3379,13 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/milestones/:milestoneId",
+              "raw": "{{base_url}}/milestones/{{milestoneId}}",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "milestones",
-                ":milestoneId"
-              ],
-              "variable": [
-                {
-                  "key": "milestoneId",
-                  "value": ""
-                }
+                "{{milestoneId}}"
               ]
             }
           },
@@ -3628,7 +3400,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"id\": 1,\n    \"ideaId\": 1,\n    \"step\": 1,\n    \"goal\": \"샘플 데이터\",\n    \"expectedResult\": \"샘플 데이터\",\n    \"expectedDate\": \"2026-06-25\",\n    \"status\": \"PENDING\",\n    \"createdAt\": \"2026-06-25T10:30:00\"\n  }\n}"
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"id\": 2,\n    \"ideaId\": 10,\n    \"step\": 2,\n    \"goal\": \"2차 기능 개선\",\n    \"expectedResult\": \"핵심 기능 개선 완료\",\n    \"expectedDate\": \"2026-08-01\",\n    \"status\": \"IN_PROGRESS\",\n    \"createdAt\": \"2026-06-01T10:00:00\"\n  }\n}"
             }
           ],
           "description": "MilestoneController의 /milestones/{milestoneId} 엔드포인트를 호출합니다."
@@ -3650,20 +3422,14 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/milestones/:milestoneId/reports",
+              "raw": "{{base_url}}/milestones/{{milestoneId}}/reports",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "milestones",
-                ":milestoneId",
+                "{{milestoneId}}",
                 "reports"
-              ],
-              "variable": [
-                {
-                  "key": "milestoneId",
-                  "value": ""
-                }
               ]
             }
           },
@@ -3678,10 +3444,50 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"reportId\": 1,\n      \"milestoneId\": 1,\n      \"type\": \"COMPLETION\",\n      \"content\": \"SeedLink에서 검증된 프로젝트 설명입니다.\",\n      \"fileUrl\": \"https://cdn.seedlink.local/images/sample.png\",\n      \"status\": \"SUBMITTED\",\n      \"submittedAt\": \"2026-06-25T10:30:00\"\n    }\n  ]\n}"
+              "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"reportId\": 3,\n      \"milestoneId\": 2,\n      \"type\": \"APPEAL\",\n      \"content\": \"두 번째 소명 보고서입니다.\",\n      \"fileUrl\": null,\n      \"rejectReason\": null,\n      \"status\": \"SUBMITTED\",\n      \"submittedAt\": \"2026-06-26T12:00:00\"\n    },\n    {\n      \"reportId\": 2,\n      \"milestoneId\": 2,\n      \"type\": \"APPEAL\",\n      \"content\": \"첫 번째 소명 보고서입니다.\",\n      \"fileUrl\": \"https://presigned-url.example.com/appeal.pdf\",\n      \"rejectReason\": \"소명 자료가 부족합니다.\",\n      \"status\": \"REJECTED\",\n      \"submittedAt\": \"2026-06-25T15:00:00\"\n    },\n    {\n      \"reportId\": 1,\n      \"milestoneId\": 2,\n      \"type\": \"COMPLETION\",\n      \"content\": \"완료 보고서입니다.\",\n      \"fileUrl\": \"https://presigned-url.example.com/completion.pdf\",\n      \"rejectReason\": \"증빙 자료가 부족합니다.\",\n      \"status\": \"REJECTED\",\n      \"submittedAt\": \"2026-06-24T10:00:00\"\n    }\n  ]\n}"
             }
           ],
           "description": "MilestoneController의 /milestones/{milestoneId}/reports 엔드포인트를 호출합니다."
+        },
+        {
+          "name": "마일스톤 보고서 단건 조회",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/milestones/{{milestoneId}}/reports/{{reportId}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "milestones",
+                "{{milestoneId}}",
+                "reports",
+                "{{reportId}}"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "성공 응답 예시",
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"reportId\": 1,\n    \"milestoneId\": 2,\n    \"type\": \"COMPLETION\",\n    \"content\": \"완료 보고서 내용입니다.\",\n    \"fileUrl\": \"https://presigned-url.example.com/completion.pdf\",\n    \"rejectReason\": null,\n    \"status\": \"SUBMITTED\",\n    \"submittedAt\": \"2026-06-26T10:30:00\"\n  }\n}"
+            }
+          ],
+          "description": "milestoneId와 reportId가 일치하는 완료/소명 보고서 단건을 조회합니다."
         },
         {
           "name": "마일스톤 완료 보고서 제출",
@@ -3689,30 +3495,37 @@
             "method": "POST",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
-              },
-              {
                 "key": "Authorization",
                 "value": "Bearer {{token}}",
                 "type": "text"
               }
             ],
             "url": {
-              "raw": "{{base_url}}/milestones/:milestoneId/completion-reports",
+              "raw": "{{base_url}}/milestones/{{milestoneId}}/completion-reports",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "milestones",
-                ":milestoneId",
+                "{{milestoneId}}",
                 "completion-reports"
-              ],
-              "variable": [
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
                 {
-                  "key": "milestoneId",
-                  "value": ""
+                  "key": "request",
+                  "value": "{\"content\":\"완료 보고서 내용입니다.\"}",
+                  "type": "text",
+                  "contentType": "application/json",
+                  "description": "CompletionReportRequest JSON part"
+                },
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": [],
+                  "description": "첨부 파일, 선택"
                 }
               ]
             }
@@ -3728,41 +3541,48 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"reportId\": 1,\n    \"milestoneId\": 1,\n    \"type\": \"COMPLETION\",\n    \"content\": \"SeedLink에서 검증된 프로젝트 설명입니다.\",\n    \"fileUrl\": \"https://cdn.seedlink.local/images/sample.png\",\n    \"status\": \"SUBMITTED\",\n    \"submittedAt\": \"2026-06-25T10:30:00\"\n  }\n}"
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"reportId\": 1,\n    \"milestoneId\": 2,\n    \"type\": \"COMPLETION\",\n    \"content\": \"완료 보고서 내용입니다.\",\n    \"fileUrl\": \"https://presigned-url.example.com/completion.pdf\",\n    \"rejectReason\": null,\n    \"status\": \"SUBMITTED\",\n    \"submittedAt\": \"2026-06-26T10:30:00\"\n  }\n}"
             }
           ],
-          "description": "MilestoneController의 /milestones/{milestoneId}/completion-reports 엔드포인트를 호출합니다."
+          "description": "multipart/form-data로 완료 보고서를 제출합니다. request 파트는 CompletionReportRequest JSON이고 file은 선택입니다."
         },
         {
-          "name": "마일스톤 이의제기 보고서 제출",
+          "name": "마일스톤 소명 보고서 제출",
           "request": {
             "method": "POST",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
-              },
-              {
                 "key": "Authorization",
                 "value": "Bearer {{token}}",
                 "type": "text"
               }
             ],
             "url": {
-              "raw": "{{base_url}}/milestones/:milestoneId/appeal-reports",
+              "raw": "{{base_url}}/milestones/{{milestoneId}}/appeal-reports",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "milestones",
-                ":milestoneId",
+                "{{milestoneId}}",
                 "appeal-reports"
-              ],
-              "variable": [
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
                 {
-                  "key": "milestoneId",
-                  "value": ""
+                  "key": "request",
+                  "value": "{\"content\":\"소명 보고서 내용입니다.\"}",
+                  "type": "text",
+                  "contentType": "application/json",
+                  "description": "CompletionReportRequest JSON part"
+                },
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": [],
+                  "description": "첨부 파일, 선택"
                 }
               ]
             }
@@ -3778,10 +3598,10 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"reportId\": 1,\n    \"milestoneId\": 1,\n    \"type\": \"COMPLETION\",\n    \"content\": \"SeedLink에서 검증된 프로젝트 설명입니다.\",\n    \"fileUrl\": \"https://cdn.seedlink.local/images/sample.png\",\n    \"status\": \"SUBMITTED\",\n    \"submittedAt\": \"2026-06-25T10:30:00\"\n  }\n}"
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"reportId\": 2,\n    \"milestoneId\": 2,\n    \"type\": \"APPEAL\",\n    \"content\": \"소명 보고서 내용입니다.\",\n    \"fileUrl\": \"https://presigned-url.example.com/appeal.pdf\",\n    \"rejectReason\": null,\n    \"status\": \"SUBMITTED\",\n    \"submittedAt\": \"2026-06-26T11:00:00\"\n  }\n}"
             }
           ],
-          "description": "MilestoneController의 /milestones/{milestoneId}/appeal-reports 엔드포인트를 호출합니다."
+          "description": "multipart/form-data로 소명 보고서를 제출합니다. request 파트는 CompletionReportRequest JSON이고 file은 선택입니다."
         },
         {
           "name": "마일스톤 완료 보고서 승인",
@@ -3800,22 +3620,16 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/milestones/:milestoneId/reports/approve/completion",
+              "raw": "{{base_url}}/milestones/{{milestoneId}}/reports/approve/completion",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "milestones",
-                ":milestoneId",
+                "{{milestoneId}}",
                 "reports",
                 "approve",
                 "completion"
-              ],
-              "variable": [
-                {
-                  "key": "milestoneId",
-                  "value": ""
-                }
               ]
             }
           },
@@ -3830,13 +3644,13 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"reportId\": 1,\n    \"milestoneId\": 1,\n    \"type\": \"COMPLETION\",\n    \"content\": \"SeedLink에서 검증된 프로젝트 설명입니다.\",\n    \"fileUrl\": \"https://cdn.seedlink.local/images/sample.png\",\n    \"status\": \"SUBMITTED\",\n    \"submittedAt\": \"2026-06-25T10:30:00\"\n  }\n}"
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"reportId\": 1,\n    \"milestoneId\": 2,\n    \"type\": \"COMPLETION\",\n    \"content\": \"완료 보고서 내용입니다.\",\n    \"fileUrl\": \"https://presigned-url.example.com/completion.pdf\",\n    \"rejectReason\": null,\n    \"status\": \"APPROVED\",\n    \"submittedAt\": \"2026-06-26T10:30:00\"\n  }\n}"
             }
           ],
           "description": "MilestoneController의 /milestones/{milestoneId}/reports/approve/completion 엔드포인트를 호출합니다."
         },
         {
-          "name": "마일스톤 이의제기 보고서 승인",
+          "name": "마일스톤 소명 보고서 승인",
           "request": {
             "method": "POST",
             "header": [
@@ -3852,22 +3666,16 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/milestones/:milestoneId/reports/approve/appeal",
+              "raw": "{{base_url}}/milestones/{{milestoneId}}/reports/approve/appeal",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "milestones",
-                ":milestoneId",
+                "{{milestoneId}}",
                 "reports",
                 "approve",
                 "appeal"
-              ],
-              "variable": [
-                {
-                  "key": "milestoneId",
-                  "value": ""
-                }
               ]
             }
           },
@@ -3882,10 +3690,10 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"reportId\": 1,\n    \"milestoneId\": 1,\n    \"type\": \"COMPLETION\",\n    \"content\": \"SeedLink에서 검증된 프로젝트 설명입니다.\",\n    \"fileUrl\": \"https://cdn.seedlink.local/images/sample.png\",\n    \"status\": \"SUBMITTED\",\n    \"submittedAt\": \"2026-06-25T10:30:00\"\n  }\n}"
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"reportId\": 2,\n    \"milestoneId\": 2,\n    \"type\": \"APPEAL\",\n    \"content\": \"소명 보고서 내용입니다.\",\n    \"fileUrl\": \"https://presigned-url.example.com/appeal.pdf\",\n    \"rejectReason\": null,\n    \"status\": \"APPROVED\",\n    \"submittedAt\": \"2026-06-26T11:00:00\"\n  }\n}"
             }
           ],
-          "description": "MilestoneController의 /milestones/{milestoneId}/reports/approve/appeal 엔드포인트를 호출합니다."
+          "description": "관리자가 최신 소명 보고서를 승인합니다."
         },
         {
           "name": "마일스톤 보고서 반려",
@@ -3904,22 +3712,25 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/milestones/:milestoneId/reports/reject",
+              "raw": "{{base_url}}/milestones/{{milestoneId}}/reports/reject",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "milestones",
-                ":milestoneId",
+                "{{milestoneId}}",
                 "reports",
                 "reject"
-              ],
-              "variable": [
-                {
-                  "key": "milestoneId",
-                  "value": ""
-                }
               ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"증빙 자료가 부족합니다.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             }
           },
           "response": [
@@ -3933,7 +3744,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"reportId\": 1,\n    \"milestoneId\": 1,\n    \"type\": \"COMPLETION\",\n    \"content\": \"SeedLink에서 검증된 프로젝트 설명입니다.\",\n    \"fileUrl\": \"https://cdn.seedlink.local/images/sample.png\",\n    \"status\": \"SUBMITTED\",\n    \"submittedAt\": \"2026-06-25T10:30:00\"\n  }\n}"
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"reportId\": 1,\n    \"milestoneId\": 2,\n    \"type\": \"COMPLETION\",\n    \"content\": \"완료 보고서 내용입니다.\",\n    \"fileUrl\": \"https://presigned-url.example.com/completion.pdf\",\n    \"rejectReason\": \"증빙 자료가 부족합니다.\",\n    \"status\": \"REJECTED\",\n    \"submittedAt\": \"2026-06-26T10:30:00\"\n  }\n}"
             }
           ],
           "description": "MilestoneController의 /milestones/{milestoneId}/reports/reject 엔드포인트를 호출합니다."
@@ -3955,21 +3766,15 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/milestones/:milestoneId/reports/refund",
+              "raw": "{{base_url}}/milestones/{{milestoneId}}/reports/refund",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "milestones",
-                ":milestoneId",
+                "{{milestoneId}}",
                 "reports",
                 "refund"
-              ],
-              "variable": [
-                {
-                  "key": "milestoneId",
-                  "value": ""
-                }
               ]
             }
           },
@@ -4006,21 +3811,15 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/milestones/ideas/:ideaId/cancel",
+              "raw": "{{base_url}}/milestones/ideas/{{ideaId}}/cancel",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "milestones",
                 "ideas",
-                ":ideaId",
+                "{{ideaId}}",
                 "cancel"
-              ],
-              "variable": [
-                {
-                  "key": "ideaId",
-                  "value": ""
-                }
               ]
             }
           },
@@ -4163,20 +3962,14 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/notifications/:notificationId/read",
+              "raw": "{{base_url}}/notifications/{{notificationId}}/read",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "notifications",
-                ":notificationId",
+                "{{notificationId}}",
                 "read"
-              ],
-              "variable": [
-                {
-                  "key": "notificationId",
-                  "value": ""
-                }
               ]
             }
           },
@@ -4437,20 +4230,14 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/payments/:paymentId/demo-confirm",
+              "raw": "{{base_url}}/payments/{{paymentId}}/demo-confirm",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "payments",
-                ":paymentId",
+                "{{paymentId}}",
                 "demo-confirm"
-              ],
-              "variable": [
-                {
-                  "key": "paymentId",
-                  "value": ""
-                }
               ]
             }
           },
@@ -4487,20 +4274,14 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/payments/:paymentId/confirm",
+              "raw": "{{base_url}}/payments/{{paymentId}}/confirm",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "payments",
-                ":paymentId",
+                "{{paymentId}}",
                 "confirm"
-              ],
-              "variable": [
-                {
-                  "key": "paymentId",
-                  "value": ""
-                }
               ]
             },
             "body": {
@@ -4546,20 +4327,14 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/payments/:paymentId/refund",
+              "raw": "{{base_url}}/payments/{{paymentId}}/refund",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "payments",
-                ":paymentId",
+                "{{paymentId}}",
                 "refund"
-              ],
-              "variable": [
-                {
-                  "key": "paymentId",
-                  "value": ""
-                }
               ]
             }
           },
@@ -4596,19 +4371,13 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/payments/:paymentId",
+              "raw": "{{base_url}}/payments/{{paymentId}}",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "payments",
-                ":paymentId"
-              ],
-              "variable": [
-                {
-                  "key": "paymentId",
-                  "value": ""
-                }
+                "{{paymentId}}"
               ]
             }
           },
@@ -4683,7 +4452,7 @@
       "name": "PreSettlementController",
       "item": [
         {
-          "name": "사전 정산 신청",
+          "name": "선정산 신청",
           "request": {
             "method": "POST",
             "header": [
@@ -4699,20 +4468,14 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/pre-settlements/ideas/:ideaId",
+              "raw": "{{base_url}}/pre-settlements/ideas/{{ideaId}}",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "pre-settlements",
                 "ideas",
-                ":ideaId"
-              ],
-              "variable": [
-                {
-                  "key": "ideaId",
-                  "value": ""
-                }
+                "{{ideaId}}"
               ]
             },
             "body": {
@@ -4739,7 +4502,7 @@
               "body": "{\n  \"success\": true,\n  \"data\": {\n    \"preSettlementId\": 1,\n    \"ideaId\": 1,\n    \"amount\": 5000000,\n    \"status\": \"REQUESTED\",\n    \"requestedAt\": \"2026-06-25T10:30:00\"\n  }\n}"
             }
           ],
-          "description": "PreSettlementController의 /pre-settlements/ideas/{ideaId} 엔드포인트를 호출합니다."
+          "description": "제안자가 진행 중인 아이디어에 대해 선정산을 신청합니다."
         },
         {
           "name": "사전 정산 완료 처리",
@@ -4747,31 +4510,25 @@
             "method": "PATCH",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json",
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
                 "type": "text"
               },
               {
-                "key": "Authorization",
-                "value": "Bearer {{token}}",
+                "key": "X-Webhook-Secret",
+                "value": "{{payment_webhook_secret}}",
                 "type": "text"
               }
             ],
             "url": {
-              "raw": "{{base_url}}/pre-settlements/:preSettlementId/complete",
+              "raw": "{{base_url}}/pre-settlements/{{preSettlementId}}/complete",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "pre-settlements",
-                ":preSettlementId",
+                "{{preSettlementId}}",
                 "complete"
-              ],
-              "variable": [
-                {
-                  "key": "preSettlementId",
-                  "value": ""
-                }
               ]
             }
           },
@@ -4786,7 +4543,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"preSettlementId\": 1,\n    \"ideaId\": 1,\n    \"amount\": 5000000,\n    \"status\": \"REQUESTED\",\n    \"requestedAt\": \"2026-06-25T10:30:00\"\n  }\n}"
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"preSettlementId\": 1,\n    \"ideaId\": 10,\n    \"amount\": 300000,\n    \"status\": \"COMPLETED\",\n    \"requestedAt\": \"2026-06-26T10:00:00\"\n  }\n}"
             }
           ],
           "description": "PreSettlementController의 /pre-settlements/{preSettlementId}/complete 엔드포인트를 호출합니다."
@@ -4797,31 +4554,25 @@
             "method": "PATCH",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json",
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
                 "type": "text"
               },
               {
-                "key": "Authorization",
-                "value": "Bearer {{token}}",
+                "key": "X-Webhook-Secret",
+                "value": "{{payment_webhook_secret}}",
                 "type": "text"
               }
             ],
             "url": {
-              "raw": "{{base_url}}/pre-settlements/:preSettlementId/fail",
+              "raw": "{{base_url}}/pre-settlements/{{preSettlementId}}/fail",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "pre-settlements",
-                ":preSettlementId",
+                "{{preSettlementId}}",
                 "fail"
-              ],
-              "variable": [
-                {
-                  "key": "preSettlementId",
-                  "value": ""
-                }
               ]
             }
           },
@@ -4836,13 +4587,13 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"preSettlementId\": 1,\n    \"ideaId\": 1,\n    \"amount\": 5000000,\n    \"status\": \"REQUESTED\",\n    \"requestedAt\": \"2026-06-25T10:30:00\"\n  }\n}"
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"preSettlementId\": 1,\n    \"ideaId\": 10,\n    \"amount\": 300000,\n    \"status\": \"FAILED\",\n    \"requestedAt\": \"2026-06-26T10:00:00\"\n  }\n}"
             }
           ],
           "description": "PreSettlementController의 /pre-settlements/{preSettlementId}/fail 엔드포인트를 호출합니다."
         },
         {
-          "name": "아이디어 사전 정산 목록 조회",
+          "name": "아이디어별 PreSettlement 장부 조회",
           "request": {
             "method": "GET",
             "header": [
@@ -4858,21 +4609,24 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/pre-settlements/ideas/:ideaId",
+              "raw": "{{base_url}}/pre-settlements/ideas/{{ideaId}}",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "pre-settlements",
                 "ideas",
-                ":ideaId"
-              ],
-              "variable": [
-                {
-                  "key": "ideaId",
-                  "value": ""
-                }
+                "{{ideaId}}"
               ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 300000\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             }
           },
           "response": [
@@ -4886,10 +4640,10 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"preSettlementId\": 1,\n      \"ideaId\": 1,\n      \"amount\": 5000000,\n      \"status\": \"REQUESTED\",\n      \"requestedAt\": \"2026-06-25T10:30:00\"\n    }\n  ]\n}"
+              "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"preSettlementId\": 1,\n      \"ideaId\": 10,\n      \"amount\": 300000,\n      \"status\": \"COMPLETED\",\n      \"requestedAt\": \"2026-06-26T10:00:00\"\n    },\n    {\n      \"preSettlementId\": 2,\n      \"ideaId\": 10,\n      \"amount\": 200000,\n      \"status\": \"FAILED\",\n      \"requestedAt\": \"2026-06-26T11:00:00\"\n    }\n  ]\n}"
             }
           ],
-          "description": "PreSettlementController의 /pre-settlements/ideas/{ideaId} 엔드포인트를 호출합니다."
+          "description": "특정 아이디어의 선정산 신청/지급 장부 목록을 조회합니다."
         }
       ],
       "description": "PreSettlementController 컨트롤러 API 목록입니다."
@@ -4903,31 +4657,25 @@
             "method": "PATCH",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json",
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
                 "type": "text"
               },
               {
-                "key": "Authorization",
-                "value": "Bearer {{token}}",
+                "key": "X-Webhook-Secret",
+                "value": "{{payment_webhook_secret}}",
                 "type": "text"
               }
             ],
             "url": {
-              "raw": "{{base_url}}/refunds/:refundId/complete",
+              "raw": "{{base_url}}/refunds/{{refundId}}/complete",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "refunds",
-                ":refundId",
+                "{{refundId}}",
                 "complete"
-              ],
-              "variable": [
-                {
-                  "key": "refundId",
-                  "value": ""
-                }
               ]
             }
           },
@@ -4942,10 +4690,54 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"id\": 1,\n    \"paymentId\": 1,\n    \"sponsorId\": 1,\n    \"amount\": 5000000,\n    \"reason\": \"GOAL_NOT_MET\",\n    \"status\": \"PENDING\",\n    \"createdAt\": \"2026-06-25T10:30:00\"\n  }\n}"
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"id\": 1,\n    \"paymentId\": 100,\n    \"sponsorId\": 20,\n    \"amount\": 30000,\n    \"reason\": \"CANCELLED\",\n    \"status\": \"COMPLETED\",\n    \"createdAt\": \"2026-06-26T10:30:00\"\n  }\n}"
             }
           ],
-          "description": "RefundController의 /refunds/{refundId}/complete 엔드포인트를 호출합니다."
+          "description": "결제팀 콜백용 환불 완료 처리 API입니다. X-Webhook-Secret 헤더가 필요합니다."
+        },
+        {
+          "name": "환불 실패 처리",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "X-Webhook-Secret",
+                "value": "{{payment_webhook_secret}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/refunds/{{refundId}}/fail",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "refunds",
+                "{{refundId}}",
+                "fail"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "성공 응답 예시",
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"id\": 1,\n    \"paymentId\": 100,\n    \"sponsorId\": 20,\n    \"amount\": 30000,\n    \"reason\": \"CANCELLED\",\n    \"status\": \"FAILED\",\n    \"createdAt\": \"2026-06-26T10:30:00\"\n  }\n}"
+            }
+          ],
+          "description": "결제팀 콜백용 환불 실패 처리 API입니다. X-Webhook-Secret 헤더가 필요합니다."
         },
         {
           "name": "내 환불 목록 조회",
@@ -4985,7 +4777,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"id\": 1,\n      \"paymentId\": 1,\n      \"sponsorId\": 1,\n      \"amount\": 5000000,\n      \"reason\": \"GOAL_NOT_MET\",\n      \"status\": \"PENDING\",\n      \"createdAt\": \"2026-06-25T10:30:00\"\n    }\n  ]\n}"
+              "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"id\": 1,\n      \"paymentId\": 100,\n      \"sponsorId\": 20,\n      \"amount\": 30000,\n      \"reason\": \"CANCELLED\",\n      \"status\": \"PENDING\",\n      \"createdAt\": \"2026-06-26T10:30:00\"\n    },\n    {\n      \"id\": 2,\n      \"paymentId\": 101,\n      \"sponsorId\": 20,\n      \"amount\": 50000,\n      \"reason\": \"GOAL_NOT_MET\",\n      \"status\": \"COMPLETED\",\n      \"createdAt\": \"2026-06-26T11:00:00\"\n    }\n  ]\n}"
             }
           ],
           "description": "RefundController의 /refunds/me 엔드포인트를 호출합니다."
@@ -4997,7 +4789,7 @@
       "name": "SettlementController",
       "item": [
         {
-          "name": "아이디어 정산 목록 조회",
+          "name": "아이디어별 Settlement 장부 조회",
           "request": {
             "method": "GET",
             "header": [
@@ -5013,20 +4805,14 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/settlements/ideas/:ideaId",
+              "raw": "{{base_url}}/settlements/ideas/{{ideaId}}",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "settlements",
                 "ideas",
-                ":ideaId"
-              ],
-              "variable": [
-                {
-                  "key": "ideaId",
-                  "value": ""
-                }
+                "{{ideaId}}"
               ]
             }
           },
@@ -5041,13 +4827,13 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"settlementId\": 1,\n      \"ideaId\": 1,\n      \"type\": \"FINAL\",\n      \"totalAmount\": 5000000,\n      \"platformFee\": 1,\n      \"payoutAmount\": 5000000,\n      \"status\": \"PENDING\",\n      \"createdAt\": \"2026-06-25T10:30:00\"\n    }\n  ]\n}"
+              "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"settlementId\": 1,\n      \"ideaId\": 10,\n      \"type\": \"FINAL\",\n      \"totalAmount\": 1000000,\n      \"platformFee\": 50000,\n      \"payoutAmount\": 950000,\n      \"status\": \"COMPLETED\",\n      \"memo\": null,\n      \"createdAt\": \"2026-06-26T10:00:00\"\n    },\n    {\n      \"settlementId\": 2,\n      \"ideaId\": 10,\n      \"type\": \"FINAL\",\n      \"totalAmount\": 300000,\n      \"platformFee\": 0,\n      \"payoutAmount\": 300000,\n      \"status\": \"DEPOSIT_REFUNDED\",\n      \"memo\": \"보증금 환급\",\n      \"createdAt\": \"2026-06-26T11:00:00\"\n    }\n  ]\n}"
             }
           ],
-          "description": "SettlementController의 /settlements/ideas/{ideaId} 엔드포인트를 호출합니다."
+          "description": "특정 아이디어의 Settlement 장부를 조회합니다. 선정산은 /pre-settlements/ideas/{{ideaId}}에서 별도로 조회합니다."
         },
         {
-          "name": "정산 상세 조회",
+          "name": "Settlement 장부 단건 조회",
           "request": {
             "method": "GET",
             "header": [
@@ -5063,19 +4849,13 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/settlements/:settlementId",
+              "raw": "{{base_url}}/settlements/{{settlementId}}",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "settlements",
-                ":settlementId"
-              ],
-              "variable": [
-                {
-                  "key": "settlementId",
-                  "value": ""
-                }
+                "{{settlementId}}"
               ]
             }
           },
@@ -5090,13 +4870,198 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"settlementId\": 1,\n    \"ideaId\": 1,\n    \"type\": \"FINAL\",\n    \"totalAmount\": 5000000,\n    \"platformFee\": 1,\n    \"payoutAmount\": 5000000,\n    \"status\": \"PENDING\",\n    \"createdAt\": \"2026-06-25T10:30:00\"\n  }\n}"
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"settlementId\": 1,\n    \"ideaId\": 10,\n    \"type\": \"FINAL\",\n    \"totalAmount\": 1000000,\n    \"platformFee\": 50000,\n    \"payoutAmount\": 950000,\n    \"status\": \"COMPLETED\",\n    \"memo\": null,\n    \"createdAt\": \"2026-06-26T10:00:00\"\n  }\n}"
             }
           ],
-          "description": "SettlementController의 /settlements/{settlementId} 엔드포인트를 호출합니다."
+          "description": "Settlement 장부 1건을 조회합니다. 선정산 내역은 포함되지 않습니다."
         }
       ],
       "description": "SettlementController 컨트롤러 API 목록입니다."
+    },
+    {
+      "name": "AdminSettlementController",
+      "item": [
+        {
+          "name": "보증금 납부 확인",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/settlements/ideas/{{ideaId}}/deposit",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "settlements",
+                "ideas",
+                "{{ideaId}}",
+                "deposit"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "성공 응답 예시",
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"depositId\": 1,\n    \"ideaId\": 10,\n    \"userId\": 5,\n    \"amount\": 300000,\n    \"status\": \"PAID\",\n    \"paidAt\": \"2026-06-26T09:00:00\",\n    \"releasedAt\": null,\n    \"payment\": null\n  }\n}"
+            }
+          ],
+          "description": "관리자가 특정 아이디어의 보증금 납부 상태를 확인합니다."
+        },
+        {
+          "name": "보증금 환급 판정",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/settlements/ideas/{{ideaId}}/deposit/release",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "settlements",
+                "ideas",
+                "{{ideaId}}",
+                "deposit",
+                "release"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "성공 응답 예시",
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"settlementId\": 3,\n    \"ideaId\": 10,\n    \"type\": \"FINAL\",\n    \"totalAmount\": 300000,\n    \"platformFee\": 0,\n    \"payoutAmount\": 300000,\n    \"status\": \"PENDING\",\n    \"memo\": \"관리자 보증금 환급 판정\",\n    \"createdAt\": \"2026-06-26T11:30:00\"\n  }\n}"
+            }
+          ],
+          "description": "관리자가 보증금 환급 장부와 지급 요청을 생성합니다. 지급 성공 후 DEPOSIT_REFUNDED로 변경됩니다."
+        },
+        {
+          "name": "보증금 몰수 판정",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/settlements/ideas/{{ideaId}}/deposit/forfeit",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "settlements",
+                "ideas",
+                "{{ideaId}}",
+                "deposit",
+                "forfeit"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "성공 응답 예시",
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"settlementId\": 2,\n    \"ideaId\": 10,\n    \"type\": \"FINAL\",\n    \"totalAmount\": 300000,\n    \"platformFee\": 0,\n    \"payoutAmount\": 0,\n    \"status\": \"FORFEITED\",\n    \"memo\": \"관리자 보증금 몰수 판정\",\n    \"createdAt\": \"2026-06-26T11:00:00\"\n  }\n}"
+            }
+          ],
+          "description": "관리자가 보증금 몰수 장부를 생성하고 Deposit 상태를 FORFEITED로 전환합니다."
+        },
+        {
+          "name": "에스크로 강제 환불",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/settlements/ideas/{{ideaId}}/force-refund",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "settlements",
+                "ideas",
+                "{{ideaId}}",
+                "force-refund"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"제안자 장기 미응답으로 인한 관리자 강제 환불\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "성공 응답 예시",
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true\n}"
+            }
+          ],
+          "description": "관리자가 강제 환불 사유를 남기고 후원금 환불 장부, 보증금 몰수 장부, 후원자별 환불 레코드를 생성합니다."
+        }
+      ]
     },
     {
       "name": "AdminUserController",
@@ -5161,21 +5126,15 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/admin/users/:userId/status",
+              "raw": "{{base_url}}/admin/users/{{userId}}/status",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "admin",
                 "users",
-                ":userId",
+                "{{userId}}",
                 "status"
-              ],
-              "variable": [
-                {
-                  "key": "userId",
-                  "value": ""
-                }
               ]
             }
           },
@@ -5256,21 +5215,15 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/admin/users/:userId/role",
+              "raw": "{{base_url}}/admin/users/{{userId}}/role",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "admin",
                 "users",
-                ":userId",
+                "{{userId}}",
                 "role"
-              ],
-              "variable": [
-                {
-                  "key": "userId",
-                  "value": ""
-                }
               ]
             }
           },
@@ -5307,20 +5260,14 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/admin/users/:userId",
+              "raw": "{{base_url}}/admin/users/{{userId}}",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "admin",
                 "users",
-                ":userId"
-              ],
-              "variable": [
-                {
-                  "key": "userId",
-                  "value": ""
-                }
+                "{{userId}}"
               ]
             }
           },
@@ -5726,21 +5673,15 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/admin/verifications/:verificationId/retry",
+              "raw": "{{base_url}}/admin/verifications/{{verificationId}}/retry",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "admin",
                 "verifications",
-                ":verificationId",
+                "{{verificationId}}",
                 "retry"
-              ],
-              "variable": [
-                {
-                  "key": "verificationId",
-                  "value": ""
-                }
               ]
             }
           },
@@ -5834,20 +5775,14 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/verifications/ideas/:ideaId",
+              "raw": "{{base_url}}/verifications/ideas/{{ideaId}}",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "verifications",
                 "ideas",
-                ":ideaId"
-              ],
-              "variable": [
-                {
-                  "key": "ideaId",
-                  "value": ""
-                }
+                "{{ideaId}}"
               ]
             }
           },
@@ -5869,6 +5804,51 @@
         }
       ],
       "description": "VerificationController 컨트롤러 API 목록입니다."
+    },
+    {
+      "name": "VbankLedgerController",
+      "item": [
+        {
+          "name": "가상계좌 입출금 장부 조회",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/payments/vbank-ledgers/ideas/{{ideaId}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "payments",
+                "vbank-ledgers",
+                "ideas",
+                "{{ideaId}}"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "성공 응답 예시",
+              "status": "OK",
+              "code": 200,
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"ledgerId\": 3,\n      \"ideaId\": 10,\n      \"type\": \"PRE_SETTLEMENT_PAID\",\n      \"direction\": \"OUT\",\n      \"amount\": 300000,\n      \"balanceAfter\": 700000,\n      \"affectsBalance\": true,\n      \"referenceType\": \"PreSettlement\",\n      \"referenceId\": 1,\n      \"memo\": \"선정산 지급\",\n      \"createdAt\": \"2026-06-26T11:00:00\"\n    },\n    {\n      \"ledgerId\": 2,\n      \"ideaId\": 10,\n      \"type\": \"FUNDING_PAID\",\n      \"direction\": \"IN\",\n      \"amount\": 1000000,\n      \"balanceAfter\": 1000000,\n      \"affectsBalance\": true,\n      \"referenceType\": \"Payment\",\n      \"referenceId\": 100,\n      \"memo\": \"후원금 입금\",\n      \"createdAt\": \"2026-06-26T10:00:00\"\n    }\n  ]\n}"
+            }
+          ],
+          "description": "특정 아이디어의 가상계좌 입출금 공개 장부를 최신순으로 조회합니다."
+        }
+      ]
     }
   ],
   "variable": [
