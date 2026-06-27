@@ -108,6 +108,9 @@ public class Idea extends BaseEntity {
     @Column(length = 50)
     private IdeaStatus previousStatus;
 
+    @Column(nullable = false)
+    private int rejectedMatchCount = 0;
+
     /** 신규 아이디어를 심사 대기 기본값과 함께 생성합니다. */
     public Idea(
             Long userId,
@@ -310,5 +313,15 @@ public class Idea extends BaseEntity {
         IdeaStatus target = this.previousStatus != null ? this.previousStatus : IdeaStatus.OPEN;
         this.previousStatus = null;
         changeStatus(target);
+    }
+
+    /** 매칭 거절 횟수를 증가시킵니다. */
+    public void increaseRejectedMatchCount() {
+        this.rejectedMatchCount++;
+    }
+
+    /** 매칭 거절 횟수가 제한에 도달했는지 확인합니다. */
+    public boolean isMatchRequestLimitExceeded() {
+        return this.rejectedMatchCount >= 3;
     }
 }

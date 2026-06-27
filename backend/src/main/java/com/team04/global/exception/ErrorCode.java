@@ -143,6 +143,8 @@ public enum ErrorCode {
     MATCH_NOT_ACCEPTED(400, "MA003", "수락된 매칭이 아닙니다"),
     MATCH_ACCESS_DENIED(403, "MA004", "해당 매칭에 대한 권한이 없습니다"),
     MATCH_ALREADY_REQUESTED(409, "MA005", "이미 요청한 매칭입니다"),
+    MATCH_REQUEST_LIMIT_EXCEEDED(400, "MA006", "매칭 요청 가능 횟수를 초과했습니다 (최대 3회)"),
+
     //알림
     NOTIFICATION_NOT_FOUND(404, "N001", "존재하지 않는 알림입니다."),
 
