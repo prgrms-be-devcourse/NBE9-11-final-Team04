@@ -339,6 +339,13 @@ public class IdeaService {
         return IdeaResponse.of(idea, milestones);
     }
 
+    /** 알림 발송 등 내부 도메인에서 아이디어 제목과 작성자 ID만 필요할 때 사용합니다. */
+    @Transactional(readOnly = true)
+    public IdeaSummaryResponse getIdeaSummary(Long ideaId) {
+        Idea idea = findActiveIdea(ideaId);
+        return IdeaSummaryResponse.of(idea);
+    }
+
     /** 작성자 본인이고 심사 대기 상태인 경우에만 아이디어 정보를 수정합니다. */
     @Transactional
     public IdeaResponse updateIdea(Long ideaId, Long userId, UpdateIdeaRequest request) {
