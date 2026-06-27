@@ -121,20 +121,21 @@ class VerificationServiceTest {
                 .isEqualTo(ErrorCode.VERIFICATION_ALREADY_IN_PROGRESS);
     }
 
-    /** 이미 완료된 검증 요청에 재제출 개념 없이 재접수를 차단하는지 확인합니다. */
+    /** 완료된 검증은 재심사 요청이 가능합니다. */
     @Test
-    @DisplayName("완료된 검증 요청 재접수 시 상태 전이 예외 발생")
-    void requestVerification_완료상태예외() {
+    @DisplayName("완료된 검증 요청 재접수 성공")
+    void requestVerification_완료상태재접수성공() {
         given(ideaRepository.findByIdAndDeletedAtIsNull(1L)).willReturn(Optional.of(idea(1L)));
         ProjectVerification verification = new ProjectVerification(1L);
         verification.startAiVerification();
         verification.completeAiVerification();
         given(projectVerificationRepository.findByIdeaId(1L)).willReturn(Optional.of(verification));
+        given(projectVerificationRepository.save(any(ProjectVerification.class)))
+                .willAnswer(invocation -> invocation.getArgument(0));
 
-        assertThatThrownBy(() -> verificationService.requestVerification(request(), 1L))
-                .isInstanceOf(CustomException.class)
-                .extracting(e -> ((CustomException) e).getErrorCode())
-                .isEqualTo(ErrorCode.INVALID_VERIFICATION_STATUS_TRANSITION);
-        then(projectVerificationRepository).should(never()).save(any());
+        var response = verificationService.requestVerification(request(), 1L);
+
+        assertThat(response.status()).isEqualTo(VerificationStatus.AI_VERIFYING);
+        then(eventPublisher).should().publishEvent(any(VerificationRequestedEvent.class));
     }
 }
