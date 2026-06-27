@@ -17,6 +17,11 @@ public interface MilestoneRepository extends JpaRepository<Milestone, Long> {
 
     List<Milestone> findByIdeaIdOrderByStep(Long ideaId);
 
+    /** 관리자 검토 대기 목록 — 제출된 보고서가 있는 마일스톤을 보고서 제출 오래된 순으로 조회한다. */
+    @Query("SELECT DISTINCT m FROM Milestone m JOIN CompletionReport r ON r.milestoneId = m.id " +
+            "WHERE r.status = 'SUBMITTED' ORDER BY r.submittedAt ASC")
+    List<Milestone> findPendingReportMilestonesOrderBySubmittedAtAsc();
+
     /** 기한 초과 마일스톤 배치 처리용 — expectedDate가 기준일 이전이고 overdueAt이 null이며, 검토 대기 중인 보고서가 없는 마일스톤 조회 */
     @Query("SELECT m FROM Milestone m WHERE m.status = :status AND m.expectedDate < :date AND m.overdueAt IS NULL " +
             "AND NOT EXISTS (SELECT r FROM CompletionReport r WHERE r.milestoneId = m.id AND r.status = 'SUBMITTED')")
