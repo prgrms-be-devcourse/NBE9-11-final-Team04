@@ -2,12 +2,15 @@ package com.team04.domain.admin.controller;
 
 import com.team04.domain.milestone.dto.request.RejectReportRequest;
 import com.team04.domain.milestone.dto.response.CompletionReportResponse;
+import com.team04.domain.milestone.dto.response.MilestoneResponse;
 import com.team04.domain.milestone.service.AdminMilestoneService;
 import com.team04.global.response.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/admin/milestones")
@@ -16,6 +19,12 @@ import org.springframework.web.bind.annotation.*;
 public class AdminMilestoneController {
 
     private final AdminMilestoneService adminMilestoneService;
+
+    /** 관리자 검토 대기 마일스톤 목록 조회 API */
+    @GetMapping("/pending-reports")
+    public ApiResponse<List<MilestoneResponse>> getPendingReportMilestones() {
+        return ApiResponse.ofSuccess(adminMilestoneService.getPendingReportMilestones());
+    }
 
     /** 완료 보고서 승인 API */
     @PostMapping("/{milestoneId}/reports/approve/completion")
