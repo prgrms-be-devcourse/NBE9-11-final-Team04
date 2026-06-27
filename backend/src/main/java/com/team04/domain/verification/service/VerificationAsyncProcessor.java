@@ -49,6 +49,7 @@ public class VerificationAsyncProcessor {
     private final ApplicationEventPublisher eventPublisher;
     private final UserRepository userRepository;
     private final TransactionTemplate transactionTemplate;
+    private final ProposerHistoryScoreCalculator proposerHistoryScoreCalculator;
 
     private List<Pattern> forbiddenKeywordPatterns;
 
@@ -101,9 +102,9 @@ public class VerificationAsyncProcessor {
 
     /** AI 검증 완료 후 아이디어 상태와 신뢰도 점수를 반영합니다. */
     private Idea updateIdeaAfterAiVerification(Long ideaId, AiVerificationStructuredResult result) {
-        TrustScore trustScore = updateTrustScore(ideaId, result);
         Idea idea = ideaRepository.findByIdAndDeletedAtIsNull(ideaId)
                 .orElseThrow(() -> new CustomException(ErrorCode.IDEA_NOT_FOUND));
+        TrustScore trustScore = updateTrustScore(ideaId, idea.getUserId(), result);
 
         if (idea.getStatus() == IdeaStatus.AI_PENDING) {
             idea.changeStatus(IdeaStatus.EXPERT_PENDING);
@@ -141,8 +142,8 @@ public class VerificationAsyncProcessor {
                 )));
     }
 
-    /** 검증 결과를 기반으로 미구현 항목은 0점 처리한 신뢰도 점수를 저장합니다. */
-    private TrustScore updateTrustScore(Long ideaId, AiVerificationStructuredResult result) {
+    /** 검증 결과와 제안자 이력을 기반으로 신뢰도 점수를 저장합니다. */
+    private TrustScore updateTrustScore(Long ideaId, Long proposerUserId, AiVerificationStructuredResult result) {
         TrustScore trustScore = trustScoreRepository.findByIdeaId(ideaId)
                 .orElseGet(() -> new TrustScore(ideaId));
         trustScore.updateScores(
@@ -154,7 +155,7 @@ public class VerificationAsyncProcessor {
                 averageScore(result, VerificationCheckCode.MILESTONE_SPECIFICITY),
                 0,
                 0,
-                0
+                proposerHistoryScoreCalculator.calculate(proposerUserId)
         );
         return trustScoreRepository.save(trustScore);
     }
