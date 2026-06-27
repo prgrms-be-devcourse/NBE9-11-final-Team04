@@ -57,7 +57,9 @@ public class PayoutRetryScheduler {
         // 현재 장부에는 지급 목적 컬럼이 없어 멱등성 키 suffix로 성공 상태를 복원한다.
         // 추후 payoutPurpose/retryCount 컬럼을 추가하면 이 분기는 리팩토링 대상이다.
         String key = settlement.getIdempotencyKey();
-        if (key.contains("DEPOSIT-GOAL-NOT-MET") || key.contains("DEPOSIT-COMPLETED")) {
+        if (key.contains("DEPOSIT-GOAL-NOT-MET")
+                || key.contains("DEPOSIT-COMPLETED")
+                || key.contains("DEPOSIT-ADMIN-RELEASE")) {
             return SettlementStatus.DEPOSIT_REFUNDED;
         }
         if (key.contains("DEPOSIT-REFUND")) {
