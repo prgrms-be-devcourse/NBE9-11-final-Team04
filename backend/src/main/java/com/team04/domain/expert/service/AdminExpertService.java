@@ -29,7 +29,12 @@ public class AdminExpertService {
     @Transactional(readOnly = true)
     public Page<AdminExpertSuspendedResponse> getExperts(String status, Pageable pageable) {
         if (StringUtils.hasText(status)) {
-            ExpertStatus expertStatus = ExpertStatus.valueOf(status.toUpperCase());
+            ExpertStatus expertStatus;
+            try {
+                expertStatus = ExpertStatus.valueOf(status.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                throw new CustomException(ErrorCode.INVALID_INPUT);
+            }
             return expertProfileRepository
                     .findProfilesByStatus(expertStatus, pageable)
                     .map(AdminExpertSuspendedResponse::from);
