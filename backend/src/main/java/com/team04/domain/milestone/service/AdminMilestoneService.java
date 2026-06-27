@@ -3,6 +3,7 @@ package com.team04.domain.milestone.service;
 import com.team04.domain.milestone.dto.request.RejectReportRequest;
 import com.team04.domain.milestone.dto.response.CompletionReportResponse;
 import com.team04.domain.milestone.dto.response.MilestoneResponse;
+import com.team04.domain.milestone.entity.CompletionReportStatus;
 import com.team04.domain.milestone.repository.MilestoneRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -38,7 +39,7 @@ public class AdminMilestoneService {
     /** 제출된 보고서가 있어 관리자가 검토해야 하는 마일스톤을 오래된 제출 순으로 조회합니다. */
     @Transactional(readOnly = true)
     public List<MilestoneResponse> getPendingReportMilestones() {
-        return milestoneRepository.findPendingReportMilestonesOrderBySubmittedAtAsc().stream()
+        return milestoneRepository.findPendingReportMilestonesOrderBySubmittedAtAsc(CompletionReportStatus.SUBMITTED).stream()
                 .map(MilestoneResponse::from)
                 .toList();
     }
