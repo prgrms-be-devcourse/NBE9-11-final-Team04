@@ -51,6 +51,7 @@ public enum ErrorCode {
     IDEA_BOOKMARK_ALREADY_EXISTS(409, "I010", "이미 관심 프로젝트로 저장한 아이디어입니다"),
     IDEA_BOOKMARK_NOT_FOUND(404, "I011", "존재하지 않는 관심 프로젝트입니다"),
     INVALID_SETTLEMENT_ACCOUNT(400, "I012", "정산 계좌 정보가 올바르지 않습니다"),
+    IDEA_STATUS_NOT_BOOKMARKABLE(400, "I014", "현재 상태의 아이디어는 북마크할 수 없습니다"),
 
     // 검증
     INVALID_VERIFICATION_STATUS_TRANSITION(400, "V001", "유효하지 않은 검증 상태 전이입니다"),

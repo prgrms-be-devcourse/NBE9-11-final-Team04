@@ -24,4 +24,8 @@ public interface ExpertMatchRepository extends JpaRepository<ExpertMatch, Long> 
     // 매칭 단건 조회 (expertProfile.user LAZY 로딩 방지용 fetch join)
     @Query("SELECT m FROM ExpertMatch m JOIN FETCH m.expertProfile ep JOIN FETCH ep.user WHERE m.id = :id")
     Optional<ExpertMatch> findByIdWithProfile(@Param("id") Long id);
+
+    // 전문가가 특정 아이디어에 매칭됐는지 확인
+    @Query("SELECT COUNT(m) > 0 FROM ExpertMatch m JOIN m.expertProfile ep JOIN ep.user u WHERE m.ideaId = :ideaId AND u.id = :userId")
+    boolean existsByIdeaIdAndUserId(@Param("ideaId") Long ideaId, @Param("userId") Long userId);
 }

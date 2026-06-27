@@ -10,9 +10,11 @@ import com.team04.domain.idea.entity.*;
 import com.team04.domain.idea.repository.IdeaBookmarkRepository;
 import com.team04.domain.idea.repository.IdeaDraftRepository;
 import com.team04.domain.idea.repository.IdeaSettlementAccountRepository;
+import com.team04.domain.match.repository.ExpertMatchRepository;
 import com.team04.domain.milestone.dto.response.MilestoneResponse;
 import com.team04.domain.milestone.entity.Milestone;
 import com.team04.domain.milestone.repository.MilestoneRepository;
+import com.team04.domain.user.entity.Role;
 import com.team04.domain.verification.dto.request.VerificationRequest;
 import com.team04.domain.verification.entity.VerificationStatus;
 import com.team04.domain.verification.repository.ProjectVerificationRepository;
@@ -54,6 +56,7 @@ public class IdeaService {
     private final VerificationService verificationService;
     private final ProjectVerificationRepository projectVerificationRepository;
     private final IdeaSettlementAccountRepository ideaSettlementAccountRepository;
+    private final ExpertMatchRepository expertMatchRepository;
 
     /** 아이디어를 등록하고 마일스톤을 함께 저장합니다. */
     @Transactional
@@ -161,10 +164,16 @@ public class IdeaService {
                 .ifPresent(v -> v.changeStatus(VerificationStatus.CANCELLED));
     }
 
-    /** 중복 여부를 확인한 뒤 로그인 사용자의 관심 프로젝트를 저장합니다. */
+    /** 중복 여부를 확인한 뒤 로그인 사용자의 관심 프로젝트를 저장합니다.
+     * OPEN/IN_PROGRESS인 아이디어만 북마크가 가능합니다.
+     * 북마크를 이미 한 상태에서 중지되거나 종료됐어도 확인이 가능합니다.*/
     @Transactional
     public void addBookmark(Long ideaId, Long userId) {
-        findActiveIdea(ideaId);
+        Idea idea = findActiveIdea(ideaId);
+        if (idea.getStatus() != IdeaStatus.OPEN
+                && idea.getStatus() != IdeaStatus.IN_PROGRESS) {
+            throw new CustomException(ErrorCode.IDEA_STATUS_NOT_BOOKMARKABLE);
+        }
         if (ideaBookmarkRepository.existsByUserIdAndIdeaId(userId, ideaId)) {
             throw new CustomException(ErrorCode.IDEA_BOOKMARK_ALREADY_EXISTS);
         }
@@ -290,10 +299,39 @@ public class IdeaService {
                 .toList();
     }
 
-    /** 삭제되지 않은 아이디어 상세 정보를 조회합니다. */
+    /** 내부 서비스 호출용 아이디어 상세 조회 (권한 검사 없음) */
+    /** 아이디어 상태와 요청자 권한에 따라 상세 정보를 반환합니다.
+     * OPEN 이전은 작성자/전문가/관리자만, OPEN 이후는 모든 사용자가 조회 가능합니다. */
     @Transactional(readOnly = true)
     public IdeaResponse getIdea(Long ideaId) {
         Idea idea = findActiveIdea(ideaId);
+        List<MilestoneResponse> milestones = milestoneRepository.findByIdeaIdOrderByStep(ideaId)
+                .stream()
+                .map(MilestoneResponse::from)
+                .toList();
+        return IdeaResponse.of(idea, milestones);
+    }
+
+    /** 외부 API 요청용 아이디어 상세 조회 (권한 검사 있음) */
+    /** 아이디어 상태와 요청자 권한에 따라 상세 정보를 반환합니다.
+     * OPEN 이전은 작성자/전문가/관리자만, OPEN 이후는 모든 사용자가 조회 가능합니다. */
+    @Transactional(readOnly = true)
+    public IdeaResponse getIdea(Long ideaId, Long userId, Role role) {
+        Idea idea = findActiveIdea(ideaId);
+
+        boolean isOwner = userId != null && idea.getUserId().equals(userId);
+        boolean isAdmin = role == Role.ADMIN;
+        boolean isMatchedExpert = role == Role.EXPERT && userId != null
+                && expertMatchRepository.existsByIdeaIdAndUserId(ideaId, userId);
+        boolean isPublic = idea.getStatus() == IdeaStatus.OPEN
+                || idea.getStatus() == IdeaStatus.IN_PROGRESS
+                || idea.getStatus() == IdeaStatus.COMPLETED
+                || idea.getStatus() == IdeaStatus.CANCELLATION_REQUESTED;
+
+        if (!isPublic && !isOwner && !isAdmin && !isMatchedExpert) {
+            throw new CustomException(ErrorCode.FORBIDDEN);
+        }
+
         List<MilestoneResponse> milestones = milestoneRepository.findByIdeaIdOrderByStep(ideaId)
                 .stream()
                 .map(MilestoneResponse::from)

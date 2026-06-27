@@ -3,6 +3,7 @@ package com.team04.domain.idea.controller;
 import com.team04.domain.idea.dto.request.*;
 import com.team04.domain.idea.dto.response.*;
 import com.team04.domain.idea.entity.IdeaCategory;
+import com.team04.domain.user.entity.Role;
 import com.team04.global.response.ApiResponse;
 import com.team04.domain.idea.service.IdeaService;
 import com.team04.global.security.CustomUserDetails;
@@ -10,7 +11,6 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Slice;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -117,12 +117,16 @@ public class IdeaController {
         return ApiResponse.ofSuccess(ideaService.uploadContentImages(images));
     }
 
-    /** 로그인 사용자만 접근 가능한 아이디어 상세 정보를 조회합니다. */
+    /** 아이디어 상태와 요청자 권한에 따라 상세 정보를 조회합니다.
+     * OPEN 이전 아이디어는 작성자, 관리자, 매칭된 전문가만 조회 가능합니다. */
     @GetMapping("/{ideaId}")
     public ApiResponse<IdeaResponse> getIdea(
-            @PathVariable Long ideaId
+            @PathVariable Long ideaId,
+            @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        return ApiResponse.ofSuccess(ideaService.getIdea(ideaId));
+        Long userId = userDetails != null ? userDetails.getUserId() : null;
+        Role role = userDetails != null ? userDetails.getRole() : null;
+        return ApiResponse.ofSuccess(ideaService.getIdea(ideaId, userId, role));
     }
 
     /** 로그인 사용자가 본인의 심사 대기 아이디어 정보를 수정합니다. */
