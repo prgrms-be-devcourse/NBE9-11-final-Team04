@@ -272,7 +272,7 @@ public class Idea extends BaseEntity {
     }
 
     /** 현재 아이디어가 삭제 가능한 상태인지 검증합니다. */
-    private void validateDeletable() {
+    public void validateDeletable() {
         if (!this.status.isDeletable()) {
             throw new CustomException(ErrorCode.IDEA_STATUS_NOT_DELETABLE);
         }

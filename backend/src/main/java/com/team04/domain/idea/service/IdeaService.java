@@ -409,6 +409,7 @@ public class IdeaService {
     public void deleteIdea(Long ideaId, Long userId) {
         Idea idea = findActiveIdea(ideaId);
         idea.validateOwner(userId);
+        idea.validateDeletable(); // 명시적 상태 검증 추가
         milestoneRepository.deleteByIdeaIdBulk(ideaId);
         ideaBookmarkRepository.deleteByIdeaIdBulk(ideaId);
         ideaSettlementAccountRepository.deleteByIdeaIdBulk(ideaId);
@@ -573,6 +574,14 @@ public class IdeaService {
             throw new CustomException(ErrorCode.INVALID_MILESTONE_STEP);
         }
     }
+
+    /** 3단계 마일스톤 완료 후 아이디어를 완료 상태로 전이합니다. */
+    @Transactional
+    public void completeIdea(Long ideaId) {
+        Idea idea = findActiveIdea(ideaId);
+        idea.changeStatus(IdeaStatus.COMPLETED);
+    }
+
     /** 펀딩 마감됐고 목표 금액 미달성인 아이디어 ID 목록을 반환합니다. */
     @Transactional(readOnly = true)
     public List<Long> getFailedFundingIdeaIds() {

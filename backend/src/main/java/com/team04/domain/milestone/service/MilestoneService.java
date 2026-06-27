@@ -200,6 +200,7 @@ public class MilestoneService {
         if (milestone.getStep() == 3) {
             settlementService.createFinalSettlement(milestone.getIdeaId());
             settlementService.createCompletedDepositRefundSettlement(milestone.getIdeaId());
+            ideaService.completeIdea(milestone.getIdeaId());
         } else {
             startNextMilestone(milestone.getIdeaId(), milestone.getStep() + 1);
         }
@@ -229,6 +230,7 @@ public class MilestoneService {
             // 3단계 소명 승인 = 최종 완성으로 처리
             settlementService.createFinalSettlement(milestone.getIdeaId());
             settlementService.createCompletedDepositRefundSettlement(milestone.getIdeaId());
+            ideaService.completeIdea(milestone.getIdeaId());
         } else {
             startNextMilestone(milestone.getIdeaId(), milestone.getStep() + 1);
         }
