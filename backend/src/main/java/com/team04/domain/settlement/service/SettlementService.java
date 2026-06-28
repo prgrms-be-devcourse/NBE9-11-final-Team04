@@ -395,6 +395,8 @@ public class SettlementService {
 
     @Transactional
     public void forceRefund(Long ideaId, String reason) {
+        // 관리자 강제 환불은 프로젝트 종료 흐름이므로 아이디어도 취소 상태로 맞춘다.
+        ideaService.cancelIdea(ideaId);
         if (!settlementExists(ideaId, "REFUND-CANCELLED")) {
             createCancelRefundSettlement(ideaId, reason);
         } else {
