@@ -42,15 +42,23 @@ public class PreSettlement {
         this.requestedAt = LocalDateTime.now();
     }
 
+    /** 외부 지급 API 호출 전에 해당 선정산 건을 처리 중으로 선점합니다. */
+    public void markProcessing() {
+        if (this.status != PreSettlementStatus.REQUESTED) {
+            throw new CustomException(ErrorCode.SETTLEMENT_INVALID_STATUS_TRANSITION);
+        }
+        this.status = PreSettlementStatus.PROCESSING;
+    }
+
     /**
      * 선정산 지급을 완료 처리합니다.
-     * REQUESTED 상태에서만 가능합니다.
+     * PROCESSING 상태에서만 가능합니다.
      */
     public void complete() {
         if (this.status == PreSettlementStatus.COMPLETED) {
             return;
         }
-        if (this.status != PreSettlementStatus.REQUESTED) {
+        if (this.status != PreSettlementStatus.PROCESSING) {
             throw new CustomException(ErrorCode.SETTLEMENT_INVALID_STATUS_TRANSITION);
         }
         this.status = PreSettlementStatus.COMPLETED;
@@ -58,13 +66,14 @@ public class PreSettlement {
 
     /**
      * 선정산 지급을 실패 처리합니다.
-     * REQUESTED 상태에서만 가능합니다.
+     * REQUESTED 또는 PROCESSING 상태에서 가능합니다.
      */
     public void fail() {
         if (this.status == PreSettlementStatus.FAILED) {
             return;
         }
-        if (this.status != PreSettlementStatus.REQUESTED) {
+        if (this.status != PreSettlementStatus.REQUESTED
+                && this.status != PreSettlementStatus.PROCESSING) {
             throw new CustomException(ErrorCode.SETTLEMENT_INVALID_STATUS_TRANSITION);
         }
         this.status = PreSettlementStatus.FAILED;

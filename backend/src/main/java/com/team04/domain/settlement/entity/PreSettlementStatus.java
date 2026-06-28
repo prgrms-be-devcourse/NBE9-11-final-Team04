@@ -6,6 +6,9 @@ public enum PreSettlementStatus {
     /** 선정산 신청 완료 (즉시 지급 대기) */
     REQUESTED,
 
+    /** 지급대행 호출 중 */
+    PROCESSING,
+
     /** 지급 완료 */
     COMPLETED,
 

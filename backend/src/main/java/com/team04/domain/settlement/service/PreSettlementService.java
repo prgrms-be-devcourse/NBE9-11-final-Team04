@@ -24,7 +24,9 @@ import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Recover;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.List;
 
@@ -38,6 +40,7 @@ public class PreSettlementService {
     private final IdeaRepository ideaRepository;
     private final IdeaService ideaService;
     private final VbankLedgerService vbankLedgerService;
+    private final PlatformTransactionManager transactionManager;
 
     /**
      * 선정산 신청
@@ -54,8 +57,16 @@ public class PreSettlementService {
             maxAttempts = 3,
             backoff = @Backoff(delay = 500)
     )
-    @Transactional
     public PreSettlementResponse requestPreSettlement(Long ideaId, PreSettlementRequest request, Long userId) {
+        TransactionTemplate transactionTemplate = new TransactionTemplate(transactionManager);
+        return transactionTemplate.execute(status -> requestPreSettlementInTransaction(ideaId, request, userId));
+    }
+
+    private PreSettlementResponse requestPreSettlementInTransaction(
+            Long ideaId,
+            PreSettlementRequest request,
+            Long userId
+    ) {
         // 선정산 한도는 ideaId 기준 누적액으로 검증하므로, 동시 요청도 같은 ideaId 단위로 직렬화한다.
         // 트랜잭션의 첫 DB 접근을 FOR UPDATE로 수행해야 REPEATABLE_READ 스냅샷이 한도 검증을 오염시키지 않는다.
         Idea lockedIdea = ideaRepository.findByIdForUpdate(ideaId)
