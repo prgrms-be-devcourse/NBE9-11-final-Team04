@@ -34,7 +34,7 @@ public record IdeaDraftResponse(
 ) {
 
     /** 임시저장 엔티티를 응답 DTO로 변환합니다. */
-    public static IdeaDraftResponse of(IdeaDraft draft) {
+    public static IdeaDraftResponse of(IdeaDraft draft, IdeaDraftMilestoneConverter converter) {
         return new IdeaDraftResponse(
                 draft.getId(),
                 draft.getUserId(),
@@ -54,7 +54,7 @@ public record IdeaDraftResponse(
                 draft.getRewardType() == null ? null : draft.getRewardType().name(),
                 draft.getImageUrl(),
                 ImageUrlConverter.parse(draft.getImageUrls()),
-                IdeaDraftMilestoneConverter.parse(draft.getMilestones()),
+                converter.parse(draft.getMilestones()),
                 draft.getCreatedAt(),
                 draft.getUpdatedAt()
         );

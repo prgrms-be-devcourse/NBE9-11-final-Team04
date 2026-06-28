@@ -25,7 +25,7 @@ public interface MilestoneRepository extends JpaRepository<Milestone, Long> {
     List<Milestone> findPendingReportMilestonesOrderBySubmittedAtAsc(
             @Param("status") CompletionReportStatus status);
 
-    @Modifying
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("DELETE FROM Milestone m WHERE m.ideaId = :ideaId")
     int deleteByIdeaIdBulk(@Param("ideaId") Long ideaId);
 

@@ -61,6 +61,7 @@ public class IdeaService {
     private final ProjectVerificationRepository projectVerificationRepository;
     private final IdeaSettlementAccountRepository ideaSettlementAccountRepository;
     private final ExpertMatchRepository expertMatchRepository;
+    private final IdeaDraftMilestoneConverter ideaDraftMilestoneConverter;
 
     /** 아이디어를 등록하고 마일스톤을 함께 저장합니다. */
     @Transactional
@@ -122,7 +123,7 @@ public class IdeaService {
     }
 
     private void validateDepositAmount(Long depositAmount, Long goalAmount) {
-        if (depositAmount > goalAmount * 0.3) {
+        if (depositAmount * 10 > goalAmount * 3) {
             throw new CustomException(ErrorCode.INVALID_DEPOSIT_AMOUNT);
         }
     }
@@ -228,7 +229,7 @@ public class IdeaService {
     public List<IdeaDraftResponse> getDrafts(Long userId) {
         return ideaDraftRepository.findByUserIdAndUpdatedAtAfterOrderByUpdatedAtDesc(userId, draftRetentionStartAt())
                 .stream()
-                .map(IdeaDraftResponse::of)
+                .map(draft -> IdeaDraftResponse.of(draft, ideaDraftMilestoneConverter))
                 .toList();
     }
 
@@ -255,8 +256,8 @@ public class IdeaService {
                 request.imageUrl()
         );
         draft.updateImageUrls(ImageUrlConverter.join(request.imageUrls()));
-        draft.updateMilestones(IdeaDraftMilestoneConverter.join(request.milestones()));
-        return IdeaDraftResponse.of(ideaDraftRepository.save(draft));
+        draft.updateMilestones(ideaDraftMilestoneConverter.join(request.milestones()));
+        return IdeaDraftResponse.of(ideaDraftRepository.save(draft), ideaDraftMilestoneConverter);
     }
 
     /** 본인 임시저장만 수정할 수 있도록 검증한 뒤 내용을 갱신합니다. */
@@ -281,8 +282,8 @@ public class IdeaService {
                 request.imageUrl()
         );
         draft.updateImageUrls(ImageUrlConverter.join(request.imageUrls()));
-        draft.updateMilestones(IdeaDraftMilestoneConverter.join(request.milestones()));
-        return IdeaDraftResponse.of(draft);
+        draft.updateMilestones(ideaDraftMilestoneConverter.join(request.milestones()));
+        return IdeaDraftResponse.of(draft, ideaDraftMilestoneConverter);
     }
 
     /** 본인 임시저장만 삭제할 수 있도록 검증한 뒤 임시저장을 제거합니다. */

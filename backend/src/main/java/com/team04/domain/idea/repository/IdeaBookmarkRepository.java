@@ -21,7 +21,7 @@ public interface IdeaBookmarkRepository extends JpaRepository<IdeaBookmark, Long
     @Query("DELETE FROM IdeaBookmark b WHERE b.userId = :userId AND b.ideaId = :ideaId")
     int deleteByUserIdAndIdeaIdBulk(@Param("userId") Long userId, @Param("ideaId") Long ideaId);
 
-    @Modifying
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("DELETE FROM IdeaBookmark b WHERE b.ideaId = :ideaId")
     int deleteByIdeaIdBulk(@Param("ideaId") Long ideaId);
 }

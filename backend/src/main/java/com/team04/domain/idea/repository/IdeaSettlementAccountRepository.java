@@ -12,7 +12,7 @@ public interface IdeaSettlementAccountRepository extends JpaRepository<IdeaSettl
 
     Optional<IdeaSettlementAccount> findByIdeaId(Long ideaId);
 
-    @Modifying
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("DELETE FROM IdeaSettlementAccount a WHERE a.ideaId = :ideaId")
     int deleteByIdeaIdBulk(@Param("ideaId") Long ideaId);
 }
