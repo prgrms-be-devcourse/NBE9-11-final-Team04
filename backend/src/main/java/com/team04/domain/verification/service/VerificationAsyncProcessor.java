@@ -95,9 +95,14 @@ public class VerificationAsyncProcessor {
     private void applyReferenceResults(ProjectVerification verification, AiVerificationStructuredResult result) {
         VerificationStatus previous = verification.getStatus();
         verification.completeAiVerification();
+
+        // 이전 검증 결과 삭제 후 새로 저장
+        verificationResultRepository.deleteByIdeaId(verification.getIdeaId());
+
         result.checks().forEach(check -> verificationResultRepository.save(new VerificationResult(
                 verification.getIdeaId(), check.checkCode(), check.passed(), check.score(), check.reason()
         )));
+
         Idea idea = updateIdeaAfterAiVerification(verification.getIdeaId(), result);
         audit(verification, previous, VerificationStatus.AI_PASSED, result.reason());
         publishProposerNotification(idea);
@@ -196,33 +201,22 @@ public class VerificationAsyncProcessor {
                 .orElse(0);
     }
 
-    /** 지정한 검증 항목들의 평균 점수를 계산합니다. */
-    private int averageScore(AiVerificationStructuredResult result, VerificationCheckCode... codes) {
-        int sum = 0;
-        int count = 0;
-        for (VerificationCheckCode code : codes) {
-            for (AiVerificationStructuredResult.CheckResult check : result.checks()) {
-                if (check.checkCode() == code) {
-                    sum += check.score();
-                    count++;
-                }
-            }
-        }
-        return count == 0 ? 0 : sum / count;
-    }
-
     /** yml 금칙어 사전에 포함된 표현을 검증 결과 항목으로 변환합니다. */
     private List<AiVerificationStructuredResult.CheckResult> detectForbiddenKeywords(VerificationRequest request) {
         String content = request.title() + " " + request.description();
-        return forbiddenKeywordPatterns.stream()
-                .filter(pattern -> pattern.matcher(content).find())
-                .map(pattern -> new AiVerificationStructuredResult.CheckResult(
-                        VerificationCheckCode.EXAGGERATED_ADVERTISEMENT,
-                        false,
-                        0,
-                        "금칙어 사전에 등록된 표현이 포함되었습니다."
-                ))
-                .toList();
+        boolean hasForbiddenKeyword = forbiddenKeywordPatterns.stream()
+                .anyMatch(pattern -> pattern.matcher(content).find());
+
+        if (!hasForbiddenKeyword) {
+            return List.of();
+        }
+
+        return List.of(new AiVerificationStructuredResult.CheckResult(
+                VerificationCheckCode.EXAGGERATED_ADVERTISEMENT,
+                false,
+                0,
+                "금칙어 사전에 등록된 표현이 포함되었습니다."
+        ));
     }
 
     /** 1차 금칙어 탐지 결과와 2차 AI 검증 결과를 하나의 구조화 결과로 병합합니다. */

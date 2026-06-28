@@ -60,8 +60,7 @@ public enum ErrorCode {
     // 검증
     INVALID_VERIFICATION_STATUS_TRANSITION(400, "V001", "유효하지 않은 검증 상태 전이입니다"),
     VERIFICATION_NOT_FOUND(404, "V002", "존재하지 않는 검증 요청입니다"),
-    VERIFICATION_WAITING_PERIOD_ACTIVE(409, "V003", "재등록 대기 기간이 만료되지 않았습니다"),
-    USE_RESUBMIT_API(400, "V004", "보완 필요 상태에서는 재제출 API를 사용해야 합니다"),
+    VERIFICATION_IDEA_MISMATCH(400, "V003", "검증 요청의 아이디어 ID가 일치하지 않습니다"),
 
     // AI 검증
     AI_RESPONSE_EMPTY(500, "V005", "OpenAI 응답이 비어 있습니다"),
