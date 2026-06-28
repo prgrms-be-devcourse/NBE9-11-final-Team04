@@ -62,6 +62,7 @@ public class IdeaAdminService {
         if (idea.getStatus() != IdeaStatus.ADMIN_PENDING) {
             throw new CustomException(ErrorCode.INVALID_IDEA_STATUS_TRANSITION);
         }
+        idea.increaseAdminRejectedCount(); // 반려 횟수 증가
         idea.reject(reason);
     }
 
