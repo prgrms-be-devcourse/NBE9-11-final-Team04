@@ -4,6 +4,8 @@ import com.team04.domain.idea.entity.Idea;
 import com.team04.domain.idea.entity.IdeaBadge;
 import com.team04.domain.idea.entity.IdeaStatus;
 import com.team04.domain.idea.repository.IdeaRepository;
+import com.team04.domain.match.entity.MatchStatus;
+import com.team04.domain.match.repository.ExpertMatchRepository;
 import com.team04.domain.notification.entity.NotificationPriority;
 import com.team04.domain.notification.entity.NotificationType;
 import com.team04.domain.user.entity.Role;
@@ -44,6 +46,7 @@ public class VerificationAsyncProcessor {
     private final VerificationAuditLogRepository auditLogRepository;
     private final TrustScoreRepository trustScoreRepository;
     private final IdeaRepository ideaRepository;
+    private final ExpertMatchRepository expertMatchRepository;
     private final VerificationProperties verificationProperties;
     private final OpenAiVerificationService openAiVerificationService;
     private final ApplicationEventPublisher eventPublisher;
@@ -108,6 +111,18 @@ public class VerificationAsyncProcessor {
 
         if (idea.getStatus() == IdeaStatus.AI_PENDING) {
             idea.changeStatus(IdeaStatus.EXPERT_PENDING);
+        }
+
+        // 재심사 시 기존 수락된 매칭이 있으면 바로 EXPERT_MATCHING으로 전이
+        ProjectVerification verification = projectVerificationRepository.findByIdeaId(ideaId)
+                .orElseThrow(() -> new CustomException(ErrorCode.VERIFICATION_NOT_FOUND));
+        if (verification.getStatus() == VerificationStatus.AI_PASSED
+                && expertMatchRepository.existsByIdeaIdAndStatus(ideaId, MatchStatus.ACCEPTED)) {
+            verification.changeStatus(VerificationStatus.EXPERT_MATCHING);
+        }
+
+        if (trustScore.getTotalScore() >= 80) {
+            idea.changeBadge(IdeaBadge.VERIFIED);
         }
 
         if (trustScore.getTotalScore() >= 80) {

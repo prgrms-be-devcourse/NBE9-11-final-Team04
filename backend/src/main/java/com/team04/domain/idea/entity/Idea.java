@@ -111,6 +111,9 @@ public class Idea extends BaseEntity {
     @Column(nullable = false)
     private int rejectedMatchCount = 0;
 
+    @Column(nullable = false)
+    private int rejectCount = 0;
+
     /** 신규 아이디어를 심사 대기 기본값과 함께 생성합니다. */
     public Idea(
             Long userId,
@@ -293,9 +296,10 @@ public class Idea extends BaseEntity {
         changeStatus(IdeaStatus.OPEN);
     }
 
-    /** 관리자 반려 후 반려 사유를 저장하고 반려 상태로 전이합니다. */
+    /** 관리자 반려 후 반려 횟수와 반려 사유를 저장하고 반려 상태로 전이합니다. */
     public void reject(String reason) {
         this.rejectReason = reason;
+        this.rejectCount++;
         changeStatus(IdeaStatus.REJECTED);
     }
 

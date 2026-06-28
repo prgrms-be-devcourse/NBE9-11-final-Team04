@@ -4,6 +4,7 @@ import com.team04.domain.idea.dto.response.AdminIdeaReviewResponse;
 import com.team04.domain.idea.entity.Idea;
 import com.team04.domain.idea.entity.IdeaStatus;
 import com.team04.domain.idea.repository.IdeaRepository;
+import com.team04.domain.verification.repository.TrustScoreRepository;
 import com.team04.global.exception.CustomException;
 import com.team04.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +22,7 @@ import java.util.Map;
 public class IdeaAdminService {
 
     private final IdeaRepository ideaRepository;
+    private final TrustScoreRepository trustScoreRepository;
 
     /** 요청한 상태의 삭제되지 않은 아이디어 심사 목록을 페이지로 조회합니다. status가 null이면 전체 조회합니다. */
     @Transactional(readOnly = true)
@@ -38,6 +40,13 @@ public class IdeaAdminService {
             throw new CustomException(ErrorCode.INVALID_IDEA_STATUS_TRANSITION);
         }
         idea.open();
+        // adminApprovalScore 갱신
+        int score = idea.getRejectCount() == 0 ? 20 : idea.getRejectCount() == 1 ? 10 : 5;
+        trustScoreRepository.findByIdeaId(ideaId)
+                .ifPresent(ts -> {
+                    ts.updateAdminApprovalScore(score);
+                    trustScoreRepository.save(ts);
+                });
     }
 
     /** 소유자 검증 없이 관리자 권한으로 아이디어를 반려하고 반려 사유를 저장합니다. */
