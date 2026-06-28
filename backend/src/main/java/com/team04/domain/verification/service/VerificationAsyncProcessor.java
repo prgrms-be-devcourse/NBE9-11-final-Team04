@@ -4,6 +4,8 @@ import com.team04.domain.idea.entity.Idea;
 import com.team04.domain.idea.entity.IdeaBadge;
 import com.team04.domain.idea.entity.IdeaStatus;
 import com.team04.domain.idea.repository.IdeaRepository;
+import com.team04.domain.match.entity.MatchStatus;
+import com.team04.domain.match.repository.ExpertMatchRepository;
 import com.team04.domain.notification.entity.NotificationPriority;
 import com.team04.domain.notification.entity.NotificationType;
 import com.team04.domain.user.entity.Role;
@@ -26,7 +28,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -44,6 +45,7 @@ public class VerificationAsyncProcessor {
     private final VerificationAuditLogRepository auditLogRepository;
     private final TrustScoreRepository trustScoreRepository;
     private final IdeaRepository ideaRepository;
+    private final ExpertMatchRepository expertMatchRepository;
     private final VerificationProperties verificationProperties;
     private final OpenAiVerificationService openAiVerificationService;
     private final ApplicationEventPublisher eventPublisher;
@@ -62,29 +64,36 @@ public class VerificationAsyncProcessor {
                 .toList();
     }
 
-    /** 트랜잭션 커밋 후 별도 스레드에서 금칙어 사전 및 OpenAI 검증을 수행합니다. */
+    /** 트랜잭션 커밋 후 별도 스레드에서 금칙어 사전 및 OpenAI 검증을 수행합니다.
+     * OpenAI 호출은 트랜잭션 밖에서 수행하고, 결과 저장만 짧은 트랜잭션으로 처리합니다. */
     @Async("verificationTaskExecutor")
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void processAiVerification(VerificationRequestedEvent event) {
-        transactionTemplate.executeWithoutResult(status -> processAiVerificationInTransaction(event));
-    }
+        // 취소 여부 확인 (짧은 트랜잭션)
+        Boolean cancelled = transactionTemplate.execute(status -> {
+            ProjectVerification verification = getVerification(event.verificationId());
+            return verification.getStatus() == VerificationStatus.CANCELLED;
+        });
+        if (Boolean.TRUE.equals(cancelled)) return;
 
-    /** 비동기 리스너와 분리된 트랜잭션 경계에서 1차 금칙어 탐지와 2차 AI 검증을 수행합니다. */
-    @Transactional
-    public void processAiVerificationInTransaction(VerificationRequestedEvent event) {
-        ProjectVerification verification = getVerification(event.verificationId());
-        if (verification.getStatus() == VerificationStatus.CANCELLED) {
-            return;
-        }
+        // OpenAI 호출 - 트랜잭션 밖
         try {
             AiVerificationStructuredResult aiResult = openAiVerificationService.verify(event.request());
-            applyReferenceResults(verification, mergeResults(detectForbiddenKeywords(event.request()), aiResult));
+            AiVerificationStructuredResult merged = mergeResults(detectForbiddenKeywords(event.request()), aiResult);
+            // 결과 저장만 트랜잭션 안에서
+            transactionTemplate.executeWithoutResult(status -> {
+                ProjectVerification verification = getVerification(event.verificationId());
+                applyReferenceResults(verification, merged);
+            });
         } catch (Exception exception) {
-            VerificationStatus previous = verification.getStatus();
-            verification.markPendingAdminReview();
-            audit(verification, previous, VerificationStatus.PENDING_ADMIN_REVIEW,
-                    "AI 검증 호출 실패로 관리자 재시도 필요: " + exception.getMessage());
-            publishPendingAdminReviewNotification(verification.getIdeaId());
+            transactionTemplate.executeWithoutResult(status -> {
+                ProjectVerification verification = getVerification(event.verificationId());
+                VerificationStatus previous = verification.getStatus();
+                verification.markPendingAdminReview();
+                audit(verification, previous, VerificationStatus.PENDING_ADMIN_REVIEW,
+                        "AI 검증 호출 실패로 관리자 재시도 필요: " + exception.getMessage());
+                publishPendingAdminReviewNotification(verification.getIdeaId());
+            });
         }
     }
 
@@ -92,9 +101,18 @@ public class VerificationAsyncProcessor {
     private void applyReferenceResults(ProjectVerification verification, AiVerificationStructuredResult result) {
         VerificationStatus previous = verification.getStatus();
         verification.completeAiVerification();
-        result.checks().forEach(check -> verificationResultRepository.save(new VerificationResult(
-                verification.getIdeaId(), check.checkCode(), check.passed(), check.score(), check.reason()
-        )));
+
+        // 이전 검증 결과 삭제 후 새로 저장
+        verificationResultRepository.deleteByIdeaId(verification.getIdeaId());
+
+        verificationResultRepository.saveAll(
+                result.checks().stream()
+                        .map(check -> new VerificationResult(
+                                verification.getIdeaId(), check.checkCode(), check.passed(), check.score(), check.reason()
+                        ))
+                        .toList()
+        );
+
         Idea idea = updateIdeaAfterAiVerification(verification.getIdeaId(), result);
         audit(verification, previous, VerificationStatus.AI_PASSED, result.reason());
         publishProposerNotification(idea);
@@ -102,13 +120,24 @@ public class VerificationAsyncProcessor {
 
     /** AI 검증 완료 후 아이디어 상태와 신뢰도 점수를 반영합니다. */
     private Idea updateIdeaAfterAiVerification(Long ideaId, AiVerificationStructuredResult result) {
-        Idea idea = ideaRepository.findByIdAndDeletedAtIsNull(ideaId)
+        Idea idea = ideaRepository.findByIdForUpdate(ideaId)
                 .orElseThrow(() -> new CustomException(ErrorCode.IDEA_NOT_FOUND));
         TrustScore trustScore = updateTrustScore(ideaId, idea.getUserId(), result);
 
         if (idea.getStatus() == IdeaStatus.AI_PENDING) {
             idea.changeStatus(IdeaStatus.EXPERT_PENDING);
         }
+
+        // 재심사 시 기존 수락된 매칭이 있으면 바로 EXPERT_MATCHING으로 전이
+        ProjectVerification verification = projectVerificationRepository.findByIdeaId(ideaId)
+                .orElseThrow(() -> new CustomException(ErrorCode.VERIFICATION_NOT_FOUND));
+        if (verification.getStatus() == VerificationStatus.AI_PASSED
+                && expertMatchRepository.existsByIdeaIdAndStatus(ideaId, MatchStatus.ACCEPTED)) {
+            verification.changeStatus(VerificationStatus.EXPERT_MATCHING);
+        }
+
+        // Idea.trustScore 동기화
+        idea.updateTrustScore(trustScore.getTotalScore());
 
         if (trustScore.getTotalScore() >= 80) {
             idea.changeBadge(IdeaBadge.VERIFIED);
@@ -178,33 +207,22 @@ public class VerificationAsyncProcessor {
                 .orElse(0);
     }
 
-    /** 지정한 검증 항목들의 평균 점수를 계산합니다. */
-    private int averageScore(AiVerificationStructuredResult result, VerificationCheckCode... codes) {
-        int sum = 0;
-        int count = 0;
-        for (VerificationCheckCode code : codes) {
-            for (AiVerificationStructuredResult.CheckResult check : result.checks()) {
-                if (check.checkCode() == code) {
-                    sum += check.score();
-                    count++;
-                }
-            }
-        }
-        return count == 0 ? 0 : sum / count;
-    }
-
     /** yml 금칙어 사전에 포함된 표현을 검증 결과 항목으로 변환합니다. */
     private List<AiVerificationStructuredResult.CheckResult> detectForbiddenKeywords(VerificationRequest request) {
         String content = request.title() + " " + request.description();
-        return forbiddenKeywordPatterns.stream()
-                .filter(pattern -> pattern.matcher(content).find())
-                .map(pattern -> new AiVerificationStructuredResult.CheckResult(
-                        VerificationCheckCode.EXAGGERATED_ADVERTISEMENT,
-                        false,
-                        0,
-                        "금칙어 사전에 등록된 표현이 포함되었습니다."
-                ))
-                .toList();
+        boolean hasForbiddenKeyword = forbiddenKeywordPatterns.stream()
+                .anyMatch(pattern -> pattern.matcher(content).find());
+
+        if (!hasForbiddenKeyword) {
+            return List.of();
+        }
+
+        return List.of(new AiVerificationStructuredResult.CheckResult(
+                VerificationCheckCode.EXAGGERATED_ADVERTISEMENT,
+                false,
+                0,
+                "금칙어 사전에 등록된 표현이 포함되었습니다."
+        ));
     }
 
     /** 1차 금칙어 탐지 결과와 2차 AI 검증 결과를 하나의 구조화 결과로 병합합니다. */

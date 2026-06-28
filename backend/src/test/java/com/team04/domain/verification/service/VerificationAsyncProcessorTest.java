@@ -5,6 +5,8 @@ import com.team04.domain.idea.entity.IdeaBadge;
 import com.team04.domain.idea.entity.IdeaCategory;
 import com.team04.domain.idea.entity.RewardType;
 import com.team04.domain.idea.repository.IdeaRepository;
+import com.team04.domain.match.entity.MatchStatus;
+import com.team04.domain.match.repository.ExpertMatchRepository;
 import com.team04.domain.user.entity.Role;
 import com.team04.domain.user.repository.UserRepository;
 import com.team04.domain.user.status.UserStatus;
@@ -53,6 +55,8 @@ class VerificationAsyncProcessorTest {
     @Mock
     private IdeaRepository ideaRepository;
     @Mock
+    private ExpertMatchRepository expertMatchRepository;
+    @Mock
     private VerificationProperties verificationProperties;
     @Mock
     private OpenAiVerificationService openAiVerificationService;
@@ -73,14 +77,23 @@ class VerificationAsyncProcessorTest {
         given(verificationProperties.forbiddenKeywords()).willReturn(List.of("무조건 성공", "원금 보장"));
         processor.initializeForbiddenKeywordPatterns();
 
+        // execute() - Boolean 반환 (취소 여부 확인용)
         lenient().doAnswer(invocation -> {
-            invocation.getArgument(0, TransactionCallback.class).doInTransaction(null);
-            return null;
+            TransactionCallback<?> callback = invocation.getArgument(0);
+            return callback.doInTransaction(null);
         }).when(transactionTemplate).execute(any());
 
+        // executeWithoutResult() - 결과 저장/실패 처리용
         lenient().doAnswer(invocation -> {
-            ((java.util.function.Consumer<org.springframework.transaction.TransactionStatus>)
-                    invocation.getArgument(0)).accept(null);
+            org.springframework.transaction.support.TransactionCallbackWithoutResult callback =
+                    new org.springframework.transaction.support.TransactionCallbackWithoutResult() {
+                        @Override
+                        protected void doInTransactionWithoutResult(org.springframework.transaction.TransactionStatus status) {
+                            ((java.util.function.Consumer<org.springframework.transaction.TransactionStatus>)
+                                    invocation.getArgument(0)).accept(status);
+                        }
+                    };
+            callback.doInTransaction(null);
             return null;
         }).when(transactionTemplate).executeWithoutResult(any());
 
@@ -146,16 +159,18 @@ class VerificationAsyncProcessorTest {
                 "AI 검증 통과"
         );
         given(projectVerificationRepository.findById(null)).willReturn(Optional.of(verification));
+        given(projectVerificationRepository.findByIdeaId(1L)).willReturn(Optional.of(verification));
         given(openAiVerificationService.verify(any())).willReturn(result);
         given(trustScoreRepository.findByIdeaId(1L)).willReturn(Optional.empty());
         given(trustScoreRepository.save(any(TrustScore.class))).willAnswer(invocation -> invocation.getArgument(0));
-        given(ideaRepository.findByIdAndDeletedAtIsNull(1L)).willReturn(Optional.of(idea()));
+        given(ideaRepository.findByIdForUpdate(1L)).willReturn(Optional.of(idea()));
         given(ideaRepository.save(any(Idea.class))).willAnswer(invocation -> invocation.getArgument(0));
+        given(expertMatchRepository.existsByIdeaIdAndStatus(1L, MatchStatus.ACCEPTED)).willReturn(false);
 
         processor.processAiVerification(new VerificationRequestedEvent(null, request("정상 제목", "정상 설명")));
 
         assertThat(verification.getStatus()).isEqualTo(VerificationStatus.AI_PASSED);
-        then(verificationResultRepository).should(times(3)).save(any(VerificationResult.class));
+        then(verificationResultRepository).should().saveAll(any());
         then(trustScoreRepository).should().save(any(TrustScore.class));
     }
 
@@ -170,17 +185,19 @@ class VerificationAsyncProcessorTest {
                 "AI 검증 완료"
         );
         given(projectVerificationRepository.findById(null)).willReturn(Optional.of(verification));
+        given(projectVerificationRepository.findByIdeaId(1L)).willReturn(Optional.of(verification));
         given(openAiVerificationService.verify(any())).willReturn(result);
         given(trustScoreRepository.findByIdeaId(1L)).willReturn(Optional.empty());
         given(trustScoreRepository.save(any(TrustScore.class))).willAnswer(invocation -> invocation.getArgument(0));
-        given(ideaRepository.findByIdAndDeletedAtIsNull(1L)).willReturn(Optional.of(idea()));
+        given(ideaRepository.findByIdForUpdate(1L)).willReturn(Optional.of(idea()));
         given(ideaRepository.save(any(Idea.class))).willAnswer(invocation -> invocation.getArgument(0));
+        given(expertMatchRepository.existsByIdeaIdAndStatus(1L, MatchStatus.ACCEPTED)).willReturn(false);
 
         processor.processAiVerification(new VerificationRequestedEvent(null, request("무조건 성공 서비스", "정상 설명")));
 
         assertThat(verification.getStatus()).isEqualTo(VerificationStatus.AI_PASSED);
         then(openAiVerificationService).should().verify(any());
-        then(verificationResultRepository).should(times(2)).save(any(VerificationResult.class));
+        then(verificationResultRepository).should().saveAll(any());
     }
 
     @Test
@@ -197,11 +214,13 @@ class VerificationAsyncProcessorTest {
                 "AI 검증 통과"
         );
         given(projectVerificationRepository.findById(null)).willReturn(Optional.of(verification));
+        given(projectVerificationRepository.findByIdeaId(1L)).willReturn(Optional.of(verification));
         given(openAiVerificationService.verify(any())).willReturn(result);
         given(trustScoreRepository.findByIdeaId(1L)).willReturn(Optional.empty());
         given(trustScoreRepository.save(any(TrustScore.class))).willReturn(savedHighTrustScore);
-        given(ideaRepository.findByIdAndDeletedAtIsNull(1L)).willReturn(Optional.of(idea));
+        given(ideaRepository.findByIdForUpdate(1L)).willReturn(Optional.of(idea));
         given(ideaRepository.save(any(Idea.class))).willAnswer(invocation -> invocation.getArgument(0));
+        given(expertMatchRepository.existsByIdeaIdAndStatus(1L, MatchStatus.ACCEPTED)).willReturn(false);
 
         processor.processAiVerification(new VerificationRequestedEvent(null, request("정상 제목", "정상 설명")));
 

@@ -172,7 +172,7 @@ public class IdeaService {
         idea.validateOwner(userId);
         idea.requestCancellation();
         projectVerificationRepository.findByIdeaId(ideaId)
-                .filter(v -> v.getStatus() == VerificationStatus.AI_VERIFYING)
+                .filter(v -> v.getStatus() != VerificationStatus.CANCELLED)
                 .ifPresent(v -> v.changeStatus(VerificationStatus.CANCELLED));
     }
 

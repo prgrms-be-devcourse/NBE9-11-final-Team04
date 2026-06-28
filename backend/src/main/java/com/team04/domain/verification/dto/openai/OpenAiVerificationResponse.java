@@ -13,7 +13,11 @@ public record OpenAiVerificationResponse(List<Choice> choices) {
         if (choices == null || choices.isEmpty()) {
             throw new CustomException(ErrorCode.AI_RESPONSE_EMPTY);
         }
-        return choices.get(0).message().content();
+        Choice choice = choices.get(0);
+        if (choice == null || choice.message() == null || choice.message().content() == null) {
+            throw new CustomException(ErrorCode.AI_RESPONSE_EMPTY);
+        }
+        return choice.message().content();
     }
 
     /** OpenAI 응답 선택지 한 건을 표현합니다. */

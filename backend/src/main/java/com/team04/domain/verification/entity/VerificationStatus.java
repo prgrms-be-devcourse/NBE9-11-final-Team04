@@ -33,9 +33,15 @@ public enum VerificationStatus {
                     || targetStatus == CANCELLED;
             case AI_PASSED -> targetStatus == EXPERT_MATCHING
                     || targetStatus == PENDING_ADMIN_REVIEW
-                    || targetStatus == AI_VERIFYING; // 재심사 허용
-            case PENDING_ADMIN_REVIEW -> targetStatus == AI_VERIFYING;
-            case EXPERT_MATCHING -> targetStatus == AI_VERIFYING;
+                    || targetStatus == AI_VERIFYING // 재심사 허용
+                    || targetStatus == CANCELLED;
+
+            case PENDING_ADMIN_REVIEW -> targetStatus == AI_VERIFYING
+                    || targetStatus == CANCELLED;
+
+            case EXPERT_MATCHING -> targetStatus == AI_VERIFYING
+                    || targetStatus == CANCELLED;
+
             case CANCELLED -> false;
         };
     }

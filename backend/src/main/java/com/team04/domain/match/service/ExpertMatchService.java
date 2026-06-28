@@ -11,6 +11,8 @@ import com.team04.domain.match.dto.response.ExpertMatchResponse;
 import com.team04.domain.match.entity.ExpertMatch;
 import com.team04.domain.match.entity.MatchStatus;
 import com.team04.domain.match.repository.ExpertMatchRepository;
+import com.team04.domain.verification.entity.VerificationStatus;
+import com.team04.domain.verification.repository.ProjectVerificationRepository;
 import com.team04.global.exception.CustomException;
 import com.team04.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +28,7 @@ public class ExpertMatchService {
     private final ExpertMatchRepository expertMatchRepository;
     private final IdeaRepository ideaRepository;
     private final ExpertProfileRepository expertProfileRepository;
+    private final ProjectVerificationRepository projectVerificationRepository;
 
 
     // GET /experts/matches — 내 매칭 요청 목록
@@ -52,6 +55,9 @@ public class ExpertMatchService {
 
         if (request.status() == MatchStatus.ACCEPTED) {
             match.accept();
+            // ProjectVerification 상태 EXPERT_MATCHING으로 전이
+            projectVerificationRepository.findByIdeaId(match.getIdeaId())
+                    .ifPresent(verification -> verification.changeStatus(VerificationStatus.EXPERT_MATCHING));
         } else if (request.status() == MatchStatus.REJECTED) {
             match.reject(request.rejectReason());
 
