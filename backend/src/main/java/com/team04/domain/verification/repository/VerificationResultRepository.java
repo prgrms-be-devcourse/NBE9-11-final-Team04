@@ -15,7 +15,7 @@ public interface VerificationResultRepository extends JpaRepository<Verification
     List<VerificationResult> findAllByIdeaId(Long ideaId);
 
     /** 아이디어 식별자로 검증 결과 이력을 일괄 삭제합니다. */
-    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Modifying(flushAutomatically = true)
     @Query("DELETE FROM VerificationResult v WHERE v.ideaId = :ideaId")
     void deleteByIdeaId(@Param("ideaId") Long ideaId);
 }

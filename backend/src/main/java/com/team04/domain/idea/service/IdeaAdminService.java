@@ -2,6 +2,7 @@ package com.team04.domain.idea.service;
 
 import com.team04.domain.idea.dto.response.AdminIdeaReviewResponse;
 import com.team04.domain.idea.entity.Idea;
+import com.team04.domain.idea.entity.IdeaBadge;
 import com.team04.domain.idea.entity.IdeaStatus;
 import com.team04.domain.idea.repository.IdeaRepository;
 import com.team04.domain.verification.repository.TrustScoreRepository;
@@ -46,6 +47,11 @@ public class IdeaAdminService {
                 .ifPresent(ts -> {
                     ts.updateAdminApprovalScore(score);
                     trustScoreRepository.save(ts);
+                    idea.updateTrustScore(ts.getTotalScore());
+                    if (ts.getTotalScore() >= 80) {
+                        idea.changeBadge(IdeaBadge.VERIFIED);
+                    }
+                    ideaRepository.save(idea);
                 });
     }
 
