@@ -121,6 +121,9 @@ public class VerificationAsyncProcessor {
             verification.changeStatus(VerificationStatus.EXPERT_MATCHING);
         }
 
+        // Idea.trustScore 동기화
+        idea.updateTrustScore(trustScore.getTotalScore());
+
         if (trustScore.getTotalScore() >= 80) {
             idea.changeBadge(IdeaBadge.VERIFIED);
         }

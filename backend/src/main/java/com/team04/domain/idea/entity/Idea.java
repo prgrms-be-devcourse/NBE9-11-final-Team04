@@ -330,4 +330,9 @@ public class Idea extends BaseEntity {
     public boolean isMatchRequestLimitExceeded() {
         return this.rejectedMatchCount >= 3;
     }
+
+    /** 신뢰도 점수를 갱신합니다. */
+    public void updateTrustScore(Integer totalScore) {
+        this.trustScore = totalScore;
+    }
 }
