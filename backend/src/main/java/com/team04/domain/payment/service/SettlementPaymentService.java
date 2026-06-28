@@ -324,16 +324,6 @@ public class SettlementPaymentService {
 
         ideaRepository.findByIdForUpdate(funding.getIdeaId())
                 .ifPresent(idea -> idea.subtractFundingAmount(funding.getAmount()));
-        // 시스템 환불 완료 시 실제 환불 출금도 아이디어 가상계좌 장부에 반영한다.
-        vbankLedgerService.recordOut(
-                funding.getIdeaId(),
-                VbankLedgerType.SPONSOR_REFUND_PAID,
-                payment.getAmount(),
-                "refund-" + payment.getId() + "-SPONSOR-REFUND",
-                "Payment",
-                payment.getId(),
-                "후원자 환불 지급"
-        );
     }
 
     private String resolveCancelReason(RefundReason reason) {
