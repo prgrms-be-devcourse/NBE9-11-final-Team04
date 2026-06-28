@@ -23,12 +23,14 @@ export interface SponsorRequest {
 }
 
 export interface Milestone {
-  milestoneId: number
-  title: string
-  description: string
-  targetAmount: number
+  id: number
+  ideaId: number
+  step: number
+  goal: string
+  expectedResult: string
+  expectedDate: string
   status: string
-  dueDate: string
+  createdAt: string
 }
 
 export interface FundingProgressEvent {

@@ -159,9 +159,9 @@ export default function FundingDetailPage() {
           <h2 className="font-semibold">마일스톤</h2>
           <div className="mt-4 space-y-3">
             {milestones.map((ms, idx) => (
-              <div key={ms.milestoneId} className="border-b border-slate-100 pb-3">
-                <p className="font-medium">{idx + 1}. {ms.title}</p>
-                <p className="text-sm text-slate-500">{formatCurrency(ms.targetAmount)} · {ms.status}</p>
+              <div key={ms.id} className="border-b border-slate-100 pb-3">
+                <p className="font-medium">{idx + 1}. {ms.goal}</p>
+                <p className="text-sm text-slate-500">{ms.expectedDate} · {ms.status}</p>
               </div>
             ))}
           </div>

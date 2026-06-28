@@ -1,6 +1,7 @@
 package com.team04.domain.settlement.service;
 
 import com.team04.domain.idea.dto.response.IdeaResponse;
+import com.team04.domain.idea.repository.IdeaRepository;
 import com.team04.domain.idea.service.IdeaService;
 import com.team04.domain.milestone.entity.MilestoneStatus;
 import com.team04.domain.milestone.repository.MilestoneRepository;
@@ -36,6 +37,7 @@ public class PreSettlementService {
 
     private final PreSettlementRepository preSettlementRepository;
     private final MilestoneRepository milestoneRepository;
+    private final IdeaRepository ideaRepository;
     private final IdeaService ideaService;
     private final ApplicationEventPublisher eventPublisher;
     private final VbankLedgerService vbankLedgerService;
@@ -44,7 +46,7 @@ public class PreSettlementService {
      * 선정산 신청
      * 마일스톤 IN_PROGRESS 상태에서만 가능
      * 요청한 제안자가 해당 아이디어 소유자인지 검증
-     * Milestone 비관락으로 동시 요청 제어
+     * Idea 비관락으로 같은 아이디어의 동시 선정산 요청 제어
      * 보증금 2배 한도 내에서 분할 신청 가능 (ideaId 기준 SUM 누적 체크)
      * spring-retry @Retryable로 최대 3회 재시도
      * payout()은 트랜잭션 커밋 이후 호출 — 롤백 시 실제 송금 방지
@@ -57,7 +59,10 @@ public class PreSettlementService {
     @Transactional
     public PreSettlementResponse requestPreSettlement(Long ideaId, PreSettlementRequest request, Long userId) {
         ideaService.validateNotSuspended(ideaId); // 분쟁 처리 중 일시 중단된 프로젝트는 선정산 신청 불가
-        milestoneRepository.findByIdeaIdAndStatusWithPessimisticLock(ideaId, MilestoneStatus.IN_PROGRESS)
+        // 선정산 한도는 ideaId 기준 누적액으로 검증하므로, 동시 요청도 같은 ideaId 단위로 직렬화한다.
+        ideaRepository.findByIdForUpdate(ideaId)
+                .orElseThrow(() -> new CustomException(ErrorCode.IDEA_NOT_FOUND));
+        milestoneRepository.findByIdeaIdAndStatus(ideaId, MilestoneStatus.IN_PROGRESS)
                 .orElseThrow(() -> new CustomException(ErrorCode.PRE_SETTLEMENT_MILESTONE_NOT_IN_PROGRESS));
 
         IdeaResponse idea = ideaService.getIdea(ideaId);

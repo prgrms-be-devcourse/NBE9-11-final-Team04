@@ -32,6 +32,7 @@ import com.team04.domain.user.entity.Role;
 import com.team04.domain.user.entity.User;
 import com.team04.domain.user.repository.UserRepository;
 import com.team04.global.config.payment.PaymentProperties;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -39,6 +40,8 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.SimpleTransactionStatus;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -49,6 +52,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
@@ -64,6 +68,8 @@ class SettlementPaymentServiceTest {
     private PaymentPayoutService paymentPayoutService;
     @Mock
     private PaymentProperties paymentProperties;
+    @Mock
+    private PlatformTransactionManager transactionManager;
     @Mock
     private PaymentRepository paymentRepository;
     @Mock
@@ -88,6 +94,12 @@ class SettlementPaymentServiceTest {
     private SettlementService settlementService;
     @Mock
     private VbankLedgerService vbankLedgerService;
+
+    @BeforeEach
+    void setUpTransactionManager() {
+        lenient().when(transactionManager.getTransaction(any()))
+                .thenReturn(new SimpleTransactionStatus());
+    }
 
     @Test
     @DisplayName("선정산 지급 성공 시 complete 콜백 호출")

@@ -393,6 +393,7 @@ function DisputeDetail({ disputeId }: { disputeId: number }) {
         </div>
       )}
 
+
       {/* 소명 제출 폼 — 피신고자, status=RECEIVED일 때만 */}
       {canAppeal && (
         <div style={{

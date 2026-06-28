@@ -28,8 +28,6 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class ExpertReviewService {
 
-    private static final int EXPERT_MATCHING_SCORE = 20;
-
     private final ExpertMatchRepository expertMatchRepository;
     private final ExpertProfileRepository expertProfileRepository;
     private final ExpertReviewRepository expertReviewRepository;
@@ -40,6 +38,7 @@ public class ExpertReviewService {
     @Transactional
     public ExpertReviewResponse createReview(Long userId, Long matchId, ExpertReviewRequest request) {
 
+        // 전문가 프로필 조회 및 검증 완료 여부 확인
         ExpertProfile expertProfile = expertProfileRepository.findByUserId(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.EXPERT_NOT_FOUND));
 
@@ -47,13 +46,16 @@ public class ExpertReviewService {
             throw new CustomException(ErrorCode.EXPERT_NOT_VERIFIED);
         }
 
+        // 매칭 조회 및 본인 매칭인지 확인
         ExpertMatch match = expertMatchRepository.findByIdAndUserId(matchId, userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.MATCH_NOT_FOUND));
 
+        // 수락된 매칭인지 확인
         if (match.getStatus() != MatchStatus.ACCEPTED) {
             throw new CustomException(ErrorCode.MATCH_NOT_ACCEPTED);
         }
 
+        // 이미 리뷰가 작성된 매칭인지 확인
         if (expertReviewRepository.existsByExpertMatch_Id(matchId)) {
             throw new CustomException(ErrorCode.REVIEW_ALREADY_EXISTS);
         }
@@ -78,12 +80,16 @@ public class ExpertReviewService {
             ideaRepository.save(idea);
         }
 
-        // 신뢰도 점수 반영 (전문가 매칭 20점)
+        // 신뢰도 점수 반영 (Feasibility 기반)
         trustScoreRepository.findByIdeaId(idea.getId()).ifPresent(trustScore -> {
+            int score = switch (request.feasibility()) {
+                case POSSIBLE -> 20;
+                case IMPOSSIBLE -> 10;
+            };
             trustScore.updateScores(
                     trustScore.getAiVerificationScore(),
                     trustScore.getMilestoneSpecificityScore(),
-                    EXPERT_MATCHING_SCORE,
+                    score,
                     trustScore.getAdminApprovalScore(),
                     trustScore.getProposerHistoryScore()
             );

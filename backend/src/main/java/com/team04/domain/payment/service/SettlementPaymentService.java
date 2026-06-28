@@ -39,6 +39,9 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.List;
 
@@ -54,6 +57,7 @@ public class SettlementPaymentService {
     private final PaymentGateway paymentGateway;
     private final PaymentPayoutService paymentPayoutService;
     private final PaymentProperties paymentProperties;
+    private final PlatformTransactionManager transactionManager;
     private final PaymentRepository paymentRepository;
     private final FundingRepository fundingRepository;
     private final IdeaRepository ideaRepository;
@@ -74,8 +78,8 @@ public class SettlementPaymentService {
         } catch (Exception e) {
             log.error("선정산 지급 처리 실패 - preSettlementId: {}, error: {}",
                     event.preSettlementId(), e.getMessage(), e);
-            // 지급 처리 중 예외가 나면 REQUESTED에 방치되지 않도록 FAILED로 전환해 스케줄러 재시도 대상에 올린다.
-            failPreSettlementAfterUnexpectedError(event.preSettlementId());
+            // 지급 처리 중 예외가 나면 REQUESTED에 방치되지 않도록 별도 트랜잭션에서 FAILED로 전환한다.
+            runInNewTransaction(() -> failPreSettlementAfterUnexpectedError(event.preSettlementId()));
         }
     }
 
@@ -86,8 +90,8 @@ public class SettlementPaymentService {
         } catch (Exception e) {
             log.error("정산 지급 처리 실패 - settlementId: {}, error: {}",
                     event.settlementId(), e.getMessage(), e);
-            // 지급 처리 중 예외가 나면 PENDING에 방치되지 않도록 FAILED로 전환해 스케줄러 재시도 대상에 올린다.
-            failSettlementAfterUnexpectedError(event.settlementId());
+            // 지급 처리 중 예외가 나면 PENDING에 방치되지 않도록 별도 트랜잭션에서 FAILED로 전환한다.
+            runInNewTransaction(() -> failSettlementAfterUnexpectedError(event.settlementId()));
         }
     }
 
@@ -159,15 +163,27 @@ public class SettlementPaymentService {
     }
 
     public void retryPreSettlementPayout(Long preSettlementId) {
-        // FAILED 상태는 payout 처리 대상이 아니므로 REQUESTED로 되돌린 뒤 재처리한다.
-        preSettlementService.retryPreSettlementPayout(preSettlementId);
-        processPreSettlementPayout(preSettlementId);
+        try {
+            // FAILED 상태는 payout 처리 대상이 아니므로 REQUESTED로 먼저 커밋한 뒤, 트랜잭션 밖에서 지급을 재처리한다.
+            runInNewTransaction(() -> preSettlementService.retryPreSettlementPayout(preSettlementId));
+            processPreSettlementPayout(preSettlementId);
+        } catch (Exception e) {
+            log.error("선정산 재시도 실패 - preSettlementId: {}, error: {}",
+                    preSettlementId, e.getMessage(), e);
+            runInNewTransaction(() -> failPreSettlementAfterUnexpectedError(preSettlementId));
+        }
     }
 
     public void retrySettlementPayout(Long settlementId, SettlementStatus successStatus) {
-        // FAILED 상태는 payout 처리 대상이 아니므로 PENDING으로 되돌린 뒤 원래 성공 상태로 재처리한다.
-        settlementService.retrySettlementPayout(settlementId);
-        processSettlementPayout(settlementId, successStatus);
+        try {
+            // FAILED 상태는 payout 처리 대상이 아니므로 PENDING으로 먼저 커밋한 뒤, 트랜잭션 밖에서 지급을 재처리한다.
+            runInNewTransaction(() -> settlementService.retrySettlementPayout(settlementId));
+            processSettlementPayout(settlementId, successStatus);
+        } catch (Exception e) {
+            log.error("정산 재시도 실패 - settlementId: {}, error: {}",
+                    settlementId, e.getMessage(), e);
+            runInNewTransaction(() -> failSettlementAfterUnexpectedError(settlementId));
+        }
     }
 
     private void failPreSettlementAfterUnexpectedError(Long preSettlementId) {
@@ -186,6 +202,12 @@ public class SettlementPaymentService {
             log.error("정산 실패 상태 전환 실패 - settlementId: {}, error: {}",
                     settlementId, failException.getMessage(), failException);
         }
+    }
+
+    private void runInNewTransaction(Runnable action) {
+        TransactionTemplate transactionTemplate = new TransactionTemplate(transactionManager);
+        transactionTemplate.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+        transactionTemplate.executeWithoutResult(status -> action.run());
     }
 
     /** PENDING 환불 건을 PG 환불 후 Payment/Funding 동기화 및 Refund complete */
