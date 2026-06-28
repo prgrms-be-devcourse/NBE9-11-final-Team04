@@ -577,13 +577,16 @@ public class PaymentService {
     // 환불 요청 — Payment/Funding REFUNDED + Idea 누적 후원금 차감 (후원자 본인)
     @Transactional
     public void refundPayment(Long paymentId, Long sponsorId) {
-        validateSponsorOwnsPayment(paymentId, sponsorId);
-
-        Payment payment = paymentRepository.findById(paymentId)
+        // 동일 결제건 환불 요청이 동시에 들어와도 한 요청만 SUCCESS 상태를 선점하도록 결제 row를 먼저 잠근다.
+        Payment payment = paymentRepository.findByIdForUpdate(paymentId)
                 .orElseThrow(() -> new CustomException(ErrorCode.PAYMENT_NOT_FOUND));
 
         Funding funding = fundingRepository.findByIdForUpdate(payment.getFundingId())
                 .orElseThrow(() -> new CustomException(ErrorCode.FUNDING_NOT_FOUND));
+
+        if (!funding.getSponsorId().equals(sponsorId)) {
+            throw new CustomException(ErrorCode.FORBIDDEN);
+        }
 
         if (payment.getStatus() != PaymentStatus.SUCCESS) {
             throw new CustomException(ErrorCode.PAYMENT_NOT_READY);

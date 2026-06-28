@@ -2,6 +2,9 @@ package com.team04.domain.milestone.service;
 
 import com.team04.domain.funding.repository.FundingRepository;
 import com.team04.domain.idea.dto.response.IdeaResponse;
+import com.team04.domain.idea.entity.Idea;
+import com.team04.domain.idea.entity.IdeaStatus;
+import com.team04.domain.idea.repository.IdeaRepository;
 import com.team04.domain.idea.service.IdeaService;
 import com.team04.domain.milestone.dto.request.FundUsageRequest;
 import com.team04.domain.milestone.dto.response.FundUsageResponse;
@@ -31,6 +34,7 @@ public class FundUsageService {
     private final PreSettlementRepository preSettlementRepository;
     private final FundingRepository fundingRepository;
     private final IdeaService ideaService;
+    private final IdeaRepository ideaRepository;
     private final VbankLedgerService vbankLedgerService;
 
     /**
@@ -42,17 +46,22 @@ public class FundUsageService {
      */
     @Transactional
     public FundUsageResponse addFundUsage(Long ideaId, FundUsageRequest request, Long userId) {
-        ideaService.validateNotSuspended(ideaId); // 분쟁 처리 중 일시 중단된 프로젝트는 자금 사용 내역 입력 불가
-        IdeaResponse idea = ideaService.getIdea(ideaId);
-        if (!idea.userId().equals(userId)) {
+        // 자금 사용 한도는 ideaId 기준 누적 지출액으로 검증하므로, 같은 아이디어의 동시 등록을 먼저 직렬화한다.
+        // 트랜잭션 첫 DB 접근을 FOR UPDATE로 수행해야 REPEATABLE_READ 환경에서도 최신 사용액을 기준으로 검증한다.
+        Idea lockedIdea = ideaRepository.findByIdForUpdate(ideaId)
+                .orElseThrow(() -> new CustomException(ErrorCode.IDEA_NOT_FOUND));
+        if (lockedIdea.getStatus() == IdeaStatus.SUSPENDED) {
+            throw new CustomException(ErrorCode.IDEA_SUSPENDED);
+        }
+        if (!lockedIdea.getUserId().equals(userId)) {
             throw new CustomException(ErrorCode.FORBIDDEN);
         }
 
-        milestoneRepository.findByIdeaIdAndStatusWithPessimisticLock(ideaId, MilestoneStatus.IN_PROGRESS)
+        milestoneRepository.findByIdeaIdAndStatus(ideaId, MilestoneStatus.IN_PROGRESS)
                 .orElseThrow(() -> new CustomException(ErrorCode.FUND_USAGE_NO_IN_PROGRESS_MILESTONE));
 
         // 지출 일자 하한선 검증 — 펀딩 시작일 이전 날짜 불가
-        if (request.usedAt().isBefore(idea.fundingStartAt().toLocalDate())) {
+        if (request.usedAt().isBefore(lockedIdea.getFundingStartAt().toLocalDate())) {
             throw new CustomException(ErrorCode.FUND_USAGE_INVALID_DATE);
         }
 
