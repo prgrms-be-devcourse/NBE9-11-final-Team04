@@ -1,6 +1,7 @@
 package com.team04.domain.milestone.repository;
 
 import com.team04.domain.milestone.entity.Milestone;
+import com.team04.domain.milestone.entity.CompletionReportStatus;
 import com.team04.domain.milestone.entity.MilestoneStatus;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -17,6 +18,12 @@ import java.util.Optional;
 public interface MilestoneRepository extends JpaRepository<Milestone, Long> {
 
     List<Milestone> findByIdeaIdOrderByStep(Long ideaId);
+
+    /** 관리자 검토 대기 목록 — 제출된 보고서가 있는 마일스톤을 가장 오래된 제출 시각 기준으로 조회한다. */
+    @Query("SELECT m FROM Milestone m JOIN CompletionReport r ON r.milestoneId = m.id " +
+            "WHERE r.status = :status GROUP BY m ORDER BY MIN(r.submittedAt) ASC")
+    List<Milestone> findPendingReportMilestonesOrderBySubmittedAtAsc(
+            @Param("status") CompletionReportStatus status);
 
     @Modifying
     @Query("DELETE FROM Milestone m WHERE m.ideaId = :ideaId")

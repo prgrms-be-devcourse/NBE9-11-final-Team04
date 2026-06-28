@@ -1,10 +1,9 @@
 package com.team04.domain.settlement.controller;
 
 import com.team04.domain.funding.dto.response.DepositResponse;
-import com.team04.domain.funding.service.FundingService;
 import com.team04.domain.settlement.dto.request.ForceRefundRequest;
 import com.team04.domain.settlement.dto.response.SettlementResponse;
-import com.team04.domain.settlement.service.SettlementService;
+import com.team04.domain.settlement.service.AdminSettlementService;
 import com.team04.global.response.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -21,13 +20,12 @@ import org.springframework.web.bind.annotation.*;
 @PreAuthorize("hasRole('ADMIN')")
 public class AdminSettlementController {
 
-    private final SettlementService settlementService;
-    private final FundingService fundingService;
+    private final AdminSettlementService adminSettlementService;
 
     /** 보증금 납부 확인. 관리자만 가능합니다. */
     @GetMapping("/ideas/{ideaId}/deposit")
     public ApiResponse<DepositResponse> getDeposit(@PathVariable Long ideaId) {
-        return ApiResponse.ofSuccess(fundingService.getDeposit(ideaId));
+        return ApiResponse.ofSuccess(adminSettlementService.getDeposit(ideaId));
     }
 
     /**
@@ -36,7 +34,7 @@ public class AdminSettlementController {
      */
     @PostMapping("/ideas/{ideaId}/deposit/release")
     public ApiResponse<SettlementResponse> releaseDeposit(@PathVariable Long ideaId) {
-        return ApiResponse.ofSuccess(settlementService.createAdminDepositRefundSettlement(ideaId));
+        return ApiResponse.ofSuccess(adminSettlementService.releaseDeposit(ideaId));
     }
 
     /**
@@ -45,7 +43,7 @@ public class AdminSettlementController {
      */
     @PostMapping("/ideas/{ideaId}/deposit/forfeit")
     public ApiResponse<SettlementResponse> forfeitDeposit(@PathVariable Long ideaId) {
-        return ApiResponse.ofSuccess(settlementService.forfeitDepositByAdmin(ideaId));
+        return ApiResponse.ofSuccess(adminSettlementService.forfeitDeposit(ideaId));
     }
 
     /**
@@ -58,7 +56,7 @@ public class AdminSettlementController {
             @PathVariable Long ideaId,
             @Valid @RequestBody ForceRefundRequest request
     ) {
-        settlementService.forceRefund(ideaId, request.reason());
+        adminSettlementService.forceRefund(ideaId, request.reason());
         return ApiResponse.ofSuccessWithoutBody();
     }
 }
