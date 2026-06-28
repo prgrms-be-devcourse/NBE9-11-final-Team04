@@ -352,7 +352,7 @@ public class MilestoneService {
      * 펀딩 마감 후 목표 달성이 확정되면 1단계 마일스톤을 시작합니다.
      * SettlementScheduler에서 마감된 성공 펀딩을 확인한 뒤 호출합니다.
      */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional
     public void startFirstMilestone(Long ideaId) {
         startNextMilestone(ideaId, 1);
     }
