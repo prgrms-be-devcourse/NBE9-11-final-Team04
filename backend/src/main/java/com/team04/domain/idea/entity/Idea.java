@@ -111,6 +111,9 @@ public class Idea extends BaseEntity {
     @Column(nullable = false)
     private int rejectedMatchCount = 0;
 
+    @Column(nullable = false)
+    private int rejectCount = 0;
+
     /** 신규 아이디어를 심사 대기 기본값과 함께 생성합니다. */
     public Idea(
             Long userId,
@@ -169,6 +172,7 @@ public class Idea extends BaseEntity {
             String competitor,
             String teamIntro,
             Long goalAmount,
+            Long depositAmount,
             LocalDateTime fundingStartAt,
             LocalDateTime fundingEndAt,
             RewardType rewardType,
@@ -185,6 +189,7 @@ public class Idea extends BaseEntity {
         this.competitor = competitor;
         this.teamIntro = teamIntro;
         this.goalAmount = goalAmount;
+        this.depositAmount = depositAmount;
         this.fundingStartAt = fundingStartAt;
         this.fundingEndAt = fundingEndAt;
         this.rewardType = rewardType;
@@ -270,7 +275,7 @@ public class Idea extends BaseEntity {
     }
 
     /** 현재 아이디어가 삭제 가능한 상태인지 검증합니다. */
-    private void validateDeletable() {
+    public void validateDeletable() {
         if (!this.status.isDeletable()) {
             throw new CustomException(ErrorCode.IDEA_STATUS_NOT_DELETABLE);
         }
@@ -291,9 +296,10 @@ public class Idea extends BaseEntity {
         changeStatus(IdeaStatus.OPEN);
     }
 
-    /** 관리자 반려 후 반려 사유를 저장하고 반려 상태로 전이합니다. */
+    /** 관리자 반려 후 반려 횟수와 반려 사유를 저장하고 반려 상태로 전이합니다. */
     public void reject(String reason) {
         this.rejectReason = reason;
+        this.rejectCount++;
         changeStatus(IdeaStatus.REJECTED);
     }
 
@@ -323,5 +329,10 @@ public class Idea extends BaseEntity {
     /** 매칭 거절 횟수가 제한에 도달했는지 확인합니다. */
     public boolean isMatchRequestLimitExceeded() {
         return this.rejectedMatchCount >= 3;
+    }
+
+    /** 신뢰도 점수를 갱신합니다. */
+    public void updateTrustScore(Integer totalScore) {
+        this.trustScore = totalScore;
     }
 }

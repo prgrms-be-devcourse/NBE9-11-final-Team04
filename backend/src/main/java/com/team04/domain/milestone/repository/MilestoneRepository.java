@@ -1,10 +1,12 @@
 package com.team04.domain.milestone.repository;
 
 import com.team04.domain.milestone.entity.Milestone;
+import com.team04.domain.milestone.entity.CompletionReportStatus;
 import com.team04.domain.milestone.entity.MilestoneStatus;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -16,6 +18,16 @@ import java.util.Optional;
 public interface MilestoneRepository extends JpaRepository<Milestone, Long> {
 
     List<Milestone> findByIdeaIdOrderByStep(Long ideaId);
+
+    /** 관리자 검토 대기 목록 — 제출된 보고서가 있는 마일스톤을 가장 오래된 제출 시각 기준으로 조회한다. */
+    @Query("SELECT m FROM Milestone m JOIN CompletionReport r ON r.milestoneId = m.id " +
+            "WHERE r.status = :status GROUP BY m ORDER BY MIN(r.submittedAt) ASC")
+    List<Milestone> findPendingReportMilestonesOrderBySubmittedAtAsc(
+            @Param("status") CompletionReportStatus status);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("DELETE FROM Milestone m WHERE m.ideaId = :ideaId")
+    int deleteByIdeaIdBulk(@Param("ideaId") Long ideaId);
 
     /** 기한 초과 마일스톤 배치 처리용 — expectedDate가 기준일 이전이고 overdueAt이 null이며, 검토 대기 중인 보고서가 없는 마일스톤 조회 */
     @Query("SELECT m FROM Milestone m WHERE m.status = :status AND m.expectedDate < :date AND m.overdueAt IS NULL " +

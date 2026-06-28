@@ -2,6 +2,7 @@ package com.team04.domain.idea.dto.request;
 
 import com.team04.domain.idea.entity.IdeaCategory;
 import com.team04.domain.idea.entity.RewardType;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Size;
@@ -26,6 +27,7 @@ public record IdeaDraftRequest(
         LocalDateTime fundingEndAt,
         RewardType rewardType,
         @Size(max = 2048) String imageUrl,
-        List<@Size(max = 2048) String> imageUrls
+        List<@Size(max = 2048) String> imageUrls,
+        @Valid @Size(max = 3) List<@Valid CreateMilestoneRequest> milestones
 ) {
 }

@@ -2,7 +2,7 @@ package com.team04.domain.milestone.service;
 
 import com.team04.domain.funding.repository.FundingRepository;
 import com.team04.domain.funding.service.FundingService;
-import com.team04.domain.idea.dto.response.IdeaResponse;
+import com.team04.domain.idea.dto.response.IdeaSummaryResponse;
 import com.team04.domain.idea.service.IdeaService;
 import com.team04.domain.milestone.dto.request.CompletionReportRequest;
 import com.team04.domain.milestone.dto.request.RejectReportRequest;
@@ -200,6 +200,7 @@ public class MilestoneService {
         if (milestone.getStep() == 3) {
             settlementService.createFinalSettlement(milestone.getIdeaId());
             settlementService.createCompletedDepositRefundSettlement(milestone.getIdeaId());
+            ideaService.completeIdea(milestone.getIdeaId());
         } else {
             startNextMilestone(milestone.getIdeaId(), milestone.getStep() + 1);
         }
@@ -229,6 +230,7 @@ public class MilestoneService {
             // 3단계 소명 승인 = 최종 완성으로 처리
             settlementService.createFinalSettlement(milestone.getIdeaId());
             settlementService.createCompletedDepositRefundSettlement(milestone.getIdeaId());
+            ideaService.completeIdea(milestone.getIdeaId());
         } else {
             startNextMilestone(milestone.getIdeaId(), milestone.getStep() + 1);
         }
@@ -240,13 +242,24 @@ public class MilestoneService {
      * 완료/소명 보고서 반려
      * 관리자만 가능
      * 최신 보고서를 반려하고 제안자에게 반려 알림을 예약합니다.
+     * 소명 보고서가 3회까지 반려되면 더 이상 보완 기회가 없으므로 보증금 몰수 중단 흐름으로 전환합니다.
      */
     @Transactional
     public CompletionReportResponse rejectReport(Long milestoneId, RejectReportRequest request) {
-        Milestone milestone = findMilestone(milestoneId);
+        Milestone milestone = milestoneRepository.findByIdWithPessimisticLock(milestoneId)
+                .orElseThrow(() -> new CustomException(ErrorCode.MILESTONE_NOT_FOUND));
+        if (milestone.getStatus() != MilestoneStatus.IN_PROGRESS) {
+            throw new CustomException(ErrorCode.INVALID_MILESTONE_STATUS_TRANSITION);
+        }
+
         CompletionReport report = findLatestReport(milestoneId);
+        if (report.getStatus() != CompletionReportStatus.SUBMITTED) {
+            throw new CustomException(ErrorCode.INVALID_MILESTONE_STATUS_TRANSITION);
+        }
+
         report.reject(request.reason());
         notifyReportRejected(milestone, report);
+        cancelIfFinalAppealRejected(milestone, report);
         return CompletionReportResponse.from(report, milestoneReportStorageClient);
     }
 
@@ -270,6 +283,8 @@ public class MilestoneService {
 
         report.approve();
         milestone.cancel();
+        // 소명 중단 인정은 프로젝트 종료 흐름이므로 아이디어도 취소 상태로 맞춘다.
+        ideaService.cancelIdea(milestone.getIdeaId());
 
         settlementService.createJustifiedCancelRefundSettlement(milestone.getIdeaId());
         settlementService.createDepositRefundSettlement(milestone.getIdeaId());
@@ -291,10 +306,7 @@ public class MilestoneService {
             return;
         }
 
-        milestone.cancel();
-        settlementService.createCancelRefundSettlement(ideaId);        // 먹튀/잠수 — 후원금 잔액
-        settlementService.createDepositForfeitSettlement(ideaId);      // 먹튀/잠수 — 보증금 몰수
-        refundService.createCancelRefunds(ideaId, false); // 먹튀/잠수 — 보증금 전액 후원자 분배
+        cancelMilestoneAsUnjustified(milestone, null);
     }
 
     /**
@@ -305,17 +317,42 @@ public class MilestoneService {
     public void cancelMilestone(Long ideaId) {
         Milestone milestone = milestoneRepository.findByIdeaIdAndStatusWithPessimisticLock(ideaId, MilestoneStatus.IN_PROGRESS)
                 .orElseThrow(() -> new CustomException(ErrorCode.MILESTONE_NOT_FOUND));
+        cancelMilestoneAsUnjustified(milestone, null);
+    }
+
+    private void cancelIfFinalAppealRejected(Milestone milestone, CompletionReport report) {
+        if (report.getType() != CompletionReportType.APPEAL) {
+            return;
+        }
+
+        long appealCount = completionReportRepository.countByMilestoneIdAndType(
+                milestone.getId(),
+                CompletionReportType.APPEAL
+        );
+        if (appealCount < MAX_APPEAL_REPORT_COUNT) {
+            return;
+        }
+
+        // 소명은 최대 3회까지 허용한다. 3회차 소명까지 반려되면 보완 기회를 모두 사용한 것으로 보고,
+        // 정당한 중단 사유가 인정되지 않은 상태이므로 프로젝트를 중단하고 보증금을 몰수한다.
+        cancelMilestoneAsUnjustified(milestone, "소명 3회 최종 반려");
+    }
+
+    private void cancelMilestoneAsUnjustified(Milestone milestone, String memo) {
+        Long ideaId = milestone.getIdeaId();
         milestone.cancel();
-        settlementService.createCancelRefundSettlement(ideaId);        // 수동 중단 — 후원금 잔액
-        settlementService.createDepositForfeitSettlement(ideaId);      // 수동 중단 — 보증금 몰수
-        refundService.createCancelRefunds(ideaId, false); // 수동 중단 — 보증금 전액 후원자 분배
+        // 관리자 중단/먹튀/소명 3회 반려는 프로젝트 종료 흐름이므로 아이디어도 취소 상태로 맞춘다.
+        ideaService.cancelIdea(ideaId);
+        settlementService.createCancelRefundSettlement(ideaId, memo);        // 부정/미소명 중단 — 후원금 잔액
+        settlementService.createDepositForfeitSettlement(ideaId, memo);      // 부정/미소명 중단 — 보증금 몰수
+        refundService.createCancelRefunds(ideaId, false); // 부정/미소명 중단 — 보증금 전액 후원자 분배
     }
 
     /**
-     * 펀딩 목표 달성 시 1단계 마일스톤 자동 시작
-     * FundingAchievementListener에서 FundingPaidEvent 수신 후 목표 달성 확인 시 호출
+     * 펀딩 마감 후 목표 달성이 확정되면 1단계 마일스톤을 시작합니다.
+     * SettlementScheduler에서 마감된 성공 펀딩을 확인한 뒤 호출합니다.
      */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional
     public void startFirstMilestone(Long ideaId) {
         startNextMilestone(ideaId, 1);
     }
@@ -342,7 +379,7 @@ public class MilestoneService {
      * 후원자 중복 발송을 막기 위해 sponsorId를 DISTINCT로 조회합니다.
      */
     private void notifyMilestoneStarted(Milestone milestone) {
-        IdeaResponse idea = ideaService.getIdea(milestone.getIdeaId());
+        IdeaSummaryResponse idea = ideaService.getIdeaSummary(milestone.getIdeaId());
         Set<Long> targetUserIds = new LinkedHashSet<>();
         targetUserIds.add(idea.userId());
         targetUserIds.addAll(fundingRepository.findPaidSponsorIdsByIdeaId(milestone.getIdeaId()));
@@ -359,7 +396,7 @@ public class MilestoneService {
      * 보고서 타입은 알림 메시지에서 완료 보고서/소명 보고서로 구분합니다.
      */
     private void notifyReportApproved(Milestone milestone, CompletionReport report) {
-        IdeaResponse idea = ideaService.getIdea(milestone.getIdeaId());
+        IdeaSummaryResponse idea = ideaService.getIdeaSummary(milestone.getIdeaId());
         String reportName = report.getType() == CompletionReportType.APPEAL ? "소명 보고서" : "완료 보고서";
         String title = "마일스톤 " + milestone.getStep() + "단계 " + reportName + "가 승인되었습니다";
         String message = "'" + idea.title() + "' 프로젝트의 " + milestone.getStep()
@@ -374,7 +411,7 @@ public class MilestoneService {
      * 반려 사유는 응답 상세에서 확인할 수 있도록 별도 필드로 내려줍니다.
      */
     private void notifyReportRejected(Milestone milestone, CompletionReport report) {
-        IdeaResponse idea = ideaService.getIdea(milestone.getIdeaId());
+        IdeaSummaryResponse idea = ideaService.getIdeaSummary(milestone.getIdeaId());
         String reportName = report.getType() == CompletionReportType.APPEAL ? "소명 보고서" : "완료 보고서";
         String title = "마일스톤 " + milestone.getStep() + "단계 " + reportName + "가 반려되었습니다";
         String message = "'" + idea.title() + "' 프로젝트의 " + milestone.getStep()

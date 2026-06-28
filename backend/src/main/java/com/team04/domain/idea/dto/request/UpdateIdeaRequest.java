@@ -2,6 +2,7 @@ package com.team04.domain.idea.dto.request;
 
 import com.team04.domain.idea.entity.IdeaCategory;
 import com.team04.domain.idea.entity.RewardType;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.Max;
@@ -26,11 +27,13 @@ public record UpdateIdeaRequest(
         @NotBlank @Size(max = 5000) String competitor,
         @NotBlank @Size(max = 5000) String teamIntro,
         @NotNull @Min(1_000_000) @Max(100_000_000) Long goalAmount,
+        @NotNull @Min(0) Long depositAmount,
         @NotNull @Future LocalDateTime fundingStartAt,
         @NotNull @Future LocalDateTime fundingEndAt,
         @NotNull RewardType rewardType,
         @Size(max = 2048) String imageUrl,
-        List<@Size(max = 2048) String> imageUrls
+        List<@Size(max = 2048) String> imageUrls,
+        @Valid @Size(min = 3, max = 3) List<@Valid CreateMilestoneRequest> milestones
 ) {
 
     /** 펀딩 종료일이 시작일보다 이후인지 검증합니다. */

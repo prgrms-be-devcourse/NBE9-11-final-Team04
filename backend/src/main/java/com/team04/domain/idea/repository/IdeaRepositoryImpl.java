@@ -11,6 +11,8 @@ import com.team04.domain.idea.entity.Idea;
 import com.team04.domain.idea.entity.IdeaCategory;
 import com.team04.domain.idea.entity.IdeaStatus;
 import com.team04.domain.idea.entity.QIdea;
+import com.team04.domain.milestone.entity.MilestoneStatus;
+import com.team04.domain.milestone.entity.QMilestone;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.util.StringUtils;
@@ -143,9 +145,35 @@ public class IdeaRepositoryImpl implements IdeaRepositoryCustom {
                 .from(idea)
                 .where(
                         idea.deletedAt.isNull(),
-                        idea.status.eq(IdeaStatus.IN_PROGRESS),
+                        idea.status.in(IdeaStatus.OPEN, IdeaStatus.IN_PROGRESS),
                         idea.fundingEndAt.lt(now),
                         idea.currentAmount.lt(idea.goalAmount)
+                )
+                .fetch();
+    }
+
+    /** 펀딩 종료일이 지났고 목표액을 달성했으며 1단계 마일스톤이 아직 대기 중인 아이디어 ID 목록을 반환합니다. */
+    @Override
+    public List<Long> findSuccessfulFundingIdeaIds(LocalDateTime now) {
+        QIdea idea = QIdea.idea;
+        QMilestone milestone = QMilestone.milestone;
+        return queryFactory
+                .select(idea.id)
+                .from(idea)
+                .where(
+                        idea.deletedAt.isNull(),
+                        idea.status.in(IdeaStatus.OPEN, IdeaStatus.IN_PROGRESS),
+                        idea.fundingEndAt.lt(now),
+                        idea.currentAmount.goe(idea.goalAmount),
+                        JPAExpressions
+                                .selectOne()
+                                .from(milestone)
+                                .where(
+                                        milestone.ideaId.eq(idea.id),
+                                        milestone.step.eq(1),
+                                        milestone.status.eq(MilestoneStatus.PENDING)
+                                )
+                                .exists()
                 )
                 .fetch();
     }
