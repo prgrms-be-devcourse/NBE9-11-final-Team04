@@ -105,9 +105,13 @@ public class VerificationAsyncProcessor {
         // 이전 검증 결과 삭제 후 새로 저장
         verificationResultRepository.deleteByIdeaId(verification.getIdeaId());
 
-        result.checks().forEach(check -> verificationResultRepository.save(new VerificationResult(
-                verification.getIdeaId(), check.checkCode(), check.passed(), check.score(), check.reason()
-        )));
+        verificationResultRepository.saveAll(
+                result.checks().stream()
+                        .map(check -> new VerificationResult(
+                                verification.getIdeaId(), check.checkCode(), check.passed(), check.score(), check.reason()
+                        ))
+                        .toList()
+        );
 
         Idea idea = updateIdeaAfterAiVerification(verification.getIdeaId(), result);
         audit(verification, previous, VerificationStatus.AI_PASSED, result.reason());
