@@ -1,7 +1,6 @@
 package com.team04.domain.milestone.controller;
 
 import com.team04.domain.milestone.dto.request.CompletionReportRequest;
-import com.team04.domain.milestone.dto.request.RejectReportRequest;
 import com.team04.domain.milestone.dto.response.CompletionReportResponse;
 import com.team04.domain.milestone.dto.response.MilestoneResponse;
 import com.team04.domain.milestone.service.MilestoneService;
@@ -10,7 +9,6 @@ import com.team04.global.exception.CustomException;
 import com.team04.global.exception.ErrorCode;
 import com.team04.global.response.ApiResponse;
 import com.team04.global.security.CustomUserDetails;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -91,64 +89,4 @@ public class MilestoneController {
         return ApiResponse.ofSuccess(milestoneService.submitAppealReport(milestoneId, request, file));
     }
 
-    /** 완료 보고서를 승인합니다 (정상 진행 → 다음 단계 또는 최종 정산). 관리자만 가능합니다. */
-    @PostMapping("/{milestoneId}/reports/approve/completion")
-    public ApiResponse<CompletionReportResponse> approveCompletionReport(
-            @PathVariable Long milestoneId,
-            @AuthenticationPrincipal CustomUserDetails userDetails) {
-        if (userDetails.getRole() != Role.ADMIN) {
-            throw new CustomException(ErrorCode.FORBIDDEN);
-        }
-        return ApiResponse.ofSuccess(milestoneService.approveCompletionReport(milestoneId));
-    }
-
-    /** 소명 보고서를 승인합니다 (계속 진행 인정 → 다음 단계). 관리자만 가능합니다. */
-    @PostMapping("/{milestoneId}/reports/approve/appeal")
-    public ApiResponse<CompletionReportResponse> approveAppealReport(
-            @PathVariable Long milestoneId,
-            @AuthenticationPrincipal CustomUserDetails userDetails) {
-        if (userDetails.getRole() != Role.ADMIN) {
-            throw new CustomException(ErrorCode.FORBIDDEN);
-        }
-        return ApiResponse.ofSuccess(milestoneService.approveAppealReport(milestoneId));
-    }
-
-    /** 완료/소명 보고서를 반려합니다. 관리자만 가능합니다. */
-    @PostMapping("/{milestoneId}/reports/reject")
-    public ApiResponse<CompletionReportResponse> rejectReport(
-            @PathVariable Long milestoneId,
-            @Valid @RequestBody RejectReportRequest request,
-            @AuthenticationPrincipal CustomUserDetails userDetails) {
-        if (userDetails.getRole() != Role.ADMIN) {
-            throw new CustomException(ErrorCode.FORBIDDEN);
-        }
-        return ApiResponse.ofSuccess(milestoneService.rejectReport(milestoneId, request));
-    }
-
-    /**
-     * 소명 중단 인정 + 환불 처리입니다. 관리자만 가능합니다.
-     * "더 이상 진행 못하겠다"는 소명을 관리자가 인정할 때 호출합니다.
-     */
-    @PostMapping("/{milestoneId}/reports/refund")
-    public ApiResponse<Void> refundMilestone(
-            @PathVariable Long milestoneId,
-            @AuthenticationPrincipal CustomUserDetails userDetails) {
-        if (userDetails.getRole() != Role.ADMIN) {
-            throw new CustomException(ErrorCode.FORBIDDEN);
-        }
-        milestoneService.refundMilestone(milestoneId);
-        return ApiResponse.ofSuccess(null);
-    }
-
-    /** 마일스톤 이행 중단 처리입니다. 관리자만 가능합니다. */
-    @PostMapping("/ideas/{ideaId}/cancel")
-    public ApiResponse<Void> cancelMilestone(
-            @PathVariable Long ideaId,
-            @AuthenticationPrincipal CustomUserDetails userDetails) {
-        if (userDetails.getRole() != Role.ADMIN) {
-            throw new CustomException(ErrorCode.FORBIDDEN);
-        }
-        milestoneService.cancelMilestone(ideaId);
-        return ApiResponse.ofSuccess(null);
-    }
 }
