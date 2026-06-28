@@ -240,13 +240,24 @@ public class MilestoneService {
      * 완료/소명 보고서 반려
      * 관리자만 가능
      * 최신 보고서를 반려하고 제안자에게 반려 알림을 예약합니다.
+     * 소명 보고서가 3회까지 반려되면 더 이상 보완 기회가 없으므로 보증금 몰수 중단 흐름으로 전환합니다.
      */
     @Transactional
     public CompletionReportResponse rejectReport(Long milestoneId, RejectReportRequest request) {
-        Milestone milestone = findMilestone(milestoneId);
+        Milestone milestone = milestoneRepository.findByIdWithPessimisticLock(milestoneId)
+                .orElseThrow(() -> new CustomException(ErrorCode.MILESTONE_NOT_FOUND));
+        if (milestone.getStatus() != MilestoneStatus.IN_PROGRESS) {
+            throw new CustomException(ErrorCode.INVALID_MILESTONE_STATUS_TRANSITION);
+        }
+
         CompletionReport report = findLatestReport(milestoneId);
+        if (report.getStatus() != CompletionReportStatus.SUBMITTED) {
+            throw new CustomException(ErrorCode.INVALID_MILESTONE_STATUS_TRANSITION);
+        }
+
         report.reject(request.reason());
         notifyReportRejected(milestone, report);
+        cancelIfFinalAppealRejected(milestone, report);
         return CompletionReportResponse.from(report, milestoneReportStorageClient);
     }
 
@@ -291,10 +302,7 @@ public class MilestoneService {
             return;
         }
 
-        milestone.cancel();
-        settlementService.createCancelRefundSettlement(ideaId);        // 먹튀/잠수 — 후원금 잔액
-        settlementService.createDepositForfeitSettlement(ideaId);      // 먹튀/잠수 — 보증금 몰수
-        refundService.createCancelRefunds(ideaId, false); // 먹튀/잠수 — 보증금 전액 후원자 분배
+        cancelMilestoneAsUnjustified(milestone, null);
     }
 
     /**
@@ -305,10 +313,33 @@ public class MilestoneService {
     public void cancelMilestone(Long ideaId) {
         Milestone milestone = milestoneRepository.findByIdeaIdAndStatusWithPessimisticLock(ideaId, MilestoneStatus.IN_PROGRESS)
                 .orElseThrow(() -> new CustomException(ErrorCode.MILESTONE_NOT_FOUND));
+        cancelMilestoneAsUnjustified(milestone, null);
+    }
+
+    private void cancelIfFinalAppealRejected(Milestone milestone, CompletionReport report) {
+        if (report.getType() != CompletionReportType.APPEAL) {
+            return;
+        }
+
+        long appealCount = completionReportRepository.countByMilestoneIdAndType(
+                milestone.getId(),
+                CompletionReportType.APPEAL
+        );
+        if (appealCount < MAX_APPEAL_REPORT_COUNT) {
+            return;
+        }
+
+        // 소명은 최대 3회까지 허용한다. 3회차 소명까지 반려되면 보완 기회를 모두 사용한 것으로 보고,
+        // 정당한 중단 사유가 인정되지 않은 상태이므로 프로젝트를 중단하고 보증금을 몰수한다.
+        cancelMilestoneAsUnjustified(milestone, "소명 3회 최종 반려");
+    }
+
+    private void cancelMilestoneAsUnjustified(Milestone milestone, String memo) {
+        Long ideaId = milestone.getIdeaId();
         milestone.cancel();
-        settlementService.createCancelRefundSettlement(ideaId);        // 수동 중단 — 후원금 잔액
-        settlementService.createDepositForfeitSettlement(ideaId);      // 수동 중단 — 보증금 몰수
-        refundService.createCancelRefunds(ideaId, false); // 수동 중단 — 보증금 전액 후원자 분배
+        settlementService.createCancelRefundSettlement(ideaId, memo);        // 부정/미소명 중단 — 후원금 잔액
+        settlementService.createDepositForfeitSettlement(ideaId, memo);      // 부정/미소명 중단 — 보증금 몰수
+        refundService.createCancelRefunds(ideaId, false); // 부정/미소명 중단 — 보증금 전액 후원자 분배
     }
 
     /**
