@@ -174,6 +174,11 @@ public class SettlementPaymentService {
     }
 
     @Transactional(readOnly = true)
+    public List<PreSettlement> findRequestedPreSettlements() {
+        return preSettlementRepository.findByStatus(PreSettlementStatus.REQUESTED);
+    }
+
+    @Transactional(readOnly = true)
     public List<Settlement> findFailedSettlements() {
         return settlementRepository.findByStatus(SettlementStatus.FAILED);
     }
