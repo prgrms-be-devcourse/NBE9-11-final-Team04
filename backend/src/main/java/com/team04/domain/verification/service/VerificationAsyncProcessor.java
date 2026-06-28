@@ -28,7 +28,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -65,29 +64,36 @@ public class VerificationAsyncProcessor {
                 .toList();
     }
 
-    /** 트랜잭션 커밋 후 별도 스레드에서 금칙어 사전 및 OpenAI 검증을 수행합니다. */
+    /** 트랜잭션 커밋 후 별도 스레드에서 금칙어 사전 및 OpenAI 검증을 수행합니다.
+     * OpenAI 호출은 트랜잭션 밖에서 수행하고, 결과 저장만 짧은 트랜잭션으로 처리합니다. */
     @Async("verificationTaskExecutor")
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void processAiVerification(VerificationRequestedEvent event) {
-        transactionTemplate.executeWithoutResult(status -> processAiVerificationInTransaction(event));
-    }
+        // 취소 여부 확인 (짧은 트랜잭션)
+        Boolean cancelled = transactionTemplate.execute(status -> {
+            ProjectVerification verification = getVerification(event.verificationId());
+            return verification.getStatus() == VerificationStatus.CANCELLED;
+        });
+        if (Boolean.TRUE.equals(cancelled)) return;
 
-    /** 비동기 리스너와 분리된 트랜잭션 경계에서 1차 금칙어 탐지와 2차 AI 검증을 수행합니다. */
-    @Transactional
-    public void processAiVerificationInTransaction(VerificationRequestedEvent event) {
-        ProjectVerification verification = getVerification(event.verificationId());
-        if (verification.getStatus() == VerificationStatus.CANCELLED) {
-            return;
-        }
+        // OpenAI 호출 - 트랜잭션 밖
         try {
             AiVerificationStructuredResult aiResult = openAiVerificationService.verify(event.request());
-            applyReferenceResults(verification, mergeResults(detectForbiddenKeywords(event.request()), aiResult));
+            AiVerificationStructuredResult merged = mergeResults(detectForbiddenKeywords(event.request()), aiResult);
+            // 결과 저장만 트랜잭션 안에서
+            transactionTemplate.executeWithoutResult(status -> {
+                ProjectVerification verification = getVerification(event.verificationId());
+                applyReferenceResults(verification, merged);
+            });
         } catch (Exception exception) {
-            VerificationStatus previous = verification.getStatus();
-            verification.markPendingAdminReview();
-            audit(verification, previous, VerificationStatus.PENDING_ADMIN_REVIEW,
-                    "AI 검증 호출 실패로 관리자 재시도 필요: " + exception.getMessage());
-            publishPendingAdminReviewNotification(verification.getIdeaId());
+            transactionTemplate.executeWithoutResult(status -> {
+                ProjectVerification verification = getVerification(event.verificationId());
+                VerificationStatus previous = verification.getStatus();
+                verification.markPendingAdminReview();
+                audit(verification, previous, VerificationStatus.PENDING_ADMIN_REVIEW,
+                        "AI 검증 호출 실패로 관리자 재시도 필요: " + exception.getMessage());
+                publishPendingAdminReviewNotification(verification.getIdeaId());
+            });
         }
     }
 
@@ -110,7 +116,7 @@ public class VerificationAsyncProcessor {
 
     /** AI 검증 완료 후 아이디어 상태와 신뢰도 점수를 반영합니다. */
     private Idea updateIdeaAfterAiVerification(Long ideaId, AiVerificationStructuredResult result) {
-        Idea idea = ideaRepository.findByIdAndDeletedAtIsNull(ideaId)
+        Idea idea = ideaRepository.findByIdForUpdate(ideaId)
                 .orElseThrow(() -> new CustomException(ErrorCode.IDEA_NOT_FOUND));
         TrustScore trustScore = updateTrustScore(ideaId, idea.getUserId(), result);
 
@@ -128,10 +134,6 @@ public class VerificationAsyncProcessor {
 
         // Idea.trustScore 동기화
         idea.updateTrustScore(trustScore.getTotalScore());
-
-        if (trustScore.getTotalScore() >= 80) {
-            idea.changeBadge(IdeaBadge.VERIFIED);
-        }
 
         if (trustScore.getTotalScore() >= 80) {
             idea.changeBadge(IdeaBadge.VERIFIED);
