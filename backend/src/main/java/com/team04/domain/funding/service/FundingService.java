@@ -346,7 +346,7 @@ public class FundingService {
     /**
      * 펀딩 목표 달성 여부 확인
      * currentAmount >= goalAmount 이면 목표 달성
-     * FundingAchievementListener에서 SSE push에 사용 (목표 달성·마일스톤 시작은 본 리스너에서 처리)
+     * FundingAchievementListener에서 SSE push에 사용하며, 마일스톤 시작은 펀딩 마감 스케줄러에서 처리한다.
      */
     public boolean isFundingGoalAchieved(Long ideaId) {
         Idea idea = ideaRepository.findByIdAndDeletedAtIsNull(ideaId)

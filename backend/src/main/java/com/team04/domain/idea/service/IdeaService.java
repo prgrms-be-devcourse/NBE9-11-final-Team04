@@ -655,6 +655,21 @@ public class IdeaService {
         return ideaRepository.findFailedFundingIdeaIds(LocalDateTime.now());
     }
 
+    /** 펀딩 마감됐고 목표 금액을 달성했지만 아직 마일스톤이 시작되지 않은 아이디어 ID 목록을 반환합니다. */
+    @Transactional(readOnly = true)
+    public List<Long> getSuccessfulFundingIdeaIds() {
+        return ideaRepository.findSuccessfulFundingIdeaIds(LocalDateTime.now());
+    }
+
+    /** 마감 후 펀딩 성공이 확정된 OPEN 아이디어를 진행 상태로 전이합니다. */
+    @Transactional
+    public void startFundingIfOpen(Long ideaId) {
+        Idea idea = findActiveIdea(ideaId);
+        if (idea.getStatus() == IdeaStatus.OPEN) {
+            idea.changeStatus(IdeaStatus.IN_PROGRESS);
+        }
+    }
+
     /** 펀딩 목표 미달성 시 아이디어를 취소 상태로 전이합니다. */
     @Transactional
     public void cancelIdea(Long ideaId) {
