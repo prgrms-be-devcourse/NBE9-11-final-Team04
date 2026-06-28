@@ -40,7 +40,7 @@ public enum IdeaStatus {
 
     /** 아이디어 내용을 수정할 수 있는 심사 대기 상태인지 확인합니다. */
     public boolean isEditable() {
-        return this == AI_PENDING || this == EXPERT_PENDING || this == ADMIN_PENDING;
+        return this == AI_PENDING || this == EXPERT_PENDING || this == ADMIN_PENDING || this == REJECTED;
     }
 
     /** 아이디어를 삭제할 수 있는 심사 대기 상태인지 확인합니다. */
@@ -84,7 +84,11 @@ public enum IdeaStatus {
                             || targetStatus == IN_PROGRESS
                             || targetStatus == CANCELLED;
 
-            case COMPLETED, CANCELLED, REJECTED ->
+            case REJECTED ->
+                    targetStatus == AI_PENDING
+                            || targetStatus == CANCELLED;
+
+            case COMPLETED, CANCELLED ->
                     false;
         };
     }

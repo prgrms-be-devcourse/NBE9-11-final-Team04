@@ -2,7 +2,7 @@ package com.team04.domain.milestone.service;
 
 import com.team04.domain.funding.repository.FundingRepository;
 import com.team04.domain.funding.service.FundingService;
-import com.team04.domain.idea.dto.response.IdeaResponse;
+import com.team04.domain.idea.dto.response.IdeaSummaryResponse;
 import com.team04.domain.idea.service.IdeaService;
 import com.team04.domain.milestone.dto.request.CompletionReportRequest;
 import com.team04.domain.milestone.dto.request.RejectReportRequest;
@@ -200,6 +200,7 @@ public class MilestoneService {
         if (milestone.getStep() == 3) {
             settlementService.createFinalSettlement(milestone.getIdeaId());
             settlementService.createCompletedDepositRefundSettlement(milestone.getIdeaId());
+            ideaService.completeIdea(milestone.getIdeaId());
         } else {
             startNextMilestone(milestone.getIdeaId(), milestone.getStep() + 1);
         }
@@ -229,6 +230,7 @@ public class MilestoneService {
             // 3단계 소명 승인 = 최종 완성으로 처리
             settlementService.createFinalSettlement(milestone.getIdeaId());
             settlementService.createCompletedDepositRefundSettlement(milestone.getIdeaId());
+            ideaService.completeIdea(milestone.getIdeaId());
         } else {
             startNextMilestone(milestone.getIdeaId(), milestone.getStep() + 1);
         }
@@ -373,7 +375,7 @@ public class MilestoneService {
      * 후원자 중복 발송을 막기 위해 sponsorId를 DISTINCT로 조회합니다.
      */
     private void notifyMilestoneStarted(Milestone milestone) {
-        IdeaResponse idea = ideaService.getIdea(milestone.getIdeaId());
+        IdeaSummaryResponse idea = ideaService.getIdeaSummary(milestone.getIdeaId());
         Set<Long> targetUserIds = new LinkedHashSet<>();
         targetUserIds.add(idea.userId());
         targetUserIds.addAll(fundingRepository.findPaidSponsorIdsByIdeaId(milestone.getIdeaId()));
@@ -390,7 +392,7 @@ public class MilestoneService {
      * 보고서 타입은 알림 메시지에서 완료 보고서/소명 보고서로 구분합니다.
      */
     private void notifyReportApproved(Milestone milestone, CompletionReport report) {
-        IdeaResponse idea = ideaService.getIdea(milestone.getIdeaId());
+        IdeaSummaryResponse idea = ideaService.getIdeaSummary(milestone.getIdeaId());
         String reportName = report.getType() == CompletionReportType.APPEAL ? "소명 보고서" : "완료 보고서";
         String title = "마일스톤 " + milestone.getStep() + "단계 " + reportName + "가 승인되었습니다";
         String message = "'" + idea.title() + "' 프로젝트의 " + milestone.getStep()
@@ -405,7 +407,7 @@ public class MilestoneService {
      * 반려 사유는 응답 상세에서 확인할 수 있도록 별도 필드로 내려줍니다.
      */
     private void notifyReportRejected(Milestone milestone, CompletionReport report) {
-        IdeaResponse idea = ideaService.getIdea(milestone.getIdeaId());
+        IdeaSummaryResponse idea = ideaService.getIdeaSummary(milestone.getIdeaId());
         String reportName = report.getType() == CompletionReportType.APPEAL ? "소명 보고서" : "완료 보고서";
         String title = "마일스톤 " + milestone.getStep() + "단계 " + reportName + "가 반려되었습니다";
         String message = "'" + idea.title() + "' 프로젝트의 " + milestone.getStep()

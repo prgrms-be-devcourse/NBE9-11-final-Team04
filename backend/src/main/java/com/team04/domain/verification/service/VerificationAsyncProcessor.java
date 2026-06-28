@@ -147,17 +147,35 @@ public class VerificationAsyncProcessor {
         TrustScore trustScore = trustScoreRepository.findByIdeaId(ideaId)
                 .orElseGet(() -> new TrustScore(ideaId));
         trustScore.updateScores(
-                averageScore(
-                        result,
-                        VerificationCheckCode.EXAGGERATED_ADVERTISEMENT,
-                        VerificationCheckCode.SIMILAR_SERVICE
-                ),
-                averageScore(result, VerificationCheckCode.MILESTONE_SPECIFICITY),
+                sumScore(result, VerificationCheckCode.EXAGGERATED_ADVERTISEMENT, VerificationCheckCode.SIMILAR_SERVICE),
+                scoreOf(result, VerificationCheckCode.MILESTONE_SPECIFICITY),
                 trustScore.getExpertMatchingScore(),
                 trustScore.getAdminApprovalScore(),
                 proposerHistoryScoreCalculator.calculate(proposerUserId)
         );
         return trustScoreRepository.save(trustScore);
+    }
+
+    /** 지정한 검증 항목들의 점수를 합산합니다. */
+    private int sumScore(AiVerificationStructuredResult result, VerificationCheckCode... codes) {
+        int sum = 0;
+        for (VerificationCheckCode code : codes) {
+            for (AiVerificationStructuredResult.CheckResult check : result.checks()) {
+                if (check.checkCode() == code) {
+                    sum += check.score();
+                }
+            }
+        }
+        return Math.min(sum, 20);
+    }
+
+    /** 지정한 검증 항목의 점수를 반환합니다. */
+    private int scoreOf(AiVerificationStructuredResult result, VerificationCheckCode code) {
+        return result.checks().stream()
+                .filter(check -> check.checkCode() == code)
+                .mapToInt(AiVerificationStructuredResult.CheckResult::score)
+                .findFirst()
+                .orElse(0);
     }
 
     /** 지정한 검증 항목들의 평균 점수를 계산합니다. */

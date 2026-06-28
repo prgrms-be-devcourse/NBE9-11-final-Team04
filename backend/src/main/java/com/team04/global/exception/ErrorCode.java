@@ -51,6 +51,11 @@ public enum ErrorCode {
     IDEA_BOOKMARK_ALREADY_EXISTS(409, "I010", "이미 관심 프로젝트로 저장한 아이디어입니다"),
     IDEA_BOOKMARK_NOT_FOUND(404, "I011", "존재하지 않는 관심 프로젝트입니다"),
     INVALID_SETTLEMENT_ACCOUNT(400, "I012", "정산 계좌 정보가 올바르지 않습니다"),
+    IDEA_STATUS_NOT_BOOKMARKABLE(400, "I014", "현재 상태의 아이디어는 북마크할 수 없습니다"),
+    IMAGE_SIZE_EXCEEDED(400, "I015", "이미지 크기는 5MB를 초과할 수 없습니다"),
+    INVALID_IMAGE_TYPE(400, "I016", "지원하지 않는 이미지 형식입니다"),
+    IMAGE_COUNT_EXCEEDED(400, "I017", "이미지는 최대 10개까지 업로드할 수 있습니다"),
+    INVALID_DEPOSIT_AMOUNT(400, "I018", "보증금은 목표금액의 30%를 초과할 수 없습니다"),
 
     // 검증
     INVALID_VERIFICATION_STATUS_TRANSITION(400, "V001", "유효하지 않은 검증 상태 전이입니다"),

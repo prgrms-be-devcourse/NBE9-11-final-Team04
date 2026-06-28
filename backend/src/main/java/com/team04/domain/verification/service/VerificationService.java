@@ -48,7 +48,11 @@ public class VerificationService {
         if (currentStatus == VerificationStatus.AI_VERIFYING) {
             throw new CustomException(ErrorCode.VERIFICATION_ALREADY_IN_PROGRESS);
         }
-        if (currentStatus != VerificationStatus.DRAFT && currentStatus != VerificationStatus.PENDING_ADMIN_REVIEW) {
+        if (currentStatus != VerificationStatus.DRAFT
+                && currentStatus != VerificationStatus.PENDING_ADMIN_REVIEW
+                && currentStatus != VerificationStatus.AI_PASSED // 재심사 허용
+                && currentStatus != VerificationStatus.EXPERT_MATCHING)
+        {
             throw new CustomException(ErrorCode.INVALID_VERIFICATION_STATUS_TRANSITION);
         }
         verification.startAiVerification();
