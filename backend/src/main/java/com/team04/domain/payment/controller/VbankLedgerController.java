@@ -6,6 +6,7 @@ import com.team04.global.exception.CustomException;
 import com.team04.global.exception.ErrorCode;
 import com.team04.global.response.ApiResponse;
 import com.team04.global.security.CustomUserDetails;
+import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -28,6 +29,7 @@ public class VbankLedgerController {
      * 결제 도메인에서 관리하는 가상계좌 흐름이므로 /payments 하위 URL을 사용합니다.
      * 관리자, 제안자, 결제 성공 후원자만 접근 가능합니다.
      */
+    @Operation(summary = "가상계좌 장부 조회", description = "아이디어별 가상계좌 입출금 장부를 최신순으로 조회합니다. 관리자, 제안자, 결제 성공 후원자만 접근할 수 있습니다.")
     @GetMapping("/ideas/{ideaId}")
     @PreAuthorize("isAuthenticated()")
     public ApiResponse<List<VbankLedgerResponse>> getLedgers(

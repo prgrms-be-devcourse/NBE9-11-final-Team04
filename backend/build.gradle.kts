@@ -33,6 +33,7 @@ dependencies {
     implementation("io.github.openfeign.querydsl:querydsl-jpa:5.6.1:jakarta")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("software.amazon.awssdk:s3")
+    implementation("io.swagger.core.v3:swagger-annotations-jakarta:2.2.31")
 
     implementation("io.github.resilience4j:resilience4j-spring-boot3:2.1.0")
 
