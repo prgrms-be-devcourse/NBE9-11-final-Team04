@@ -1,21 +1,19 @@
 package com.team04.domain.verification.entity;
 
 import com.team04.global.entity.BaseEntity;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 /** 프로젝트 검증 상태 변경 이력을 감사 목적으로 저장하는 엔티티입니다. */
 @Entity
-@Table(name = "verification_audit_log")
+@Table(
+        name = "verification_audit_log",
+        indexes = {
+                @Index(name = "idx_verification_audit_log_idea", columnList = "idea_id, created_at")
+        }
+)
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class VerificationAuditLog extends BaseEntity {

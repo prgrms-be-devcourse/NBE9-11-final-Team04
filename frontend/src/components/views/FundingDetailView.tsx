@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
@@ -14,6 +14,8 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { ProgressBar } from '@/components/ui/ProgressBar'
+import { PaymentCheckoutModal } from '@/components/views/PaymentCheckoutModal'
+import { startPaymentCheckout } from '@/lib/paymentCheckout'
 import type { CreateFundingResponse, FundingProgressEvent, VbankInfo } from '@/types/funding'
 import { formatCurrency, calcAchievementRate, getErrorMessage } from '@/utils/format'
 
@@ -23,14 +25,23 @@ export default function FundingDetailPage() {
   const fundingId = params.fundingId ? Number(params.fundingId) : undefined
   const queryClient = useQueryClient()
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  const user = useAuthStore((s) => s.user)
   const [amount, setAmount] = useState(10000)
   const [paymentMethod, setPaymentMethod] = useState<'CARD' | 'VIRTUAL_ACCOUNT'>('CARD')
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [cancelNotice, setCancelNotice] = useState('')
   const [liveProgress, setLiveProgress] = useState<FundingProgressEvent | null>(null)
   const [vbankInfo, setVbankInfo] = useState<VbankInfo | null>(null)
+  const [checkoutOpen, setCheckoutOpen] = useState(false)
+  const [pendingPaymentId, setPendingPaymentId] = useState<number | null>(null)
 
-  const { data: funding } = useQuery({
+  const { data: paymentConfig } = useQuery({
+    queryKey: ['payments', 'config'],
+    queryFn: () => paymentsApi.getConfig(),
+  })
+
+  const { data: funding, isLoading: fundingLoading } = useQuery({
     queryKey: ['fundings', fundingId],
     queryFn: () => fundingsApi.getById(fundingId!),
     enabled: !!fundingId && !ideaId,
@@ -38,11 +49,13 @@ export default function FundingDetailPage() {
 
   const effectiveIdeaId = ideaId ?? funding?.ideaId
 
-  const { data: idea, isLoading } = useQuery({
+  const { data: idea, isLoading: ideaLoading } = useQuery({
     queryKey: ['ideas', effectiveIdeaId],
     queryFn: () => ideasApi.getById(effectiveIdeaId!),
     enabled: !!effectiveIdeaId,
   })
+
+  const isLoading = fundingLoading || ideaLoading
 
   const { data: milestones } = useQuery({
     queryKey: ['fundings', effectiveIdeaId, 'milestones'],
@@ -50,6 +63,20 @@ export default function FundingDetailPage() {
     enabled: !!effectiveIdeaId,
     retry: false,
   })
+
+  const isOwner = !!user && !!idea && user.id === idea.userId
+
+  const { data: myPayments } = useQuery({
+    queryKey: ['payments', 'me'],
+    queryFn: () => paymentsApi.getMyPayments(0, 200),
+    enabled: isAuthenticated && !isOwner,
+  })
+
+  const hasSponsored = myPayments?.content.some(
+    (p) => p.ideaId === effectiveIdeaId && p.status === 'SUCCESS',
+  ) ?? false
+
+  const canAccessWorkspace = isOwner || hasSponsored
 
   useSse<FundingProgressEvent>({
     url: `/fundings/${effectiveIdeaId}/sse`,
@@ -64,23 +91,47 @@ export default function FundingDetailPage() {
     mutationFn: (paymentId: number) => paymentsApi.demoConfirm(paymentId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ideas', effectiveIdeaId] })
+      setCheckoutOpen(false)
+      setPendingPaymentId(null)
+      queryClient.invalidateQueries({ queryKey: ['payments', 'me'] })
       setSuccess('후원이 완료되었습니다! 🎉')
+    },
+    onError: (err) => setError(getErrorMessage(err)),
+  })
+
+  const cancelSponsorMutation = useMutation({
+    mutationFn: () => fundingsApi.cancelSponsor(effectiveIdeaId!),
+    onSuccess: () => {
+      setCheckoutOpen(false)
+      setPendingPaymentId(null)
+      setCancelNotice('결제가 취소되었습니다.')
+      setSuccess('')
     },
     onError: (err) => setError(getErrorMessage(err)),
   })
 
   const sponsorMutation = useMutation({
     mutationFn: () => fundingsApi.sponsor(effectiveIdeaId!, { amount, paymentMethod }),
-    onSuccess: (data: CreateFundingResponse) => {
-      const { payment } = data
-      const isMockUrl = payment.redirectUrl?.includes('mock-pg.local')
-      if (payment.redirectUrl && !isMockUrl) {
-        window.location.href = payment.redirectUrl
-      } else if (payment.vbank) {
-        setVbankInfo(payment.vbank)
-      } else {
-        demoConfirmMutation.mutate(payment.paymentId)
-      }
+    onSuccess: async (data: CreateFundingResponse) => {
+      setError('')
+      await startPaymentCheckout(
+        data.payment,
+        paymentConfig,
+        paymentMethod,
+        effectiveIdeaId!,
+        idea?.title ?? 'SeedLink 후원',
+        'sponsor',
+        {
+          onMockModal: (paymentId) => {
+            setPendingPaymentId(paymentId)
+            setCheckoutOpen(true)
+            setCancelNotice('')
+          },
+          onVbank: (vbank) => setVbankInfo(vbank),
+          onUserCancel: () => cancelSponsorMutation.mutate(),
+          onError: (msg) => setError(msg),
+        },
+      )
     },
     onError: (err) => setError(getErrorMessage(err)),
   })
@@ -110,6 +161,15 @@ export default function FundingDetailPage() {
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
+      <PaymentCheckoutModal
+        open={checkoutOpen}
+        amount={amount}
+        method={paymentMethod}
+        orderLabel={idea.title}
+        loading={demoConfirmMutation.isPending || cancelSponsorMutation.isPending}
+        onConfirm={() => pendingPaymentId && demoConfirmMutation.mutate(pendingPaymentId)}
+        onCancel={() => cancelSponsorMutation.mutate()}
+      />
       <Link href={`/ideas/${idea.ideaId}`} className="text-sm text-primary-600">← 아이디어 상세</Link>
       <h1 className="mt-4 text-2xl font-bold">{idea.title}</h1>
       <Card className="mt-6">
@@ -121,7 +181,20 @@ export default function FundingDetailPage() {
         </div>
         {liveProgress && <p className="mt-2 text-center text-xs text-emerald-600">● LIVE</p>}
       </Card>
-      {isAuthenticated && (idea.status === 'OPEN' || idea.status === 'IN_PROGRESS') && (
+      {isAuthenticated && canAccessWorkspace && (idea.status === 'OPEN' || idea.status === 'IN_PROGRESS') && (
+        <Link
+          href={`/workspaces/${idea.ideaId}`}
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+            marginTop: '24px', padding: '14px', borderRadius: '10px',
+            background: '#059669', color: '#fff',
+            fontSize: '15px', fontWeight: 700, textDecoration: 'none',
+          }}
+        >
+          🚀 워크스페이스 입장
+        </Link>
+      )}
+      {isAuthenticated && user?.id !== idea.userId && (idea.status === 'OPEN' || idea.status === 'IN_PROGRESS') && (
         <Card className="mt-6">
           <h2 className="font-semibold">후원하기</h2>
           <div className="mt-4 flex gap-2">
@@ -151,7 +224,18 @@ export default function FundingDetailPage() {
             <Button onClick={() => sponsorMutation.mutate()} loading={sponsorMutation.isPending}>후원</Button>
           </div>
           {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
-          {success && <p className="mt-2 text-sm text-emerald-600 font-medium">{success}</p>}
+          {cancelNotice && <p className="mt-2 text-sm text-amber-600">{cancelNotice}</p>}
+          {success && (
+            <div className="mt-3 space-y-2">
+              <p className="text-sm font-medium text-emerald-600">{success}</p>
+              <Link
+                href={`/workspaces/${idea.ideaId}`}
+                className="inline-block text-sm font-semibold text-indigo-600"
+              >
+                → 워크스페이스 입장
+              </Link>
+            </div>
+          )}
         </Card>
       )}
       {milestones && milestones.length > 0 && (
@@ -159,9 +243,9 @@ export default function FundingDetailPage() {
           <h2 className="font-semibold">마일스톤</h2>
           <div className="mt-4 space-y-3">
             {milestones.map((ms, idx) => (
-              <div key={ms.milestoneId} className="border-b border-slate-100 pb-3">
-                <p className="font-medium">{idx + 1}. {ms.title}</p>
-                <p className="text-sm text-slate-500">{formatCurrency(ms.targetAmount)} · {ms.status}</p>
+              <div key={ms.id} className="border-b border-slate-100 pb-3">
+                <p className="font-medium">{idx + 1}. {ms.goal}</p>
+                <p className="text-sm text-slate-500">{ms.expectedDate} · {ms.status}</p>
               </div>
             ))}
           </div>

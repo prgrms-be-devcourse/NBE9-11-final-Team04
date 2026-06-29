@@ -4,6 +4,7 @@ import com.team04.domain.idea.dto.response.AdminIdeaReviewResponse;
 import com.team04.domain.idea.entity.Idea;
 import com.team04.domain.idea.entity.IdeaStatus;
 import com.team04.domain.idea.repository.IdeaRepository;
+import com.team04.domain.verification.repository.TrustScoreRepository;
 import com.team04.global.exception.CustomException;
 import com.team04.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +22,7 @@ import java.util.Map;
 public class IdeaAdminService {
 
     private final IdeaRepository ideaRepository;
+    private final TrustScoreRepository trustScoreRepository;
 
     /** 요청한 상태의 삭제되지 않은 아이디어 심사 목록을 페이지로 조회합니다. status가 null이면 전체 조회합니다. */
     @Transactional(readOnly = true)
@@ -47,6 +49,7 @@ public class IdeaAdminService {
         if (idea.getStatus() != IdeaStatus.ADMIN_PENDING) {
             throw new CustomException(ErrorCode.INVALID_IDEA_STATUS_TRANSITION);
         }
+        idea.increaseAdminRejectedCount(); // 반려 횟수 증가
         idea.reject(reason);
     }
 
@@ -91,6 +94,14 @@ public class IdeaAdminService {
         return ideaRepository.findByIdAndDeletedAtIsNull(ideaId)
                 .map(Idea::getStatus)
                 .orElse(null);
+    }
+
+    /** 아이디어 ID 목록을 IN 쿼리로 한 번에 조회하여 Map으로 반환합니다. */
+    @Transactional(readOnly = true)
+    public Map<Long, IdeaStatus> getIdeaStatusMap(List<Long> ideaIds) {
+        if (ideaIds == null || ideaIds.isEmpty()) return Map.of();
+        return ideaRepository.findByIdInAndDeletedAtIsNull(ideaIds).stream()
+                .collect(java.util.stream.Collectors.toMap(Idea::getId, Idea::getStatus));
     }
 
     /** 소프트 삭제되지 않은 아이디어를 조회하고 없으면 공통 예외를 발생시킵니다. */

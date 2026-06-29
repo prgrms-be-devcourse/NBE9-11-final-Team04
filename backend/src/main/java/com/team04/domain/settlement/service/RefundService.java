@@ -4,12 +4,15 @@ import com.team04.domain.dispute.entity.DisputeStatus;
 import com.team04.domain.dispute.entity.TargetType;
 import com.team04.domain.dispute.repository.DisputeRepository;
 import com.team04.domain.funding.entity.Deposit;
+import com.team04.domain.funding.entity.Funding;
 import com.team04.domain.funding.repository.DepositRepository;
 import com.team04.domain.funding.repository.FundingRepository;
 import com.team04.domain.funding.service.FundingService;
 import com.team04.domain.idea.service.IdeaService;
 import com.team04.domain.payment.entity.Payment;
+import com.team04.domain.payment.entity.VbankLedgerType;
 import com.team04.domain.payment.repository.PaymentRepository;
+import com.team04.domain.payment.service.VbankLedgerService;
 import com.team04.domain.settlement.dto.response.RefundResponse;
 import com.team04.domain.settlement.entity.PreSettlementStatus;
 import com.team04.domain.settlement.entity.Refund;
@@ -40,6 +43,7 @@ public class RefundService {
     private final IdeaService ideaService;
     private final FundingService fundingService;
     private final DisputeRepository disputeRepository;
+    private final VbankLedgerService vbankLedgerService;
 
     /**
      * 목표 미달성 환불 레코드 일괄 생성
@@ -177,12 +181,35 @@ public class RefundService {
     /**
      * 환불 완료 처리
      * 결제팀 콜백용 — PENDING → COMPLETED
+     *
+     * 환불 완료 시점에 아이디어 가상계좌 장부에도 실제 환불 OUT 기록을 남긴다.
+     * 이행 중단/먹튀 환불은 후원금 잔액 + 몰수 보증금 분배액이 Refund.amount에 포함되어 있으므로,
+     * Payment.amount가 아니라 refund.getAmount()를 기준으로 기록해야 한다.
      */
     @Transactional
     public RefundResponse completeRefund(Long refundId) {
-        Refund refund = refundRepository.findById(refundId)
+        // PG 콜백이 중복으로 들어와도 환불 완료와 가상계좌 장부 기록은 한 번만 처리되도록 잠근다.
+        Refund refund = refundRepository.findByIdForUpdate(refundId)
                 .orElseThrow(() -> new CustomException(ErrorCode.REFUND_NOT_FOUND));
+
+        Payment payment = paymentRepository.findById(refund.getPaymentId())
+                .orElseThrow(() -> new CustomException(ErrorCode.PAYMENT_NOT_FOUND));
+
+        Funding funding = fundingRepository.findById(payment.getFundingId())
+                .orElseThrow(() -> new CustomException(ErrorCode.FUNDING_NOT_FOUND));
+
         refund.complete();
+
+        vbankLedgerService.recordOut(
+                funding.getIdeaId(),
+                VbankLedgerType.SPONSOR_REFUND_PAID,
+                refund.getAmount(),
+                "refund-" + refund.getId() + "-SPONSOR-REFUND",
+                "Refund",
+                refund.getId(),
+                "후원자 환불 지급"
+        );
+
         return RefundResponse.from(refund);
     }
 

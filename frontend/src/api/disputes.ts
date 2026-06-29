@@ -39,11 +39,20 @@ export const DISPUTE_CATEGORY_LABELS: Record<DisputeCategory, string> = {
   ACCOUNT_IMPERSONATION:     '계정 도용/사칭',
 }
 
+export interface DisputeAppealInfo {
+  status: string
+  appealCount: number
+  content: string
+  fileUrl: string | null
+  createdAt: string
+}
+
+
 export interface DisputeResponse {
   id: number
   targetType: TargetType
   targetId: number
-  reportedUserId: number
+  reportedId: number
   reporterId: number
   category: DisputeCategory
   title: string
@@ -51,6 +60,7 @@ export interface DisputeResponse {
   reason: string
   evidenceUrl: string | null
   createdAt: string
+  appeal: DisputeAppealInfo | null
 }
 
 export interface CreateDisputeRequest {

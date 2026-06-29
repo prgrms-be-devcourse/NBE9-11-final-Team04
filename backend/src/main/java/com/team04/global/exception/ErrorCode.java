@@ -51,12 +51,16 @@ public enum ErrorCode {
     IDEA_BOOKMARK_ALREADY_EXISTS(409, "I010", "이미 관심 프로젝트로 저장한 아이디어입니다"),
     IDEA_BOOKMARK_NOT_FOUND(404, "I011", "존재하지 않는 관심 프로젝트입니다"),
     INVALID_SETTLEMENT_ACCOUNT(400, "I012", "정산 계좌 정보가 올바르지 않습니다"),
+    IDEA_STATUS_NOT_BOOKMARKABLE(400, "I014", "현재 상태의 아이디어는 북마크할 수 없습니다"),
+    IMAGE_SIZE_EXCEEDED(400, "I015", "이미지 크기는 5MB를 초과할 수 없습니다"),
+    INVALID_IMAGE_TYPE(400, "I016", "지원하지 않는 이미지 형식입니다"),
+    IMAGE_COUNT_EXCEEDED(400, "I017", "이미지는 최대 10개까지 업로드할 수 있습니다"),
+    INVALID_DEPOSIT_AMOUNT(400, "I018", "보증금은 목표금액의 30%를 초과할 수 없습니다"),
 
     // 검증
     INVALID_VERIFICATION_STATUS_TRANSITION(400, "V001", "유효하지 않은 검증 상태 전이입니다"),
     VERIFICATION_NOT_FOUND(404, "V002", "존재하지 않는 검증 요청입니다"),
-    VERIFICATION_WAITING_PERIOD_ACTIVE(409, "V003", "재등록 대기 기간이 만료되지 않았습니다"),
-    USE_RESUBMIT_API(400, "V004", "보완 필요 상태에서는 재제출 API를 사용해야 합니다"),
+    VERIFICATION_IDEA_MISMATCH(400, "V003", "검증 요청의 아이디어 ID가 일치하지 않습니다"),
 
     // AI 검증
     AI_RESPONSE_EMPTY(500, "V005", "OpenAI 응답이 비어 있습니다"),
@@ -143,6 +147,8 @@ public enum ErrorCode {
     MATCH_NOT_ACCEPTED(400, "MA003", "수락된 매칭이 아닙니다"),
     MATCH_ACCESS_DENIED(403, "MA004", "해당 매칭에 대한 권한이 없습니다"),
     MATCH_ALREADY_REQUESTED(409, "MA005", "이미 요청한 매칭입니다"),
+    MATCH_REQUEST_LIMIT_EXCEEDED(400, "MA006", "매칭 요청 가능 횟수를 초과했습니다 (최대 3회)"),
+
     //알림
     NOTIFICATION_NOT_FOUND(404, "N001", "존재하지 않는 알림입니다."),
 

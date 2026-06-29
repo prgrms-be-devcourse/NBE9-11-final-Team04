@@ -17,6 +17,7 @@ import com.team04.domain.payment.event.PreSettlementPayoutRequestedEvent;
 import com.team04.domain.payment.event.SettlementPayoutRequestedEvent;
 import com.team04.domain.payment.repository.PaymentRepository;
 import com.team04.domain.settlement.entity.PreSettlement;
+import com.team04.domain.settlement.entity.PreSettlementStatus;
 import com.team04.domain.settlement.entity.Refund;
 import com.team04.domain.settlement.entity.RefundReason;
 import com.team04.domain.settlement.entity.Settlement;
@@ -32,6 +33,7 @@ import com.team04.domain.user.entity.Role;
 import com.team04.domain.user.entity.User;
 import com.team04.domain.user.repository.UserRepository;
 import com.team04.global.config.payment.PaymentProperties;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -39,6 +41,8 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.SimpleTransactionStatus;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -49,6 +53,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
@@ -64,6 +69,8 @@ class SettlementPaymentServiceTest {
     private PaymentPayoutService paymentPayoutService;
     @Mock
     private PaymentProperties paymentProperties;
+    @Mock
+    private PlatformTransactionManager transactionManager;
     @Mock
     private PaymentRepository paymentRepository;
     @Mock
@@ -89,6 +96,12 @@ class SettlementPaymentServiceTest {
     @Mock
     private VbankLedgerService vbankLedgerService;
 
+    @BeforeEach
+    void setUpTransactionManager() {
+        lenient().when(transactionManager.getTransaction(any()))
+                .thenReturn(new SimpleTransactionStatus());
+    }
+
     @Test
     @DisplayName("선정산 지급 성공 시 complete 콜백 호출")
     void processPreSettlementPayout_success() {
@@ -97,7 +110,11 @@ class SettlementPaymentServiceTest {
                 .amount(50_000L)
                 .build();
         setField(preSettlement, "id", 1L);
+        preSettlement.markProcessing();
 
+        given(preSettlementRepository.markProcessingIfRequested(
+                1L, PreSettlementStatus.REQUESTED, PreSettlementStatus.PROCESSING
+        )).willReturn(1);
         given(preSettlementRepository.findById(1L)).willReturn(Optional.of(preSettlement));
         given(ideaService.getIdea(10L)).willReturn(sampleIdea(10L, 100L));
         given(userRepository.findById(100L)).willReturn(Optional.of(sampleUser(100L)));
@@ -202,7 +219,11 @@ class SettlementPaymentServiceTest {
                 .amount(50_000L)
                 .build();
         setField(preSettlement, "id", 1L);
+        preSettlement.markProcessing();
 
+        given(preSettlementRepository.markProcessingIfRequested(
+                1L, PreSettlementStatus.REQUESTED, PreSettlementStatus.PROCESSING
+        )).willReturn(1);
         given(preSettlementRepository.findById(1L)).willReturn(Optional.of(preSettlement));
         given(ideaService.getIdea(10L)).willThrow(new RuntimeException("unexpected"));
 

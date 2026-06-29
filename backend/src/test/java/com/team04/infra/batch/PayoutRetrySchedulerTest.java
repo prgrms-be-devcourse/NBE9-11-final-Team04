@@ -27,8 +27,14 @@ class PayoutRetrySchedulerTest {
     private SettlementPaymentService settlementPaymentService;
 
     @Test
-    @DisplayName("FAILED 선정산과 정산 지급 건을 재처리한다")
+    @DisplayName("REQUESTED 선정산과 FAILED 선정산/정산 지급 건을 처리한다")
     void retryFailedPayouts_success() {
+        PreSettlement requestedPreSettlement = PreSettlement.builder()
+                .ideaId(1L)
+                .amount(20_000L)
+                .build();
+        setField(requestedPreSettlement, "id", 4L);
+
         PreSettlement preSettlement = PreSettlement.builder()
                 .ideaId(1L)
                 .amount(10_000L)
@@ -55,11 +61,13 @@ class PayoutRetrySchedulerTest {
                 .build();
         setField(depositSettlement, "id", 3L);
 
+        given(settlementPaymentService.findRequestedPreSettlements()).willReturn(List.of(requestedPreSettlement));
         given(settlementPaymentService.findFailedPreSettlements()).willReturn(List.of(preSettlement));
         given(settlementPaymentService.findFailedSettlements()).willReturn(List.of(finalSettlement, depositSettlement));
 
         payoutRetryScheduler.retryFailedPayouts();
 
+        verify(settlementPaymentService).processPreSettlementPayout(4L);
         verify(settlementPaymentService).retryPreSettlementPayout(1L);
         verify(settlementPaymentService).retrySettlementPayout(2L, SettlementStatus.COMPLETED);
         verify(settlementPaymentService).retrySettlementPayout(3L, SettlementStatus.DEPOSIT_REFUNDED);

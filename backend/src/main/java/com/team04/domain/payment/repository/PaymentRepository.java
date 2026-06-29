@@ -21,7 +21,25 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
     Optional<Payment> findByOrderId(String orderId);
 
+    @Query("SELECT p.fundingId FROM Payment p WHERE p.id = :paymentId")
+    Optional<Long> findFundingIdById(@Param("paymentId") Long paymentId);
+
     Optional<Payment> findFirstByFundingIdAndStatusOrderByCreatedAtDesc(Long fundingId, PaymentStatus status);
+
+    @Query(value = "SELECT * FROM payments WHERE id = :id FOR UPDATE", nativeQuery = true)
+    Optional<Payment> findByIdForUpdate(@Param("id") Long id);
+
+    @Query(value = """
+            SELECT * FROM payments
+            WHERE funding_id = :fundingId AND status = :status
+            ORDER BY created_at DESC
+            LIMIT 1
+            FOR UPDATE
+            """, nativeQuery = true)
+    Optional<Payment> findFirstByFundingIdAndStatusForUpdate(
+            @Param("fundingId") Long fundingId,
+            @Param("status") String status
+    );
 
     @Query("""
             SELECT p FROM Payment p

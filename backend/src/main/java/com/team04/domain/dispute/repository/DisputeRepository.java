@@ -52,4 +52,6 @@ public interface DisputeRepository extends JpaRepository<Dispute, Long> {
 
     @Query("SELECT d.status, COUNT(d) FROM Dispute d GROUP BY d.status")
     List<Object[]> countGroupByStatus();
+
+    long countByReportedIdAndStatus(Long reportedId, DisputeStatus status);
 }

@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
@@ -9,6 +9,7 @@ import { paymentsApi } from '@/api/payments'
 import { ProtectedRoute } from '@/components/layout/AppShell'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { formatCurrency, getErrorMessage } from '@/utils/format'
+import { startPaymentCheckout } from '@/lib/paymentCheckout'
 import type { VbankInfo } from '@/types/funding'
 
 function DepositPaymentForm() {
@@ -21,6 +22,11 @@ function DepositPaymentForm() {
   const [error, setError] = useState('')
   const [vbankInfo, setVbankInfo] = useState<VbankInfo | null>(null)
   const [depositDone, setDepositDone] = useState(false)
+
+  const { data: paymentConfig } = useQuery({
+    queryKey: ['payments', 'config'],
+    queryFn: () => paymentsApi.getConfig(),
+  })
 
   const { data: idea, isLoading } = useQuery({
     queryKey: ['ideas', ideaId],
@@ -39,16 +45,22 @@ function DepositPaymentForm() {
 
   const depositMutation = useMutation({
     mutationFn: () => fundingsApi.payDeposit(ideaId, idea!.depositAmount, paymentMethod),
-    onSuccess: (data) => {
-      const { payment } = data
-      const isMockUrl = payment.redirectUrl?.includes('mock-pg.local')
-      if (payment.redirectUrl && !isMockUrl) {
-        window.location.href = payment.redirectUrl
-      } else if (payment.vbank) {
-        setVbankInfo(payment.vbank)
-      } else {
-        demoConfirmMutation.mutate(payment.paymentId)
-      }
+    onSuccess: async (data) => {
+      setError('')
+      await startPaymentCheckout(
+        data.payment,
+        paymentConfig,
+        paymentMethod,
+        ideaId,
+        idea?.title ?? 'SeedLink 보증금',
+        'deposit',
+        {
+          onMockModal: (paymentId) => demoConfirmMutation.mutate(paymentId),
+          onVbank: (vbank) => setVbankInfo(vbank),
+          onUserCancel: () => setError('결제가 취소되었습니다.'),
+          onError: (msg) => setError(msg),
+        },
+      )
     },
     onError: (err) => setError(getErrorMessage(err)),
   })

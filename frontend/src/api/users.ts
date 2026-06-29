@@ -35,4 +35,7 @@ export const usersApi = {
       headers: { 'Content-Type': undefined },
     }))
   },
+
+  deleteProfileImage: () =>
+    unwrap(apiClient.delete<ApiResponse<User>>('/users/me/profile-image')),
 }

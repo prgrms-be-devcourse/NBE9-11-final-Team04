@@ -211,7 +211,7 @@ public class FundingService {
     // 내 후원 취소 — PAID면 5단계 환불, PENDING_PAYMENT면 결제 실패 처리
     @Transactional
     public void cancelMySponsorship(Long fundingId, Long sponsorId) {
-        Funding funding = fundingRepository
+        Funding candidate = fundingRepository
                 .findFirstByIdeaIdAndSponsorIdAndStatusInOrderByCreatedAtDesc(
                         fundingId,
                         sponsorId,
@@ -219,19 +219,36 @@ public class FundingService {
                 )
                 .orElseThrow(() -> new CustomException(ErrorCode.FUNDING_NOT_FOUND));
 
+        Funding funding = fundingRepository.findByIdForUpdate(candidate.getId())
+                .orElseThrow(() -> new CustomException(ErrorCode.FUNDING_NOT_FOUND));
+
+        if (!funding.getSponsorId().equals(sponsorId)) {
+            throw new CustomException(ErrorCode.FORBIDDEN);
+        }
+
+        if (funding.getStatus() == FundingStatus.CANCELLED) {
+            return;
+        }
+
         if (funding.getStatus() == FundingStatus.PAID) {
             validateFundingNotLockedByMilestone(funding);
 
             Payment payment = paymentRepository
-                    .findFirstByFundingIdAndStatusOrderByCreatedAtDesc(funding.getId(), PaymentStatus.SUCCESS)
+                    .findFirstByFundingIdAndStatusForUpdate(
+                            funding.getId(), PaymentStatus.SUCCESS.name())
                     .orElseThrow(() -> new CustomException(ErrorCode.PAYMENT_NOT_FOUND));
             paymentService.refundPayment(payment.getId(), sponsorId);
             return;
         }
 
+        if (funding.getStatus() != FundingStatus.PENDING_PAYMENT) {
+            throw new CustomException(ErrorCode.PAYMENT_NOT_READY);
+        }
+
         Payment payment = paymentRepository
-                .findFirstByFundingIdAndStatusOrderByCreatedAtDesc(funding.getId(), PaymentStatus.PENDING)
-                .orElseThrow(() -> new CustomException(ErrorCode.PAYMENT_NOT_FOUND));
+                .findFirstByFundingIdAndStatusForUpdate(funding.getId(), PaymentStatus.PENDING.name())
+                .orElseThrow(() -> new CustomException(ErrorCode.PAYMENT_NOT_READY));
+
         payment.fail();
         funding.markAsCancelled();
     }
@@ -346,7 +363,7 @@ public class FundingService {
     /**
      * 펀딩 목표 달성 여부 확인
      * currentAmount >= goalAmount 이면 목표 달성
-     * FundingAchievementListener에서 SSE push에 사용 (목표 달성·마일스톤 시작은 본 리스너에서 처리)
+     * FundingAchievementListener에서 SSE push에 사용하며, 마일스톤 시작은 펀딩 마감 스케줄러에서 처리한다.
      */
     public boolean isFundingGoalAchieved(Long ideaId) {
         Idea idea = ideaRepository.findByIdAndDeletedAtIsNull(ideaId)

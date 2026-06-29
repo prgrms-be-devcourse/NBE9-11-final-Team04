@@ -9,6 +9,7 @@ import com.team04.domain.dispute.dto.response.DisputeStatsResponse;
 import com.team04.domain.dispute.entity.*;
 import com.team04.domain.dispute.repository.DisputeAppealRepository;
 import com.team04.domain.dispute.repository.DisputeRepository;
+import com.team04.domain.idea.entity.IdeaStatus;
 import com.team04.domain.idea.service.IdeaAdminService;
 import com.team04.domain.notification.entity.NotificationPriority;
 import com.team04.domain.notification.entity.NotificationType;
@@ -145,15 +146,25 @@ public class DisputeService {
     @Transactional(readOnly = true)
     public Page<AdminDisputeResponse> getDisputeList(
             DisputeStatus status, DisputeCategory category, TargetType targetType, Pageable pageable) {
-        return disputeRepository.findAllByFilters(status, category, targetType, pageable)
-                .map(dispute -> {
-                    String ideaStatus = null;
-                    if (dispute.getTargetType() == TargetType.IDEA) {
-                        com.team04.domain.idea.entity.IdeaStatus is = ideaAdminService.getIdeaStatus(dispute.getTargetId());
-                        ideaStatus = is != null ? is.name() : null;
-                    }
-                    return AdminDisputeResponse.of(dispute, ideaStatus);
-                });
+        Page<Dispute> disputePage = disputeRepository.findAllByFilters(status, category, targetType, pageable);
+
+        List<Long> ideaIds = disputePage.getContent().stream()
+                .filter(d -> d.getTargetType() == TargetType.IDEA)
+                .map(Dispute::getTargetId)
+                .distinct()
+                .toList();
+
+        Map<Long, IdeaStatus> ideaStatusMap =
+                ideaAdminService.getIdeaStatusMap(ideaIds);
+
+        return disputePage.map(dispute -> {
+            String ideaStatus = null;
+            if (dispute.getTargetType() == TargetType.IDEA) {
+                com.team04.domain.idea.entity.IdeaStatus is = ideaStatusMap.get(dispute.getTargetId());
+                ideaStatus = is != null ? is.name() : null;
+            }
+            return AdminDisputeResponse.of(dispute, ideaStatus);
+        });
     }
 
     @Transactional(readOnly = true)

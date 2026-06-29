@@ -310,18 +310,20 @@ public class PaymentService {
 
     @Transactional
     public Payment completeCardPayment(Long paymentId, String paymentKey, Long amount) {
-        Payment payment = paymentRepository.findById(paymentId)
+        Payment paymentRef = paymentRepository.findById(paymentId)
                 .orElseThrow(() -> new CustomException(ErrorCode.PAYMENT_NOT_FOUND));
 
-        if (payment.isDepositPayment()) {
+        if (paymentRef.isDepositPayment()) {
             throw new CustomException(ErrorCode.PAYMENT_NOT_READY);
         }
 
-        validatePaymentConfirmable(payment, amount);
-
-        Funding funding = fundingRepository.findByIdForUpdate(payment.getFundingId())
+        Funding funding = fundingRepository.findByIdForUpdate(paymentRef.getFundingId())
                 .orElseThrow(() -> new CustomException(ErrorCode.FUNDING_NOT_FOUND));
 
+        Payment payment = paymentRepository.findByIdForUpdate(paymentId)
+                .orElseThrow(() -> new CustomException(ErrorCode.PAYMENT_NOT_FOUND));
+
+        validatePaymentConfirmable(payment, amount);
         validateFundingPayable(funding, amount);
         validateNoSuccessfulPayment(payment.getFundingId());
 
@@ -476,38 +478,44 @@ public class PaymentService {
 
     @Transactional
     public boolean completeDepositWebhook(String orderId, Long amount) {
-        Payment payment = paymentRepository.findByOrderId(orderId)
+        Payment paymentRef = paymentRepository.findByOrderId(orderId)
                 .orElseThrow(() -> new CustomException(ErrorCode.PAYMENT_NOT_FOUND));
 
-        if (payment.getStatus() == PaymentStatus.SUCCESS) {
+        if (paymentRef.getStatus() == PaymentStatus.SUCCESS) {
             return false;
         }
 
-        if (payment.getMethod() != PaymentMethod.VIRTUAL_ACCOUNT) {
+        if (paymentRef.getMethod() != PaymentMethod.VIRTUAL_ACCOUNT) {
             throw new CustomException(ErrorCode.PAYMENT_NOT_READY);
         }
 
-        validatePaymentConfirmable(payment, amount);
+        if (paymentRef.isDepositPayment()) {
+            Payment payment = paymentRepository.findByIdForUpdate(paymentRef.getId())
+                    .orElseThrow(() -> new CustomException(ErrorCode.PAYMENT_NOT_FOUND));
+            validatePaymentConfirmable(payment, amount);
 
-        if (!payment.isDepositPayment()) {
-            validateNoOtherSuccessfulPayment(payment.getFundingId(), payment.getId());
+            VbankDeposit vbankDeposit = vbankDepositRepository.findByPaymentId(payment.getId())
+                    .orElseThrow(() -> new CustomException(ErrorCode.PAYMENT_NOT_FOUND));
+            vbankDeposit.markDeposited();
+            payment.completeIfPending();
+            finalizeDepositPayment(payment);
+            return true;
         }
+
+        Funding funding = fundingRepository.findByIdForUpdate(paymentRef.getFundingId())
+                .orElseThrow(() -> new CustomException(ErrorCode.FUNDING_NOT_FOUND));
+
+        Payment payment = paymentRepository.findByIdForUpdate(paymentRef.getId())
+                .orElseThrow(() -> new CustomException(ErrorCode.PAYMENT_NOT_FOUND));
+
+        validatePaymentConfirmable(payment, amount);
+        validateNoOtherSuccessfulPayment(payment.getFundingId(), payment.getId());
+        validateFundingPayable(funding, amount);
 
         VbankDeposit vbankDeposit = vbankDepositRepository.findByPaymentId(payment.getId())
                 .orElseThrow(() -> new CustomException(ErrorCode.PAYMENT_NOT_FOUND));
         vbankDeposit.markDeposited();
         payment.completeIfPending();
-
-        // 보증금 가상계좌 입금 — Funding 없이 Deposit HELD 확정
-        if (payment.isDepositPayment()) {
-            finalizeDepositPayment(payment);
-            return true;
-        }
-
-        Funding funding = fundingRepository.findByIdForUpdate(payment.getFundingId())
-                .orElseThrow(() -> new CustomException(ErrorCode.FUNDING_NOT_FOUND));
-
-        validateFundingPayable(funding, amount);
 
         funding.markAsPaid();
         // 가상계좌 후원 입금 웹훅 성공 시에도 카드 결제와 동일하게 실제 입금 장부를 남긴다.
@@ -577,13 +585,26 @@ public class PaymentService {
     // 환불 요청 — Payment/Funding REFUNDED + Idea 누적 후원금 차감 (후원자 본인)
     @Transactional
     public void refundPayment(Long paymentId, Long sponsorId) {
-        validateSponsorOwnsPayment(paymentId, sponsorId);
-
-        Payment payment = paymentRepository.findById(paymentId)
+        Long fundingId = paymentRepository.findFundingIdById(paymentId)
                 .orElseThrow(() -> new CustomException(ErrorCode.PAYMENT_NOT_FOUND));
 
-        Funding funding = fundingRepository.findByIdForUpdate(payment.getFundingId())
+        Long ideaId = fundingRepository.findIdeaIdById(fundingId)
                 .orElseThrow(() -> new CustomException(ErrorCode.FUNDING_NOT_FOUND));
+
+        // 관계 ID만 먼저 읽고 엔티티는 락 조회로만 올린다.
+        // 일반 조회 엔티티가 영속성 컨텍스트에 남으면 락 대기 후에도 오래된 SUCCESS/PAID 상태로 중복 환불될 수 있다.
+        Idea idea = ideaRepository.findByIdForUpdate(ideaId)
+                .orElseThrow(() -> new CustomException(ErrorCode.IDEA_NOT_FOUND));
+
+        Funding funding = fundingRepository.findByIdForUpdate(fundingId)
+                .orElseThrow(() -> new CustomException(ErrorCode.FUNDING_NOT_FOUND));
+
+        Payment payment = paymentRepository.findByIdForUpdate(paymentId)
+                .orElseThrow(() -> new CustomException(ErrorCode.PAYMENT_NOT_FOUND));
+
+        if (!funding.getSponsorId().equals(sponsorId)) {
+            throw new CustomException(ErrorCode.FORBIDDEN);
+        }
 
         if (payment.getStatus() != PaymentStatus.SUCCESS) {
             throw new CustomException(ErrorCode.PAYMENT_NOT_READY);
@@ -610,8 +631,7 @@ public class PaymentService {
         funding.markAsRefunded();
         payment.markAsRefunded();
 
-        ideaRepository.findByIdForUpdate(funding.getIdeaId())
-                .ifPresent(idea -> idea.subtractFundingAmount(funding.getAmount()));
+        idea.subtractFundingAmount(funding.getAmount());
         // 후원자 직접 취소 환불은 실제 출금으로 보아 가상계좌 장부 잔액에서 차감한다.
         vbankLedgerService.recordOut(
                 funding.getIdeaId(),
@@ -627,8 +647,17 @@ public class PaymentService {
     // 결제 실패 처리 — PG 오류·가상계좌 만료 시 호출
     @Transactional
     public void failPayment(Long paymentId) {
-        Payment payment = paymentRepository.findById(paymentId)
+        Payment paymentRef = paymentRepository.findById(paymentId)
                 .orElseThrow(() -> new CustomException(ErrorCode.PAYMENT_NOT_FOUND));
+
+        if (paymentRef.getFundingId() != null) {
+            fundingRepository.findByIdForUpdate(paymentRef.getFundingId())
+                    .orElseThrow(() -> new CustomException(ErrorCode.FUNDING_NOT_FOUND));
+        }
+
+        Payment payment = paymentRepository.findByIdForUpdate(paymentId)
+                .orElseThrow(() -> new CustomException(ErrorCode.PAYMENT_NOT_FOUND));
+
         if (payment.getStatus() != PaymentStatus.PENDING) {
             return;
         }
@@ -641,7 +670,7 @@ public class PaymentService {
     }
 
     private void cancelFundingIfPending(Long fundingId) {
-        fundingRepository.findById(fundingId).ifPresent(funding -> {
+        fundingRepository.findByIdForUpdate(fundingId).ifPresent(funding -> {
             if (funding.getStatus() == FundingStatus.PENDING_PAYMENT) {
                 funding.markAsCancelled();
             }
@@ -848,9 +877,26 @@ public class PaymentService {
             String redirectUrl,
             PaymentResponse.VbankInfo vbankInfo
     ) {
+        Long ideaId = null;
+        String ideaTitle = null;
+        if (payment.getFundingId() != null) {
+            ideaId = fundingRepository.findById(payment.getFundingId())
+                    .map(com.team04.domain.funding.entity.Funding::getIdeaId)
+                    .orElse(null);
+        } else if (payment.getIdeaId() != null) {
+            ideaId = payment.getIdeaId();
+        }
+        if (ideaId != null) {
+            final Long id = ideaId;
+            ideaTitle = ideaRepository.findById(id)
+                    .map(com.team04.domain.idea.entity.Idea::getTitle)
+                    .orElse(null);
+        }
         return new PaymentResponse(
                 payment.getId(),
                 payment.getFundingId(),
+                ideaId,
+                ideaTitle,
                 payment.getOrderId(),
                 payment.getAmount(),
                 payment.getStatus(),
@@ -872,6 +918,8 @@ public class PaymentService {
         return new PaymentResponse(
                 created.id(),
                 created.fundingId(),
+                null,
+                null,
                 created.orderId(),
                 created.amount(),
                 PaymentStatus.PENDING,

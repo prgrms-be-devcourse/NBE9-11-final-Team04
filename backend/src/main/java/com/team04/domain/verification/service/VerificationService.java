@@ -1,7 +1,9 @@
 package com.team04.domain.verification.service;
 
 import com.team04.domain.idea.entity.Idea;
+import com.team04.domain.idea.entity.IdeaStatus;
 import com.team04.domain.idea.repository.IdeaRepository;
+import com.team04.domain.match.repository.ExpertMatchRepository;
 import com.team04.domain.user.entity.Role;
 import com.team04.domain.verification.dto.request.VerificationRequest;
 import com.team04.domain.verification.dto.response.VerificationResponse;
@@ -31,6 +33,7 @@ public class VerificationService {
     private final ProjectVerificationRepository projectVerificationRepository;
     private final VerificationAuditLogRepository auditLogRepository;
     private final VerificationResultRepository verificationResultRepository;
+    private final ExpertMatchRepository expertMatchRepository;
     private final IdeaRepository ideaRepository;
     private final ApplicationEventPublisher eventPublisher;
 
@@ -48,7 +51,10 @@ public class VerificationService {
         if (currentStatus == VerificationStatus.AI_VERIFYING) {
             throw new CustomException(ErrorCode.VERIFICATION_ALREADY_IN_PROGRESS);
         }
-        if (currentStatus != VerificationStatus.DRAFT && currentStatus != VerificationStatus.PENDING_ADMIN_REVIEW) {
+        if (currentStatus != VerificationStatus.DRAFT
+                && currentStatus != VerificationStatus.AI_PASSED // 재심사 허용
+                && currentStatus != VerificationStatus.EXPERT_MATCHING)
+        {
             throw new CustomException(ErrorCode.INVALID_VERIFICATION_STATUS_TRANSITION);
         }
         verification.startAiVerification();
@@ -61,13 +67,24 @@ public class VerificationService {
     /** 아이디어 ID로 검증 결과를 조회합니다. */
     @Transactional(readOnly = true)
     public VerificationResponse getVerificationByIdeaId(Long ideaId, Long userId, Role role) {
+        Idea idea = ideaRepository.findByIdAndDeletedAtIsNull(ideaId)
+                .orElseThrow(() -> new CustomException(ErrorCode.IDEA_NOT_FOUND));
+
         if (role == Role.USER) {
-            Idea idea = ideaRepository.findByIdAndDeletedAtIsNull(ideaId)
-                    .orElseThrow(() -> new CustomException(ErrorCode.IDEA_NOT_FOUND));
             if (!idea.getUserId().equals(userId)) {
                 throw new CustomException(ErrorCode.FORBIDDEN);
             }
+        } else if (role == Role.EXPERT) {
+            boolean isPublic = idea.getStatus() == IdeaStatus.OPEN
+                    || idea.getStatus() == IdeaStatus.IN_PROGRESS
+                    || idea.getStatus() == IdeaStatus.COMPLETED
+                    || idea.getStatus() == IdeaStatus.CANCELLATION_REQUESTED;
+            boolean isMatched = expertMatchRepository.existsByIdeaIdAndUserId(ideaId, userId);
+            if (!isPublic && !isMatched) {
+                throw new CustomException(ErrorCode.FORBIDDEN);
+            }
         }
+
         ProjectVerification verification = projectVerificationRepository.findByIdeaId(ideaId)
                 .orElseThrow(() -> new CustomException(ErrorCode.VERIFICATION_NOT_FOUND));
         List<VerificationResultResponse> results = verificationResultRepository.findAllByIdeaId(ideaId)

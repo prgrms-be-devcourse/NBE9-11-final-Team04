@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { ideasApi } from '@/api/ideas'
 import { Badge } from '@/components/ui/Badge'
@@ -22,6 +23,7 @@ const STATUS_VARIANT: Record<IdeaStatus, 'blue' | 'green' | 'orange' | 'red' | '
 }
 
 export default function MyIdeasPage() {
+  const router = useRouter()
   const queryClient = useQueryClient()
 
   const { data: ideas, isLoading: ideasLoading } = useQuery({
@@ -136,6 +138,21 @@ export default function MyIdeasPage() {
                     목표 {formatCurrency(idea.goalAmount)}
                   </p>
                 </div>
+                {(idea.status === 'OPEN' || idea.status === 'IN_PROGRESS') && (
+                  <div style={{ padding: '0 24px 16px', display: 'flex', gap: '8px' }}>
+                    <button
+                      onClick={(e) => { e.preventDefault(); router.push(`/workspaces/${idea.ideaId}`) }}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: '6px',
+                        padding: '8px 16px', fontSize: '13px', fontWeight: 700,
+                        background: '#059669', color: '#fff',
+                        borderRadius: '8px', border: 'none', cursor: 'pointer',
+                      }}
+                    >
+                      🚀 워크스페이스
+                    </button>
+                  </div>
+                )}
                 </div>
               </Link>
             ))}

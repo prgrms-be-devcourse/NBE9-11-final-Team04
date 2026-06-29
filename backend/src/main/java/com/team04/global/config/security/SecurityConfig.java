@@ -42,7 +42,9 @@ public class SecurityConfig {
                 "http://localhost:3000",
                 "http://localhost:5173",
                 "http://127.0.0.1:3000",
-                "http://127.0.0.1:5173"
+                "http://127.0.0.1:5173",
+                "https://seedlink.site",
+                "https://www.seedlink.site"
         ));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
@@ -67,10 +69,12 @@ public class SecurityConfig {
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .dispatcherTypeMatchers(DispatcherType.ERROR, DispatcherType.ASYNC).permitAll()
+                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/users/me/business").hasRole("USER")
                         .requestMatchers(HttpMethod.POST, "/auth/logout").authenticated()
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers("/actuator/health").permitAll() // 헬스체크
+                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .requestMatchers("/payments/webhooks/**").permitAll()
                         .requestMatchers(HttpMethod.PATCH, "/pre-settlements/*/complete").permitAll()
                         .requestMatchers(HttpMethod.PATCH, "/pre-settlements/*/fail").permitAll()
@@ -91,6 +95,9 @@ public class SecurityConfig {
                         .requestMatchers("/workspaces/**").authenticated()
                         .requestMatchers(HttpMethod.GET, "/experts/{expertId}").authenticated()
                         .requestMatchers("/experts/verify").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/experts/me").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/experts/profile").authenticated()
+                        .requestMatchers(HttpMethod.PATCH, "/experts/profile").hasRole("EXPERT")
                         .requestMatchers(HttpMethod.POST, "/matches/experts/{expertProfileId}").hasRole("USER")
                         .requestMatchers(HttpMethod.GET, "/experts").authenticated()
                         .requestMatchers("/experts/**").hasRole("EXPERT")

@@ -39,8 +39,12 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.List;
+import java.util.function.Supplier;
 
 /**
  * 정산 장부와 PG 연동을 잇는 최소 오케스트레이터.
@@ -54,6 +58,7 @@ public class SettlementPaymentService {
     private final PaymentGateway paymentGateway;
     private final PaymentPayoutService paymentPayoutService;
     private final PaymentProperties paymentProperties;
+    private final PlatformTransactionManager transactionManager;
     private final PaymentRepository paymentRepository;
     private final FundingRepository fundingRepository;
     private final IdeaRepository ideaRepository;
@@ -74,8 +79,8 @@ public class SettlementPaymentService {
         } catch (Exception e) {
             log.error("선정산 지급 처리 실패 - preSettlementId: {}, error: {}",
                     event.preSettlementId(), e.getMessage(), e);
-            // 지급 처리 중 예외가 나면 REQUESTED에 방치되지 않도록 FAILED로 전환해 스케줄러 재시도 대상에 올린다.
-            failPreSettlementAfterUnexpectedError(event.preSettlementId());
+            // 지급 처리 중 예외가 나면 REQUESTED에 방치되지 않도록 별도 트랜잭션에서 FAILED로 전환한다.
+            runInNewTransaction(() -> failPreSettlementAfterUnexpectedError(event.preSettlementId()));
         }
     }
 
@@ -86,32 +91,51 @@ public class SettlementPaymentService {
         } catch (Exception e) {
             log.error("정산 지급 처리 실패 - settlementId: {}, error: {}",
                     event.settlementId(), e.getMessage(), e);
-            // 지급 처리 중 예외가 나면 PENDING에 방치되지 않도록 FAILED로 전환해 스케줄러 재시도 대상에 올린다.
-            failSettlementAfterUnexpectedError(event.settlementId());
+            // 지급 처리 중 예외가 나면 PENDING에 방치되지 않도록 별도 트랜잭션에서 FAILED로 전환한다.
+            runInNewTransaction(() -> failSettlementAfterUnexpectedError(event.settlementId()));
         }
     }
 
     /** 선정산 REQUESTED 건에 대해 지급대행을 요청하고 결과에 따라 complete/fail 처리 */
     public void processPreSettlementPayout(Long preSettlementId) {
+        // 외부 지급 API 호출 전에 REQUESTED -> PROCESSING 전이를 먼저 커밋해 중복 지급을 방지한다.
+        if (!markPreSettlementProcessing(preSettlementId)) {
+            return;
+        }
+
         PreSettlement preSettlement = preSettlementRepository.findById(preSettlementId).orElse(null);
-        if (preSettlement == null || preSettlement.getStatus() != PreSettlementStatus.REQUESTED) {
+        if (preSettlement == null || preSettlement.getStatus() != PreSettlementStatus.PROCESSING) {
             return;
         }
 
-        // 실제 payout 호출 전에 장부 출금 가능 여부를 먼저 확인해 지급 성공 후 장부 실패를 줄인다.
-        vbankLedgerService.validateSufficientBalanceForOut(preSettlement.getIdeaId(), preSettlement.getAmount());
+        try {
+            // afterCommit 이벤트 리스너에서는 기존 트랜잭션이 이미 종료된 상태라 비관락 조회를 새 트랜잭션에서 수행한다.
+            runInNewTransaction(() ->
+                    vbankLedgerService.validateSufficientBalanceForOut(preSettlement.getIdeaId(), preSettlement.getAmount())
+            );
 
-        PayoutRequest request = buildPreSettlementPayoutRequest(preSettlement);
-        PayoutResult result = paymentPayoutService.payout(request);
+            PayoutRequest request = buildPreSettlementPayoutRequest(preSettlement);
+            PayoutResult result = paymentPayoutService.payout(request);
 
-        if (result.success() && shouldAutoCompletePayout(result)) {
-            preSettlementService.completePreSettlement(preSettlementId);
-            return;
-        }
-        if (!result.success()) {
-            log.error("선정산 지급 실패 preSettlementId={}, message={}",
-                    preSettlementId, result.failureMessage());
-            preSettlementService.failPreSettlement(preSettlementId);
+            if (result.success() && shouldAutoCompletePayout(result)) {
+                try {
+                    // 상태 변경과 가상계좌 장부 기록은 payout 호출 이후 별도 트랜잭션에서 확정한다.
+                    runInNewTransaction(() -> preSettlementService.completePreSettlement(preSettlementId));
+                } catch (Exception e) {
+                    log.error("CRITICAL: 선정산 외부 지급은 성공했으나 DB 완료 처리에 실패했습니다. 수동 확인이 필요합니다. preSettlementId={}, payoutId={}",
+                            preSettlementId, result.payoutId(), e);
+                }
+                return;
+            }
+            if (!result.success()) {
+                log.error("선정산 지급 실패 preSettlementId={}, message={}",
+                        preSettlementId, result.failureMessage());
+                runInNewTransaction(() -> preSettlementService.failPreSettlement(preSettlementId));
+            }
+        } catch (Exception e) {
+            log.error("선정산 지급 처리 중 예외 발생 preSettlementId={}, error={}",
+                    preSettlementId, e.getMessage(), e);
+            runInNewTransaction(() -> failPreSettlementAfterUnexpectedError(preSettlementId));
         }
     }
 
@@ -122,24 +146,32 @@ public class SettlementPaymentService {
             return;
         }
         if (settlement.getPayoutAmount() <= 0) {
-            settlementService.completeSettlementPayout(settlementId, successStatus);
+            runInNewTransaction(() -> settlementService.completeSettlementPayout(settlementId, successStatus));
             return;
         }
 
-        // 실제 payout 호출 전에 장부 출금 가능 여부를 먼저 확인해 지급 성공 후 장부 실패를 줄인다.
-        vbankLedgerService.validateSufficientBalanceForOut(settlement.getIdeaId(), settlement.getPayoutAmount());
+        // afterCommit 이벤트 리스너에서는 기존 트랜잭션이 이미 종료된 상태라 비관락 조회를 새 트랜잭션에서 수행한다.
+        runInNewTransaction(() ->
+                vbankLedgerService.validateSufficientBalanceForOut(settlement.getIdeaId(), settlement.getPayoutAmount())
+        );
 
         PayoutRequest request = buildSettlementPayoutRequest(settlement);
         PayoutResult result = paymentPayoutService.payout(request);
 
         if (result.success() && shouldAutoCompletePayout(result)) {
-            settlementService.completeSettlementPayout(settlementId, successStatus);
+            try {
+                // 상태 변경과 가상계좌 장부 기록은 payout 호출 이후 별도 트랜잭션에서 확정한다.
+                runInNewTransaction(() -> settlementService.completeSettlementPayout(settlementId, successStatus));
+            } catch (Exception e) {
+                log.error("CRITICAL: 정산 외부 지급은 성공했으나 DB 완료 처리에 실패했습니다. 수동 확인이 필요합니다. settlementId={}, payoutId={}",
+                        settlementId, result.payoutId(), e);
+            }
             return;
         }
         if (!result.success()) {
             log.error("정산 지급 실패 settlementId={}, message={}",
                     settlementId, result.failureMessage());
-            settlementService.failSettlementPayout(settlementId);
+            runInNewTransaction(() -> settlementService.failSettlementPayout(settlementId));
         }
     }
 
@@ -154,20 +186,37 @@ public class SettlementPaymentService {
     }
 
     @Transactional(readOnly = true)
+    public List<PreSettlement> findRequestedPreSettlements() {
+        return preSettlementRepository.findByStatus(PreSettlementStatus.REQUESTED);
+    }
+
+    @Transactional(readOnly = true)
     public List<Settlement> findFailedSettlements() {
         return settlementRepository.findByStatus(SettlementStatus.FAILED);
     }
 
     public void retryPreSettlementPayout(Long preSettlementId) {
-        // FAILED 상태는 payout 처리 대상이 아니므로 REQUESTED로 되돌린 뒤 재처리한다.
-        preSettlementService.retryPreSettlementPayout(preSettlementId);
-        processPreSettlementPayout(preSettlementId);
+        try {
+            // FAILED 상태는 payout 처리 대상이 아니므로 REQUESTED로 먼저 커밋한 뒤, 트랜잭션 밖에서 지급을 재처리한다.
+            runInNewTransaction(() -> preSettlementService.retryPreSettlementPayout(preSettlementId));
+            processPreSettlementPayout(preSettlementId);
+        } catch (Exception e) {
+            log.error("선정산 재시도 실패 - preSettlementId: {}, error: {}",
+                    preSettlementId, e.getMessage(), e);
+            runInNewTransaction(() -> failPreSettlementAfterUnexpectedError(preSettlementId));
+        }
     }
 
     public void retrySettlementPayout(Long settlementId, SettlementStatus successStatus) {
-        // FAILED 상태는 payout 처리 대상이 아니므로 PENDING으로 되돌린 뒤 원래 성공 상태로 재처리한다.
-        settlementService.retrySettlementPayout(settlementId);
-        processSettlementPayout(settlementId, successStatus);
+        try {
+            // FAILED 상태는 payout 처리 대상이 아니므로 PENDING으로 먼저 커밋한 뒤, 트랜잭션 밖에서 지급을 재처리한다.
+            runInNewTransaction(() -> settlementService.retrySettlementPayout(settlementId));
+            processSettlementPayout(settlementId, successStatus);
+        } catch (Exception e) {
+            log.error("정산 재시도 실패 - settlementId: {}, error: {}",
+                    settlementId, e.getMessage(), e);
+            runInNewTransaction(() -> failSettlementAfterUnexpectedError(settlementId));
+        }
     }
 
     private void failPreSettlementAfterUnexpectedError(Long preSettlementId) {
@@ -186,6 +235,29 @@ public class SettlementPaymentService {
             log.error("정산 실패 상태 전환 실패 - settlementId: {}, error: {}",
                     settlementId, failException.getMessage(), failException);
         }
+    }
+
+    private boolean markPreSettlementProcessing(Long preSettlementId) {
+        return runInNewTransaction(() ->
+                preSettlementRepository.markProcessingIfRequested(
+                        preSettlementId,
+                        PreSettlementStatus.REQUESTED,
+                        PreSettlementStatus.PROCESSING
+                ) == 1
+        );
+    }
+
+    private void runInNewTransaction(Runnable action) {
+        runInNewTransaction(() -> {
+            action.run();
+            return null;
+        });
+    }
+
+    private <T> T runInNewTransaction(Supplier<T> action) {
+        TransactionTemplate transactionTemplate = new TransactionTemplate(transactionManager);
+        transactionTemplate.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+        return transactionTemplate.execute(status -> action.get());
     }
 
     /** PENDING 환불 건을 PG 환불 후 Payment/Funding 동기화 및 Refund complete */
@@ -281,16 +353,6 @@ public class SettlementPaymentService {
 
         ideaRepository.findByIdForUpdate(funding.getIdeaId())
                 .ifPresent(idea -> idea.subtractFundingAmount(funding.getAmount()));
-        // 시스템 환불 완료 시 실제 환불 출금도 아이디어 가상계좌 장부에 반영한다.
-        vbankLedgerService.recordOut(
-                funding.getIdeaId(),
-                VbankLedgerType.SPONSOR_REFUND_PAID,
-                payment.getAmount(),
-                "refund-" + payment.getId() + "-SPONSOR-REFUND",
-                "Payment",
-                payment.getId(),
-                "후원자 환불 지급"
-        );
     }
 
     private String resolveCancelReason(RefundReason reason) {

@@ -1,6 +1,7 @@
 package com.team04.domain.match.repository;
 
 import com.team04.domain.match.entity.ExpertMatch;
+import com.team04.domain.match.entity.MatchStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -24,4 +25,11 @@ public interface ExpertMatchRepository extends JpaRepository<ExpertMatch, Long> 
     // 매칭 단건 조회 (expertProfile.user LAZY 로딩 방지용 fetch join)
     @Query("SELECT m FROM ExpertMatch m JOIN FETCH m.expertProfile ep JOIN FETCH ep.user WHERE m.id = :id")
     Optional<ExpertMatch> findByIdWithProfile(@Param("id") Long id);
+
+    // 전문가가 특정 아이디어에 매칭됐는지 확인
+    @Query("SELECT COUNT(m) > 0 FROM ExpertMatch m JOIN m.expertProfile ep JOIN ep.user u WHERE m.ideaId = :ideaId AND u.id = :userId")
+    boolean existsByIdeaIdAndUserId(@Param("ideaId") Long ideaId, @Param("userId") Long userId);
+
+    // 수락된 매칭이 있는지 확인
+    boolean existsByIdeaIdAndStatus(Long ideaId, MatchStatus status);
 }

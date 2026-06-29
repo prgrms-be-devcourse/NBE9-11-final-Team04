@@ -68,6 +68,8 @@ class FundingServiceTest {
                 10L,
                 List.of(FundingStatus.PAID, FundingStatus.PENDING_PAYMENT)
         )).willReturn(Optional.of(funding));
+        given(fundingRepository.findByIdForUpdate(funding.getId()))
+                .willReturn(Optional.of(funding));
         given(milestoneRepository.findMaxStepByIdeaIdAndStatus(1L, MilestoneStatus.COMPLETED))
                 .willReturn(1);
 
@@ -89,9 +91,12 @@ class FundingServiceTest {
                 10L,
                 List.of(FundingStatus.PAID, FundingStatus.PENDING_PAYMENT)
         )).willReturn(Optional.of(funding));
+        given(fundingRepository.findByIdForUpdate(funding.getId()))
+                .willReturn(Optional.of(funding));
         given(milestoneRepository.findMaxStepByIdeaIdAndStatus(1L, MilestoneStatus.COMPLETED))
                 .willReturn(1);
-        given(paymentRepository.findFirstByFundingIdAndStatusOrderByCreatedAtDesc(funding.getId(), PaymentStatus.SUCCESS))
+        given(paymentRepository.findFirstByFundingIdAndStatusForUpdate(
+                funding.getId(), PaymentStatus.SUCCESS.name()))
                 .willReturn(Optional.of(payment));
 
         fundingService.cancelMySponsorship(1L, 10L);
