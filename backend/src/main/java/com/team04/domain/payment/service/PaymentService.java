@@ -577,20 +577,21 @@ public class PaymentService {
     // 환불 요청 — Payment/Funding REFUNDED + Idea 누적 후원금 차감 (후원자 본인)
     @Transactional
     public void refundPayment(Long paymentId, Long sponsorId) {
-        Payment paymentForRelation = paymentRepository.findById(paymentId)
+        Long fundingId = paymentRepository.findFundingIdById(paymentId)
                 .orElseThrow(() -> new CustomException(ErrorCode.PAYMENT_NOT_FOUND));
 
-        Funding fundingForRelation = fundingRepository.findById(paymentForRelation.getFundingId())
+        Long ideaId = fundingRepository.findIdeaIdById(fundingId)
                 .orElseThrow(() -> new CustomException(ErrorCode.FUNDING_NOT_FOUND));
 
-        // 데드락 방지를 위해 같은 아이디어의 환불/정산 흐름은 상위 엔티티부터 같은 순서로 잠근다.
-        Idea idea = ideaRepository.findByIdForUpdate(fundingForRelation.getIdeaId())
+        // 관계 ID만 먼저 읽고 엔티티는 락 조회로만 올린다.
+        // 일반 조회 엔티티가 영속성 컨텍스트에 남으면 락 대기 후에도 오래된 SUCCESS/PAID 상태로 중복 환불될 수 있다.
+        Idea idea = ideaRepository.findByIdForUpdate(ideaId)
                 .orElseThrow(() -> new CustomException(ErrorCode.IDEA_NOT_FOUND));
 
-        Funding funding = fundingRepository.findByIdForUpdate(fundingForRelation.getId())
+        Funding funding = fundingRepository.findByIdForUpdate(fundingId)
                 .orElseThrow(() -> new CustomException(ErrorCode.FUNDING_NOT_FOUND));
 
-        Payment payment = paymentRepository.findByIdForUpdate(paymentForRelation.getId())
+        Payment payment = paymentRepository.findByIdForUpdate(paymentId)
                 .orElseThrow(() -> new CustomException(ErrorCode.PAYMENT_NOT_FOUND));
 
         if (!funding.getSponsorId().equals(sponsorId)) {
