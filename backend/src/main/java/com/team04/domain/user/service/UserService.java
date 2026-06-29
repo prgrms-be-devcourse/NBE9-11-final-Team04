@@ -15,6 +15,7 @@ import com.team04.domain.user.repository.UserRepository;
 import com.team04.domain.user.status.UserStatus;
 import com.team04.global.exception.CustomException;
 import com.team04.global.exception.ErrorCode;
+import com.team04.global.storage.StorageClient;
 import com.team04.infra.redis.RefreshTokenRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -22,6 +23,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 @Service
 @RequiredArgsConstructor
@@ -31,6 +33,7 @@ public class UserService {
     private final ProfileRepository profileRepository;
     private final PasswordEncoder passwordEncoder;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final StorageClient storageClient;
 
     @Transactional(readOnly = true)
     public UserResponse getMe(Long userId) {
@@ -71,6 +74,10 @@ public class UserService {
     public UserResponse updateMe(Long userId, UserUpdateRequest request){
         User user = getActiveUserOrThrow(userId);
 
+        if (!user.getNickname().equals(request.nickname()) && userRepository.existsByNickname(request.nickname())) {
+            throw new CustomException(ErrorCode.DUPLICATE_NICKNAME);
+        }
+
         user.update(request.nickname());
 
         Profile profile = profileRepository.findByUserId(userId)
@@ -80,6 +87,32 @@ public class UserService {
         profileRepository.save(profile);
         userRepository.save(user);
 
+        return new UserResponse(user, profile);
+    }
+
+    @Transactional
+    public UserResponse updateProfileImage(Long userId, MultipartFile file) {
+        User user = getActiveUserOrThrow(userId);
+        Profile profile = profileRepository.findByUserId(userId)
+                .orElseGet(() -> Profile.create(user));
+        if (profile.getProfileImage() != null) {
+            storageClient.delete(profile.getProfileImage());
+        }
+        String imageUrl = storageClient.upload(file, "profile");
+        profile.updateProfileImage(imageUrl);
+        profileRepository.save(profile);
+        return new UserResponse(user, profile);
+    }
+
+    @Transactional
+    public UserResponse deleteProfileImage(Long userId) {
+        User user = getActiveUserOrThrow(userId);
+        Profile profile = profileRepository.findByUserId(userId).orElse(null);
+        if (profile != null && profile.getProfileImage() != null) {
+            storageClient.delete(profile.getProfileImage());
+            profile.updateProfileImage(null);
+            profileRepository.save(profile);
+        }
         return new UserResponse(user, profile);
     }
 
