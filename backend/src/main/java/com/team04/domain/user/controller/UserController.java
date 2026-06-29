@@ -42,7 +42,7 @@ public class UserController {
     @PatchMapping(value = "/me/profile-image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ApiResponse<UserResponse> updateProfileImage(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @RequestPart("file") MultipartFile file) {
+            @RequestParam("file") MultipartFile file) {
         return ApiResponse.ofSuccess(userService.updateProfileImage(userDetails.getUserId(), file));
     }
 
