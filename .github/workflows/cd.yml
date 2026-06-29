@@ -96,6 +96,8 @@ jobs:
             MAIL_USERNAME=${{ secrets.MAIL_USERNAME }}
             MAIL_PASSWORD=${{ secrets.MAIL_PASSWORD }}
             NEXT_PUBLIC_API_BASE_URL=${{ secrets.NEXT_PUBLIC_API_BASE_URL }}
+            ADMIN_INIT_EMAIL=${{ secrets.ADMIN_INIT_EMAIL }}
+            ADMIN_INIT_PASSWORD=${{ secrets.ADMIN_INIT_PASSWORD }}
             EOF
             cat infra/payment.env >> .env
 
