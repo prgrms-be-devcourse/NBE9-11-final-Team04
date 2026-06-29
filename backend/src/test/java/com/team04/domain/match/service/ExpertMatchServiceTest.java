@@ -58,7 +58,8 @@ class ExpertMatchServiceTest {
                 userId, "AI 농업 플랫폼", IdeaCategory.TECH,
                 "한 줄 소개", "문제", "해결", "목표", "고객", "경쟁사", "팀",
                 50000000L, 50000000L,
-                LocalDateTime.now().plusDays(1), LocalDateTime.now().plusMonths(1),
+                LocalDateTime.of(2026, 8, 1, 0, 0),
+                LocalDateTime.of(2026, 9, 15, 0, 0),
                 RewardType.REWARD_POINT, null, null
         );
     }
@@ -184,6 +185,20 @@ class ExpertMatchServiceTest {
     }
 
     @Test
+    @DisplayName("거절 시 거절 사유가 공백이면 INVALID_INPUT 예외가 발생한다")
+    void respond_거절사유공백_INVALID_INPUT_예외() {
+        ExpertProfile profile = activeProfile();
+        ExpertMatch match = pendingMatch(10L, profile);
+        given(expertMatchRepository.findByIdAndUserId(1L, 2L)).willReturn(Optional.of(match));
+
+        assertThatThrownBy(() -> expertMatchService.respond(
+                2L, 1L, new ExpertMatchRespondRequest(MatchStatus.REJECTED, "   ")))
+                .isInstanceOf(CustomException.class)
+                .extracting(e -> ((CustomException) e).getErrorCode())
+                .isEqualTo(ErrorCode.INVALID_INPUT);
+    }
+
+    @Test
     @DisplayName("수락 처리 시 매칭 상태가 ACCEPTED로 변경된다")
     void respond_수락_ACCEPTED_상태변경() {
         ExpertProfile profile = activeProfile();
@@ -195,6 +210,26 @@ class ExpertMatchServiceTest {
 
         assertThat(match.getStatus()).isEqualTo(MatchStatus.ACCEPTED);
         assertThat(match.getRespondedAt()).isNotNull();
+    }
+
+    @Test
+    @DisplayName("수락 처리 시 ProjectVerification 상태가 EXPERT_MATCHING으로 전이된다")
+    void respond_수락_ProjectVerification_EXPERT_MATCHING_전이() {
+        ExpertProfile profile = activeProfile();
+        ExpertMatch match = pendingMatch(10L, profile);
+
+        com.team04.domain.verification.entity.ProjectVerification verification =
+                new com.team04.domain.verification.entity.ProjectVerification(10L);
+        verification.startAiVerification();
+        verification.completeAiVerification(); // AI_PASSED 상태로 전이
+
+        given(expertMatchRepository.findByIdAndUserId(1L, 2L)).willReturn(Optional.of(match));
+        given(projectVerificationRepository.findByIdeaId(10L)).willReturn(Optional.of(verification));
+
+        expertMatchService.respond(2L, 1L, new ExpertMatchRespondRequest(MatchStatus.ACCEPTED, null));
+
+        assertThat(verification.getStatus())
+                .isEqualTo(com.team04.domain.verification.entity.VerificationStatus.EXPERT_MATCHING);
     }
 
     @Test

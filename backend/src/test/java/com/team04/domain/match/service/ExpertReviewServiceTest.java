@@ -15,9 +15,12 @@ import com.team04.domain.match.repository.ExpertMatchRepository;
 import com.team04.domain.match.repository.ExpertReviewRepository;
 import com.team04.domain.user.entity.Role;
 import com.team04.domain.user.entity.User;
+import com.team04.domain.verification.entity.ProjectVerification;
 import com.team04.domain.verification.entity.TrustScore;
+import com.team04.domain.verification.entity.VerificationStatus;
 import com.team04.domain.verification.repository.ProjectVerificationRepository;
 import com.team04.domain.verification.repository.TrustScoreRepository;
+import com.team04.global.event.NotificationEvent;
 import com.team04.global.exception.CustomException;
 import com.team04.global.exception.ErrorCode;
 import org.junit.jupiter.api.DisplayName;
@@ -77,7 +80,8 @@ class ExpertReviewServiceTest {
                 1L, "AI 농업 플랫폼", IdeaCategory.TECH,
                 "한 줄 소개", "문제", "해결", "목표", "고객", "경쟁사", "팀",
                 50000000L, 50000000L,
-                LocalDateTime.now().plusDays(1), LocalDateTime.now().plusMonths(1),
+                LocalDateTime.of(2026, 8, 1, 0, 0),
+                LocalDateTime.of(2026, 9, 15, 0, 0),
                 RewardType.REWARD_POINT, null, null
         );
         ReflectionTestUtils.setField(idea, "id", 10L);      // 추가 — idea.getId() = 10L
@@ -209,6 +213,32 @@ class ExpertReviewServiceTest {
     }
 
     @Test
+    @DisplayName("검토서 작성 시 ProjectVerification 상태가 PENDING_ADMIN_REVIEW로 전이된다")
+    void createReview_ProjectVerification_PENDING_ADMIN_REVIEW_전이() {
+        ExpertProfile profile = activeProfile();
+        ExpertMatch match = acceptedMatch(10L, profile);
+        Idea idea = expertPendingIdea();
+        TrustScore trustScore = new TrustScore(10L);
+
+        ProjectVerification verification = new ProjectVerification(10L);
+        verification.startAiVerification();    // DRAFT → AI_VERIFYING
+        verification.completeAiVerification(); // AI_VERIFYING → AI_PASSED
+        verification.changeStatus(VerificationStatus.EXPERT_MATCHING); // AI_PASSED → EXPERT_MATCHING
+
+        given(expertProfileRepository.findByUserId(2L)).willReturn(Optional.of(profile));
+        given(expertMatchRepository.findByIdAndUserId(1L, 2L)).willReturn(Optional.of(match));
+        given(expertReviewRepository.existsByExpertMatch_Id(1L)).willReturn(false);
+        given(expertReviewRepository.save(any())).willAnswer(i -> i.getArgument(0));
+        given(ideaRepository.findByIdAndDeletedAtIsNull(10L)).willReturn(Optional.of(idea));
+        given(trustScoreRepository.findByIdeaId(10L)).willReturn(Optional.of(trustScore));
+        given(projectVerificationRepository.findByIdeaId(10L)).willReturn(Optional.of(verification));
+
+        expertReviewService.createReview(2L, 1L, reviewRequest(Feasibility.POSSIBLE));
+
+        assertThat(verification.getStatus()).isEqualTo(VerificationStatus.PENDING_ADMIN_REVIEW);
+    }
+
+    @Test
     @DisplayName("검토서 작성 성공 시 제안자에게 알림이 발송된다")
     void createReview_성공_알림발송() {
         ExpertProfile profile = activeProfile();
@@ -226,6 +256,6 @@ class ExpertReviewServiceTest {
 
         expertReviewService.createReview(2L, 1L, reviewRequest(Feasibility.POSSIBLE));
 
-        then(eventPublisher).should().publishEvent(any(Object.class));
+        then(eventPublisher).should().publishEvent(any(NotificationEvent.class)); // 수정
     }
 }

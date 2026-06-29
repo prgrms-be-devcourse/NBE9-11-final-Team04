@@ -83,7 +83,7 @@ public class ExpertController {
 
     /* 전문가 프로필 수정 API */
     @Operation(
-            summary = " 전문가 프로필 수정",
+            summary = "전문가 프로필 수정",
             description = "로그인한 전문가 본인의 기술 스택, 포트폴리오, 경력을 수정합니다. EXPERT 권한 필요."
     )
     @PatchMapping("/profile")
