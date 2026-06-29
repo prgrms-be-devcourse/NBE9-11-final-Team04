@@ -1,12 +1,19 @@
 'use client'
 
-import { useState } from 'react'
+import { Suspense } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient, unwrap } from '@/api/client'
 import { Badge } from '@/components/ui/Badge'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
-import type { ApiResponse } from '@/types/api'
+import type { ApiResponse, PageResponse } from '@/types/api'
 import { formatCurrency, formatDateTime } from '@/utils/format'
+
+interface IdeaOption {
+  ideaId: number
+  title: string
+  status: string
+}
 
 interface DepositResponse {
   depositId: number | null
@@ -30,9 +37,14 @@ const settlementApi = {
 
   forceRefund: (ideaId: number) =>
     unwrap(apiClient.patch<ApiResponse<void>>(`/admin/settlements/ideas/${ideaId}/force-refund`)),
-}
 
-type DepositStatus = 'HELD' | 'REFUNDED' | 'FORFEITED' | 'PENDING_PAYMENT'
+  getIdeas: () =>
+    unwrap(
+      apiClient.get<ApiResponse<PageResponse<IdeaOption>>>('/admin/ideas', {
+        params: { page: 0, size: 200 },
+      }),
+    ),
+}
 
 const DEPOSIT_STATUS_BADGE: Record<string, { variant: 'green' | 'orange' | 'red' | 'gray'; label: string }> = {
   HELD:            { variant: 'orange', label: '보유중' },
@@ -41,93 +53,138 @@ const DEPOSIT_STATUS_BADGE: Record<string, { variant: 'green' | 'orange' | 'red'
   PENDING_PAYMENT: { variant: 'gray',   label: '납입 대기' },
 }
 
+const DEPOSIT_ACTIONABLE_STATUSES = new Set(['HELD', 'PENDING_PAYMENT'])
+
 function getDepositStatusBadge(status: string) {
   return DEPOSIT_STATUS_BADGE[status] ?? { variant: 'gray' as const, label: status }
 }
 
-export default function AdminSettlementsPage() {
-  const queryClient = useQueryClient()
-  const [ideaIdInput, setIdeaIdInput] = useState('')
-  const [searchedIdeaId, setSearchedIdeaId] = useState<number | null>(null)
+const IDEA_STATUS_KO: Record<string, string> = {
+  AI_PENDING:             'AI 검증',
+  EXPERT_PENDING:         '전문가 검증',
+  ADMIN_PENDING:          '승인 대기',
+  OPEN:                   '펀딩중',
+  IN_PROGRESS:            '사업중',
+  COMPLETED:              '완료',
+  CANCELLED:              '취소',
+  REJECTED:               '반려',
+  CANCELLATION_REQUESTED: '취소 요청',
+  SUSPENDED:              '중단',
+}
 
-  const { data: deposit, isLoading } = useQuery({
-    queryKey: ['admin', 'settlements', 'deposit', searchedIdeaId],
-    queryFn: () => settlementApi.getDeposit(searchedIdeaId!),
-    enabled: searchedIdeaId !== null,
+function AdminSettlementsContent() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const queryClient = useQueryClient()
+  const ideaIdParam = searchParams.get('ideaId')
+  const parsedIdeaId = ideaIdParam ? parseInt(ideaIdParam, 10) : null
+  const selectedIdeaId = parsedIdeaId && !isNaN(parsedIdeaId) && parsedIdeaId > 0 ? parsedIdeaId : null
+
+  const { data: ideasPage, isLoading: ideasLoading } = useQuery({
+    queryKey: ['admin', 'ideas', 'all', 'settlement'],
+    queryFn: settlementApi.getIdeas,
+    staleTime: 30_000,
+  })
+
+  const ideas = ideasPage?.content ?? []
+
+  const { data: deposit, isLoading: depositLoading } = useQuery({
+    queryKey: ['admin', 'settlements', 'deposit', selectedIdeaId],
+    queryFn: () => settlementApi.getDeposit(selectedIdeaId!),
+    enabled: selectedIdeaId !== null,
   })
 
   const releaseMutation = useMutation({
     mutationFn: (ideaId: number) => settlementApi.release(ideaId),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'settlements', 'deposit', searchedIdeaId] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'settlements', 'deposit', selectedIdeaId] }),
     onError: () => alert('보증금 환급 처리 중 오류가 발생했습니다.'),
   })
 
   const forfeitMutation = useMutation({
     mutationFn: (ideaId: number) => settlementApi.forfeit(ideaId),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'settlements', 'deposit', searchedIdeaId] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'settlements', 'deposit', selectedIdeaId] }),
     onError: () => alert('보증금 몰수 처리 중 오류가 발생했습니다.'),
   })
 
   const forceRefundMutation = useMutation({
     mutationFn: (ideaId: number) => settlementApi.forceRefund(ideaId),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'settlements', 'deposit', searchedIdeaId] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'settlements', 'deposit', selectedIdeaId] }),
     onError: () => alert('강제 전체 환불 처리 중 오류가 발생했습니다.'),
   })
 
   const isMutating = releaseMutation.isPending || forfeitMutation.isPending || forceRefundMutation.isPending
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault()
-    const parsed = parseInt(ideaIdInput, 10)
-    if (!isNaN(parsed) && parsed > 0) {
-      setSearchedIdeaId(parsed)
+  const handleSelect = (ideaId: number | null) => {
+    if (ideaId) {
+      router.replace(`/admin/settlements?ideaId=${ideaId}`, { scroll: false })
+    } else {
+      router.replace('/admin/settlements', { scroll: false })
     }
   }
 
+  const selectedIdea = ideas.find((i) => i.ideaId === selectedIdeaId)
   const statusBadge = deposit ? getDepositStatusBadge(deposit.status) : null
+  const isActionable = deposit ? DEPOSIT_ACTIONABLE_STATUSES.has(deposit.status) : false
 
   return (
     <>
-      {/* 헤더 */}
       <div style={{ marginBottom: '24px' }}>
         <h1 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--fg)', marginBottom: '4px' }}>
           💼 정산/보증금 관리
         </h1>
         <p style={{ fontSize: '14px', color: 'var(--fg-muted)' }}>
-          아이디어 ID로 보증금 현황을 조회하고 환급·몰수·강제 환불을 처리합니다.
+          아이디어를 선택해 보증금 현황을 조회하고 환급·몰수·강제 환불을 처리합니다.
         </p>
       </div>
 
-      {/* ideaId 검색 */}
-      <form onSubmit={handleSearch} style={{ display: 'flex', gap: '10px', marginBottom: '28px' }}>
-        <input
-          type="number"
-          min={1}
-          value={ideaIdInput}
-          onChange={(e) => setIdeaIdInput(e.target.value)}
-          placeholder="아이디어 ID 입력"
-          style={{
-            flex: 1, maxWidth: '240px',
-            padding: '10px 14px', borderRadius: '8px',
-            border: '1.5px solid var(--border)', fontSize: '14px',
-            color: 'var(--fg)', outline: 'none', boxSizing: 'border-box',
-          }}
-        />
-        <button
-          type="submit"
-          style={{
-            padding: '10px 22px', borderRadius: '8px', border: 'none',
-            background: 'var(--brand)', color: '#fff',
-            fontWeight: 700, fontSize: '14px', cursor: 'pointer',
-          }}
-        >
-          조회
-        </button>
-      </form>
+      {/* 아이디어 선택 드롭다운 */}
+      <div style={{ marginBottom: '28px' }}>
+        <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--fg-muted)', marginBottom: '8px' }}>
+          아이디어 선택
+        </label>
+        {ideasLoading ? (
+          <div style={{ padding: '10px 0' }}><LoadingSpinner /></div>
+        ) : ideas.length === 0 ? (
+          <div style={{
+            padding: '14px 16px', borderRadius: '8px',
+            background: 'var(--bg-alt)', border: '1.5px solid var(--border)',
+            fontSize: '14px', color: 'var(--fg-muted)',
+          }}>
+            등록된 아이디어가 없습니다.
+          </div>
+        ) : (
+          <select
+            value={selectedIdeaId ?? ''}
+            onChange={(e) => {
+              const val = e.target.value
+              handleSelect(val ? parseInt(val, 10) : null)
+            }}
+            style={{
+              width: '100%', maxWidth: '560px',
+              padding: '11px 14px', borderRadius: '8px',
+              border: '1.5px solid var(--border)', fontSize: '14px',
+              color: selectedIdeaId ? 'var(--fg)' : 'var(--fg-muted)',
+              background: '#fff', outline: 'none', cursor: 'pointer',
+              appearance: 'none',
+              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23888' d='M6 8L1 3h10z'/%3E%3C/svg%3E")`,
+              backgroundRepeat: 'no-repeat',
+              backgroundPosition: 'right 14px center',
+              paddingRight: '36px',
+            }}
+          >
+            <option value="">아이디어를 선택하세요</option>
+            {ideas.map((idea) => (
+              <option key={idea.ideaId} value={idea.ideaId}>
+                #{idea.ideaId} [{IDEA_STATUS_KO[idea.status] ?? idea.status}] — {idea.title}
+              </option>
+            ))}
+          </select>
+        )}
+      </div>
 
       {/* 결과 */}
-      {searchedIdeaId !== null && (
-        isLoading ? (
+      {selectedIdeaId !== null && (
+        depositLoading ? (
           <LoadingSpinner />
         ) : !deposit ? (
           <div style={{
@@ -135,7 +192,7 @@ export default function AdminSettlementsPage() {
             background: 'var(--bg-alt)', borderRadius: '12px',
             color: 'var(--fg-muted)', fontSize: '15px',
           }}>
-            아이디어 #{searchedIdeaId}의 보증금 정보를 찾을 수 없습니다.
+            아이디어 #{selectedIdeaId}의 보증금 정보를 찾을 수 없습니다.
           </div>
         ) : (
           <>
@@ -147,7 +204,7 @@ export default function AdminSettlementsPage() {
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
                 <h2 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--fg)' }}>
-                  보증금 상세
+                  {selectedIdea ? `"${selectedIdea.title}"` : `아이디어 #${selectedIdeaId}`} 보증금
                 </h2>
                 {statusBadge && (
                   <Badge variant={statusBadge.variant}>{statusBadge.label}</Badge>
@@ -184,45 +241,54 @@ export default function AdminSettlementsPage() {
               </div>
 
               {/* 액션 버튼 */}
-              <div style={{
-                display: 'flex', gap: '10px', flexWrap: 'wrap',
-                paddingTop: '20px', borderTop: '1px solid var(--border)',
-              }}>
-                <button
-                  onClick={() => {
-                    if (confirm(`아이디어 #${deposit.ideaId}의 보증금을 환급하시겠습니까?`)) {
-                      releaseMutation.mutate(deposit.ideaId)
-                    }
-                  }}
-                  disabled={isMutating}
-                  style={{
-                    padding: '9px 20px', borderRadius: '8px',
-                    border: '1.5px solid #86efac', background: '#f0fdf4',
-                    color: '#1a7a3f', fontWeight: 700, fontSize: '14px',
-                    cursor: isMutating ? 'not-allowed' : 'pointer',
-                    opacity: isMutating ? 0.6 : 1,
-                  }}
-                >
-                  ✅ 환급
-                </button>
-                <button
-                  onClick={() => {
-                    if (confirm(`아이디어 #${deposit.ideaId}의 보증금을 몰수하시겠습니까?`)) {
-                      forfeitMutation.mutate(deposit.ideaId)
-                    }
-                  }}
-                  disabled={isMutating}
-                  style={{
-                    padding: '9px 20px', borderRadius: '8px',
-                    border: '1.5px solid #fca5a5', background: '#fff',
-                    color: '#dc2626', fontWeight: 700, fontSize: '14px',
-                    cursor: isMutating ? 'not-allowed' : 'pointer',
-                    opacity: isMutating ? 0.6 : 1,
-                  }}
-                >
-                  ⛔ 몰수
-                </button>
-              </div>
+              {isActionable ? (
+                <div style={{
+                  display: 'flex', gap: '10px', flexWrap: 'wrap',
+                  paddingTop: '20px', borderTop: '1px solid var(--border)',
+                }}>
+                  <button
+                    onClick={() => {
+                      if (confirm(`"${selectedIdea?.title ?? `아이디어 #${deposit.ideaId}`}"의 보증금을 환급하시겠습니까?`)) {
+                        releaseMutation.mutate(deposit.ideaId)
+                      }
+                    }}
+                    disabled={isMutating}
+                    style={{
+                      padding: '9px 20px', borderRadius: '8px',
+                      border: '1.5px solid #86efac', background: '#f0fdf4',
+                      color: '#1a7a3f', fontWeight: 700, fontSize: '14px',
+                      cursor: isMutating ? 'not-allowed' : 'pointer',
+                      opacity: isMutating ? 0.6 : 1,
+                    }}
+                  >
+                    ✅ 환급
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (confirm(`"${selectedIdea?.title ?? `아이디어 #${deposit.ideaId}`}"의 보증금을 몰수하시겠습니까?`)) {
+                        forfeitMutation.mutate(deposit.ideaId)
+                      }
+                    }}
+                    disabled={isMutating}
+                    style={{
+                      padding: '9px 20px', borderRadius: '8px',
+                      border: '1.5px solid #fca5a5', background: '#fff',
+                      color: '#dc2626', fontWeight: 700, fontSize: '14px',
+                      cursor: isMutating ? 'not-allowed' : 'pointer',
+                      opacity: isMutating ? 0.6 : 1,
+                    }}
+                  >
+                    ⛔ 몰수
+                  </button>
+                </div>
+              ) : (
+                <div style={{
+                  paddingTop: '20px', borderTop: '1px solid var(--border)',
+                  fontSize: '13px', color: 'var(--fg-muted)',
+                }}>
+                  이 보증금은 이미 처리가 완료되었습니다.
+                </div>
+              )}
             </div>
 
             {/* 강제 전체 환불 — 위험 구역 */}
@@ -234,12 +300,12 @@ export default function AdminSettlementsPage() {
                 위험 구역 — 강제 전체 환불
               </p>
               <p style={{ fontSize: '13px', color: '#dc2626', marginBottom: '14px', opacity: 0.8 }}>
-                아이디어 #{deposit.ideaId}의 모든 후원금을 환불하고 보증금을 몰수합니다.
+                {selectedIdea ? `"${selectedIdea.title}"` : `아이디어 #${deposit.ideaId}`}의 모든 후원금을 환불하고 보증금을 몰수합니다.
                 이 작업은 되돌릴 수 없습니다.
               </p>
               <button
                 onClick={() => {
-                  if (confirm(`아이디어 #${deposit.ideaId}의 전체 후원금을 강제 환불하시겠습니까?\n보증금은 몰수됩니다. 이 작업은 되돌릴 수 없습니다.`)) {
+                  if (confirm(`모든 후원금을 강제 환불하시겠습니까?\n보증금은 몰수됩니다. 이 작업은 되돌릴 수 없습니다.`)) {
                     forceRefundMutation.mutate(deposit.ideaId)
                   }
                 }}
@@ -258,5 +324,13 @@ export default function AdminSettlementsPage() {
         )
       )}
     </>
+  )
+}
+
+export default function AdminSettlementsPage() {
+  return (
+    <Suspense fallback={<LoadingSpinner />}>
+      <AdminSettlementsContent />
+    </Suspense>
   )
 }
