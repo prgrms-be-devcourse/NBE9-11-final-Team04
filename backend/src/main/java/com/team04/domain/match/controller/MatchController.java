@@ -1,5 +1,8 @@
 package com.team04.domain.match.controller;
 
+import com.team04.domain.idea.entity.Idea;
+import com.team04.domain.idea.repository.IdeaRepository;
+import com.team04.domain.idea.service.IdeaService;
 import com.team04.domain.match.dto.request.ExpertMatchRespondRequest;
 import com.team04.domain.match.dto.request.ExpertReviewRequest;
 import com.team04.domain.match.dto.request.MatchRequest;
@@ -7,6 +10,9 @@ import com.team04.domain.match.dto.response.ExpertMatchResponse;
 import com.team04.domain.match.dto.response.ExpertReviewResponse;
 import com.team04.domain.match.service.ExpertMatchService;
 import com.team04.domain.match.service.ExpertReviewService;
+import com.team04.domain.user.entity.Role;
+import com.team04.global.exception.CustomException;
+import com.team04.global.exception.ErrorCode;
 import com.team04.global.response.ApiResponse;
 import com.team04.global.security.CustomUserDetails;
 import jakarta.validation.Valid;
@@ -25,6 +31,7 @@ public class MatchController {
 
     private final ExpertMatchService expertMatchService;
     private final ExpertReviewService expertReviewService;
+    private final IdeaService ideaService;
 
     /* 제안자 -> 전문가 매칭 요청 목록 조회 API */
     @GetMapping
@@ -72,5 +79,21 @@ public class MatchController {
                 userDetails.getUserId(), expertProfileId, request
         );
         return ResponseEntity.status(201).body(ApiResponse.ofSuccess(response));
+    }
+
+    /* 아이디어별 전문가 검토서 목록 조회 API */
+    @GetMapping("/ideas/{ideaId}/reviews")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<List<ExpertReviewResponse>>> getReviewsByIdeaId(
+            @PathVariable Long ideaId,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        // ADMIN이 아닌 경우 IdeaService 내부에서 소유자 검증 처리
+        if (userDetails.getRole() != Role.ADMIN) {
+            ideaService.getIdea(ideaId, userDetails.getUserId(), userDetails.getRole());
+        }
+        return ResponseEntity.ok(ApiResponse.ofSuccess(
+                expertReviewService.getReviewsByIdeaId(ideaId)
+        ));
     }
 }

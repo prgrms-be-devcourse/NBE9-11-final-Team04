@@ -24,6 +24,8 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 public class ExpertReviewService {
@@ -103,5 +105,13 @@ public class ExpertReviewService {
         ));
 
         return ExpertReviewResponse.from(review);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ExpertReviewResponse> getReviewsByIdeaId(Long ideaId) {
+        return expertReviewRepository.findByIdeaId(ideaId)
+                .stream()
+                .map(ExpertReviewResponse::from)
+                .toList();
     }
 }
