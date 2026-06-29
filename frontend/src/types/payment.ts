@@ -2,7 +2,9 @@ import type { PaymentStatus } from './enums'
 
 export interface Payment {
   paymentId: number
-  fundingId: number
+  fundingId: number | null
+  ideaId: number | null
+  ideaTitle: string | null
   orderId: string
   amount: number
   status: PaymentStatus

@@ -6,7 +6,9 @@ import Link from 'next/link'
 import { useMutation } from '@tanstack/react-query'
 import { apiClient, unwrap } from '@/api/client'
 import type { ApiResponse } from '@/types/api'
+import { usersApi } from '@/api/users'
 import { ProtectedRoute } from '@/components/layout/AppShell'
+import { useAuthStore } from '@/store/authStore'
 import { getErrorMessage } from '@/utils/format'
 
 type TechStack = 'TECH' | 'LIFE' | 'HEALTH' | 'EDUCATION' | 'ENVIRONMENT' | 'CULTURE' | 'ETC'
@@ -59,6 +61,7 @@ function StepIndicator({ current }: { current: number }) {
 
 function ExpertProfileContent() {
   const router = useRouter()
+  const { setUser } = useAuthStore()
   const [techStack, setTechStack] = useState<TechStack | ''>('')
   const [portfolioUrl, setPortfolioUrl] = useState('')
   const [career, setCareer] = useState('')
@@ -73,7 +76,11 @@ function ExpertProfileContent() {
       }
       return unwrap(apiClient.post<ApiResponse<unknown>>('/experts/profile', body))
     },
-    onSuccess: () => router.push('/expert/matches'),
+    onSuccess: async () => {
+      const updatedUser = await usersApi.getMe()
+      setUser(updatedUser)
+      router.push('/expert/matches')
+    },
     onError: (err) => setError(getErrorMessage(err)),
   })
 
@@ -208,7 +215,7 @@ function ExpertProfileContent() {
 
 export default function ExpertProfilePage() {
   return (
-    <ProtectedRoute roles={['EXPERT']}>
+    <ProtectedRoute roles={['USER', 'EXPERT']}>
       <div style={{ minHeight: '80vh', padding: '60px 24px' }}>
         <ExpertProfileContent />
       </div>

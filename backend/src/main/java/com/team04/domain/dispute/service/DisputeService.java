@@ -9,6 +9,7 @@ import com.team04.domain.dispute.dto.response.DisputeStatsResponse;
 import com.team04.domain.dispute.entity.*;
 import com.team04.domain.dispute.repository.DisputeAppealRepository;
 import com.team04.domain.dispute.repository.DisputeRepository;
+import com.team04.domain.idea.entity.IdeaStatus;
 import com.team04.domain.idea.service.IdeaAdminService;
 import com.team04.domain.notification.entity.NotificationPriority;
 import com.team04.domain.notification.entity.NotificationType;
@@ -153,7 +154,7 @@ public class DisputeService {
                 .distinct()
                 .toList();
 
-        Map<Long, com.team04.domain.idea.entity.IdeaStatus> ideaStatusMap =
+        Map<Long, IdeaStatus> ideaStatusMap =
                 ideaAdminService.getIdeaStatusMap(ideaIds);
 
         return disputePage.map(dispute -> {
