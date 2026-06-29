@@ -59,9 +59,11 @@ class ExpertProfileServiceTest {
     @DisplayName("verified=true인 전문가 프로필 등록 시 techStack, portfolioUrl, career가 업데이트된다")
     void registerProfile_검증완료_프로필업데이트() {
         ExpertProfile profile = activeProfile();
+        User user = user();
         given(expertProfileRepository.findByUserId(1L)).willReturn(Optional.of(profile));
+        given(userRepository.findById(1L)).willReturn(Optional.of(user)); // 추가
 
-        var response = expertProfileService.registerProfile(1L, request());
+        expertProfileService.registerProfile(1L, request());
 
         assertThat(profile.getTechStack()).isEqualTo(TechStack.TECH);
         assertThat(profile.getPortfolioUrl()).isEqualTo("https://portfolio.url");
