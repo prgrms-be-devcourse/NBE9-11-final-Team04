@@ -30,6 +30,9 @@ public interface FundingRepository extends JpaRepository<Funding, Long> {
     @Query("SELECT COALESCE(SUM(f.amount), 0) FROM Funding f WHERE f.ideaId = :ideaId AND f.status = :status")
     Long sumAmountByIdeaIdAndStatus(@Param("ideaId") Long ideaId, @Param("status") FundingStatus status);
 
+    @Query("SELECT f.ideaId FROM Funding f WHERE f.id = :id")
+    Optional<Long> findIdeaIdById(@Param("id") Long id);
+
     @Query(value = "SELECT * FROM fundings WHERE id = :id FOR UPDATE", nativeQuery = true)
     Optional<Funding> findByIdForUpdate(@Param("id") Long id);
 

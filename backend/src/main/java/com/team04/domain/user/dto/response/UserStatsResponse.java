@@ -4,6 +4,7 @@ public record UserStatsResponse(
         long totalCount,
         long userCount,
         long expertCount,
+        long adminCount,
         long suspendedCount,
         long withdrawnCount
 ) {}

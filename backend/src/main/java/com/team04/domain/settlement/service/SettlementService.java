@@ -2,6 +2,7 @@ package com.team04.domain.settlement.service;
 
 import com.team04.domain.funding.service.FundingService;
 import com.team04.domain.idea.dto.response.IdeaResponse;
+import com.team04.domain.idea.repository.IdeaRepository;
 import com.team04.domain.idea.service.IdeaService;
 import com.team04.domain.payment.entity.VbankLedgerType;
 import com.team04.domain.payment.event.SettlementPayoutRequestedEvent;
@@ -33,6 +34,7 @@ public class SettlementService {
 
     private final SettlementRepository settlementRepository;
     private final IdeaService ideaService;
+    private final IdeaRepository ideaRepository;
     private final PreSettlementRepository preSettlementRepository;
     private final RefundService refundService;
     private final FundingService fundingService;
@@ -195,6 +197,15 @@ public class SettlementService {
      */
     @Transactional
     public SettlementResponse createAdminDepositRefundSettlement(Long ideaId) {
+        // 관리자 보증금 환급/몰수 판정은 같은 ideaId에서 하나만 가능해야 하므로 아이디어 단위로 직렬화한다.
+        lockIdeaForDepositDecision(ideaId);
+        if (settlementExists(ideaId, "DEPOSIT-FORFEITED")
+                || settlementExists(ideaId, "DEPOSIT-COMPLETED")
+                || settlementExists(ideaId, "DEPOSIT-GOAL-NOT-MET")
+                || settlementExists(ideaId, "DEPOSIT-REFUND")) {
+            throw new CustomException(ErrorCode.SETTLEMENT_DUPLICATE);
+        }
+
         String idempotencyKey = "idea-" + ideaId + "-DEPOSIT-ADMIN-RELEASE";
 
         if (settlementRepository.findByIdempotencyKey(idempotencyKey).isPresent()) {
@@ -377,6 +388,15 @@ public class SettlementService {
      */
     @Transactional
     public SettlementResponse forfeitDepositByAdmin(Long ideaId) {
+        // 관리자 보증금 환급/몰수 판정은 같은 ideaId에서 하나만 가능해야 하므로 아이디어 단위로 직렬화한다.
+        lockIdeaForDepositDecision(ideaId);
+        if (settlementExists(ideaId, "DEPOSIT-ADMIN-RELEASE")
+                || settlementExists(ideaId, "DEPOSIT-COMPLETED")
+                || settlementExists(ideaId, "DEPOSIT-GOAL-NOT-MET")
+                || settlementExists(ideaId, "DEPOSIT-REFUND")) {
+            throw new CustomException(ErrorCode.SETTLEMENT_DUPLICATE);
+        }
+
         SettlementResponse response = createDepositForfeitSettlement(ideaId, "관리자 보증금 몰수 판정");
         fundingService.forfeitDeposit(ideaId);
         return response;
@@ -412,6 +432,11 @@ public class SettlementService {
 
     private boolean settlementExists(Long ideaId, String suffix) {
         return settlementRepository.findByIdempotencyKey("idea-" + ideaId + "-" + suffix).isPresent();
+    }
+
+    private void lockIdeaForDepositDecision(Long ideaId) {
+        ideaRepository.findByIdForUpdate(ideaId)
+                .orElseThrow(() -> new CustomException(ErrorCode.IDEA_NOT_FOUND));
     }
 
     @Transactional
