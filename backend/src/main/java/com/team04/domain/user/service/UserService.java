@@ -170,9 +170,10 @@ public class UserService {
         long total = userRepository.count();
         long user = userRepository.countByRoleAndActive(Role.USER);
         long expert = userRepository.countByRoleAndActive(Role.EXPERT);
+        long admin = userRepository.countByRoleAndActive(Role.ADMIN);
         long suspended = userRepository.countByStatus(UserStatus.SUSPENDED);
         long withdrawn = userRepository.countByStatus(UserStatus.WITHDRAWN);
 
-        return new UserStatsResponse(total, user, expert, suspended, withdrawn);
+        return new UserStatsResponse(total, user, expert, admin, suspended, withdrawn);
     }
 }

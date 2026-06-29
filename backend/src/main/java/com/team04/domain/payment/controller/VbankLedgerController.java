@@ -7,6 +7,8 @@ import com.team04.global.exception.ErrorCode;
 import com.team04.global.response.ApiResponse;
 import com.team04.global.security.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -17,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+@Tag(name = "Payment", description = "결제 생성·승인·환불·조회 및 PG 웹훅 API")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/payments/vbank-ledgers")
@@ -30,6 +33,11 @@ public class VbankLedgerController {
      * 관리자, 제안자, 결제 성공 후원자만 접근 가능합니다.
      */
     @Operation(summary = "가상계좌 장부 조회", description = "아이디어별 가상계좌 입출금 장부를 최신순으로 조회합니다. 관리자, 제안자, 결제 성공 후원자만 접근할 수 있습니다.")
+    @Operation(
+            summary = "가상계좌 장부 조회",
+            description = "아이디어별 가상계좌 입출금 장부를 최신순으로 조회합니다. 관리자, 제안자, 결제 성공 후원자만 접근할 수 있습니다.",
+            security = @SecurityRequirement(name = "bearerAuth")
+    )
     @GetMapping("/ideas/{ideaId}")
     @PreAuthorize("isAuthenticated()")
     public ApiResponse<List<VbankLedgerResponse>> getLedgers(
