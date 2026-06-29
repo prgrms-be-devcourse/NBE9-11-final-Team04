@@ -51,6 +51,9 @@ jobs:
       - name: Docker 이미지 저장
         run: docker save seedlink-app:latest | gzip > seedlink-app.tar.gz
 
+      - name: node_modules 제거
+        run: rm -rf frontend/node_modules frontend/.next
+
       - name: EC2로 파일 전송
         uses: appleboy/scp-action@v0.1.7
         with:
