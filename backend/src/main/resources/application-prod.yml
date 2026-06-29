@@ -1,3 +1,11 @@
+admin:
+  init:
+    email: ${ADMIN_INIT_EMAIL}
+    password: ${ADMIN_INIT_PASSWORD}
+    name: ${ADMIN_INIT_NAME:관리자}
+    nickname: ${ADMIN_INIT_NICKNAME:admin}
+    age: ${ADMIN_INIT_AGE:30}
+
 spring:
   datasource:
     url: jdbc:mysql://${DB_HOST}:${DB_PORT}/${DB_NAME}?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
