@@ -38,6 +38,12 @@ public class VerificationAdminService {
     @Transactional
     public void retry(Long verificationId, VerificationRequest request) {
         ProjectVerification verification = getVerification(verificationId);
+
+        // ideaId 일치 여부 검증
+        if (!verification.getIdeaId().equals(request.ideaId())) {
+            throw new CustomException(ErrorCode.VERIFICATION_IDEA_MISMATCH);
+        }
+
         VerificationStatus previous = verification.getStatus();
         verification.changeStatus(VerificationStatus.AI_VERIFYING);
         audit(verification, previous, VerificationStatus.AI_VERIFYING, "관리자 수동 재시도");

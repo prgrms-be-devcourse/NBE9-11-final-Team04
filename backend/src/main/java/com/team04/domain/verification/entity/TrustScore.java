@@ -1,19 +1,19 @@
 package com.team04.domain.verification.entity;
 
 import com.team04.global.entity.BaseEntity;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 /** 프로젝트 검증의 항목별 신뢰도 점수와 합산 점수를 저장하는 엔티티입니다. */
 @Entity
-@Table(name = "trust_score")
+@Table(
+        name = "trust_score",
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uk_trust_score_idea", columnNames = "idea_id")
+        }
+)
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class TrustScore extends BaseEntity {
@@ -82,5 +82,11 @@ public class TrustScore extends BaseEntity {
                 + adminApprovalScore
                 + proposerHistoryScore;
         return Math.min(total, ITEM_MAX_SCORE * 5);
+    }
+
+    /** 관리자 승인 점수를 갱신하고 총점을 재계산합니다. */
+    public void updateAdminApprovalScore(Integer score) {
+        this.adminApprovalScore = limitItemScore(score);
+        this.totalScore = calculateTotalScore();
     }
 }

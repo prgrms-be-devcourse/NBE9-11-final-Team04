@@ -283,6 +283,8 @@ public class MilestoneService {
 
         report.approve();
         milestone.cancel();
+        // 소명 중단 인정은 프로젝트 종료 흐름이므로 아이디어도 취소 상태로 맞춘다.
+        ideaService.cancelIdea(milestone.getIdeaId());
 
         settlementService.createJustifiedCancelRefundSettlement(milestone.getIdeaId());
         settlementService.createDepositRefundSettlement(milestone.getIdeaId());
@@ -339,16 +341,18 @@ public class MilestoneService {
     private void cancelMilestoneAsUnjustified(Milestone milestone, String memo) {
         Long ideaId = milestone.getIdeaId();
         milestone.cancel();
+        // 관리자 중단/먹튀/소명 3회 반려는 프로젝트 종료 흐름이므로 아이디어도 취소 상태로 맞춘다.
+        ideaService.cancelIdea(ideaId);
         settlementService.createCancelRefundSettlement(ideaId, memo);        // 부정/미소명 중단 — 후원금 잔액
         settlementService.createDepositForfeitSettlement(ideaId, memo);      // 부정/미소명 중단 — 보증금 몰수
         refundService.createCancelRefunds(ideaId, false); // 부정/미소명 중단 — 보증금 전액 후원자 분배
     }
 
     /**
-     * 펀딩 목표 달성 시 1단계 마일스톤 자동 시작
-     * FundingAchievementListener에서 FundingPaidEvent 수신 후 목표 달성 확인 시 호출
+     * 펀딩 마감 후 목표 달성이 확정되면 1단계 마일스톤을 시작합니다.
+     * SettlementScheduler에서 마감된 성공 펀딩을 확인한 뒤 호출합니다.
      */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional
     public void startFirstMilestone(Long ideaId) {
         startNextMilestone(ideaId, 1);
     }

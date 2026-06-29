@@ -6,7 +6,6 @@ import com.team04.domain.funding.event.FundingPaidEvent;
 import com.team04.domain.funding.repository.FundingRepository;
 import com.team04.domain.idea.entity.Idea;
 import com.team04.domain.idea.repository.IdeaRepository;
-import com.team04.domain.milestone.service.MilestoneService;
 import com.team04.global.exception.CustomException;
 import com.team04.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -26,7 +25,7 @@ import org.springframework.transaction.event.TransactionalEventListener;
  * <p>{@link Funding#markAmountAppliedToIdea()} 플래그로 웹훅·이벤트 중복 수신 시
  * 누적 후원금이 두 번 올라가지 않도록 멱등 처리합니다.
  *
- * <p>실행 순서: 본 리스너 {@code @Order(1)} (집계·목표 달성 시 1단계 마일스톤 시작)
+ * <p>실행 순서: 본 리스너 {@code @Order(1)} (집계)
  * → {@link FundingAchievementListener} {@code @Order(2)} (SSE)
  */
 @Component
@@ -36,7 +35,6 @@ public class IdeaFundingPaidListener {
 
     private final IdeaRepository ideaRepository;
     private final FundingRepository fundingRepository;
-    private final MilestoneService milestoneService;
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
@@ -52,13 +50,7 @@ public class IdeaFundingPaidListener {
         Idea idea = ideaRepository.findByIdForUpdate(event.ideaId())
                 .orElseThrow(() -> new CustomException(ErrorCode.IDEA_NOT_FOUND));
 
-        long previousAmount = idea.getCurrentAmount();
         idea.addFundingAmount(event.amount());
         funding.markAmountAppliedToIdea();
-
-        // 이번 후원으로 처음 목표를 달성한 경우에만 마일스톤 시작 (초과 후원 시 중복 호출 방지)
-        if (previousAmount < idea.getGoalAmount() && idea.getCurrentAmount() >= idea.getGoalAmount()) {
-            milestoneService.startFirstMilestone(event.ideaId());
-        }
     }
 }

@@ -1,4 +1,4 @@
-package com.team04.domain.settlement.controller;
+package com.team04.domain.admin.controller;
 
 import com.team04.domain.funding.dto.response.DepositResponse;
 import com.team04.domain.settlement.dto.request.ForceRefundRequest;

@@ -24,8 +24,11 @@ public interface IdeaRepositoryCustom {
     /** 인기 프로젝트 점수 기준 상위 5개 아이디어를 조회합니다. */
     List<Idea> findTop5PopularIdeas();
 
-    /** 펀딩 마감됐고 목표 금액 미달성인 아이디어 ID 목록을 조회합니다. */
+    /** 펀딩 마감됐고 목표 금액 미달성인 OPEN/IN_PROGRESS 아이디어 ID 목록을 조회합니다. */
     List<Long> findFailedFundingIdeaIds(LocalDateTime now);
+
+    /** 펀딩 마감됐고 목표 금액을 달성했지만 1단계 마일스톤이 아직 시작되지 않은 OPEN/IN_PROGRESS 아이디어 ID 목록을 조회합니다. */
+    List<Long> findSuccessfulFundingIdeaIds(LocalDateTime now);
 
     /** 전체 아이디어 상태별 건수를 조회합니다. */
     Map<IdeaStatus, Long> countByStatus();
