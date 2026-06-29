@@ -5,6 +5,8 @@ admin:
     name: ${ADMIN_INIT_NAME:관리자}
     nickname: ${ADMIN_INIT_NICKNAME:admin}
     age: ${ADMIN_INIT_AGE:30}
+  internal:
+    base-url: ${ADMIN_INTERNAL_BASE_URL}
 
 spring:
   datasource:
@@ -98,7 +100,3 @@ oauth:
     client-secret: ${GOOGLE_CLIENT_SECRET}
   kakao:
     client-id: ${KAKAO_CLIENT_ID}
-
-admin:
-  internal:
-    base-url: ${ADMIN_INTERNAL_BASE_URL}
