@@ -8,6 +8,9 @@ import com.team04.domain.idea.service.AdminIdeaReviewService;
 import com.team04.domain.idea.service.IdeaAdminService;
 import com.team04.global.response.ApiResponse;
 import com.team04.global.security.CustomUserDetails;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -31,12 +34,18 @@ import java.util.Map;
 @RequestMapping("/admin/ideas")
 @RequiredArgsConstructor
 @PreAuthorize("hasRole('ADMIN')")
+@Tag(name = "아이디어 관리자 API", description = "관리자 아이디어 심사, 승인, 반려, 중단, 복원, 통계 API")
 public class AdminIdeaController {
 
     private final AdminIdeaReviewService adminIdeaReviewService;
     private final IdeaAdminService ideaAdminService;
 
     /** 요청한 상태의 관리자 아이디어 심사 목록을 페이지로 조회합니다. status 생략 시 전체 조회합니다. */
+    @Operation(
+            summary = "관리자 아이디어 심사 목록 조회",
+            description = "요청한 상태의 관리자 아이디어 심사 목록을 페이지로 조회합니다. 상태를 생략하면 전체 조회합니다."
+    )
+    @SecurityRequirement(name = "bearerAuth")
     @GetMapping
     public ApiResponse<Page<AdminIdeaReviewResponse>> getReviews(
             @RequestParam(required = false) IdeaStatus status,
@@ -46,6 +55,11 @@ public class AdminIdeaController {
     }
 
     /** 관리자가 (AI검증 + 전문가검토 + 마일스톤 + 보증금)을 통합 조회 합니다. */
+    @Operation(
+            summary = "관리자 아이디어 심사 요약 조회",
+            description = "관리자가 AI 검증, 전문가 검토, 마일스톤, 보증금 정보를 통합 조회합니다."
+    )
+    @SecurityRequirement(name = "bearerAuth")
     @GetMapping("/{ideaId}/review-summary")
     public ApiResponse<AdminIdeaReviewSummary> getReviewSummary(
             @PathVariable Long ideaId,
@@ -57,6 +71,11 @@ public class AdminIdeaController {
     }
 
     /** 관리자가 아이디어를 승인 상태로 전이합니다. */
+    @Operation(
+            summary = "아이디어 승인",
+            description = "관리자가 아이디어를 승인 상태로 전이합니다."
+    )
+    @SecurityRequirement(name = "bearerAuth")
     @PatchMapping("/{ideaId}/approve")
     public ApiResponse<Void> approve(@PathVariable Long ideaId) {
         adminIdeaReviewService.approve(ideaId);
@@ -64,6 +83,11 @@ public class AdminIdeaController {
     }
 
     /** 관리자가 아이디어를 반려하고 반려 사유를 저장합니다. */
+    @Operation(
+            summary = "아이디어 반려",
+            description = "관리자가 아이디어를 반려하고 반려 사유를 저장합니다."
+    )
+    @SecurityRequirement(name = "bearerAuth")
     @PutMapping("/{ideaId}/reject")
     public ApiResponse<Void> reject(
             @PathVariable Long ideaId,
@@ -74,6 +98,11 @@ public class AdminIdeaController {
     }
 
     /** 관리자가 OPEN 또는 IN_PROGRESS 아이디어를 일시 중단합니다. */
+    @Operation(
+            summary = "아이디어 일시 중단",
+            description = "관리자가 OPEN 또는 IN_PROGRESS 상태의 아이디어를 일시 중단합니다."
+    )
+    @SecurityRequirement(name = "bearerAuth")
     @PatchMapping("/{ideaId}/suspend")
     public ApiResponse<Void> suspendIdea(@PathVariable Long ideaId) {
         ideaAdminService.suspendIdea(ideaId);
@@ -81,6 +110,11 @@ public class AdminIdeaController {
     }
 
     /** 관리자가 일시 중단된 아이디어를 중단 전 상태로 복원합니다. */
+    @Operation(
+            summary = "아이디어 복원",
+            description = "관리자가 일시 중단된 아이디어를 중단 전 상태로 복원합니다."
+    )
+    @SecurityRequirement(name = "bearerAuth")
     @PatchMapping("/{ideaId}/restore")
     public ApiResponse<Void> restoreIdea(@PathVariable Long ideaId) {
         ideaAdminService.restoreIdea(ideaId);
@@ -88,6 +122,11 @@ public class AdminIdeaController {
     }
 
     /** 전체 아이디어 상태별 현황을 집계합니다. */
+    @Operation(
+            summary = "아이디어 상태 통계 조회",
+            description = "전체 아이디어 상태별 현황을 집계합니다."
+    )
+    @SecurityRequirement(name = "bearerAuth")
     @GetMapping("/stats")
     public ApiResponse<Map<IdeaStatus, Long>> getStatusStats() {
         return ApiResponse.ofSuccess(ideaAdminService.getStatusStats());
