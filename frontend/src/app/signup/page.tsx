@@ -122,6 +122,7 @@ export default function SignupPage() {
     setError('')
     if (form.password !== form.confirmPassword) { setError('비밀번호가 일치하지 않습니다.'); return }
     if (form.password.length < 8) { setError('비밀번호는 8자 이상이어야 합니다.'); return }
+    if (!/[^A-Za-z0-9]/.test(form.password)) { setError('비밀번호에는 특수문자를 1개 이상 포함해야 합니다.'); return }
     sendOtpMutation.mutate()
   }
 
@@ -163,7 +164,7 @@ export default function SignupPage() {
 
             <Input label="나이" type="number" min={19} value={form.age || ''} onChange={(e) => setForm({ ...form, age: Number(e.target.value) })} placeholder="만 나이" required />
             <Input label="이메일" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="example@seedlink.com" required />
-            <Input label="비밀번호" type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="8자 이상" required />
+            <Input label="비밀번호" type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="8자 이상, 특수문자 포함" required />
             <Input label="비밀번호 확인" type="password" value={form.confirmPassword} onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })} placeholder="비밀번호 재입력" required />
 
             {SHOW_SOCIAL && (

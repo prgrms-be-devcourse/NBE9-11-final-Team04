@@ -628,10 +628,18 @@ public class PaymentService {
             throw new CustomException(ErrorCode.REFUND_FAILED);
         }
 
+        boolean lastPaidFundingBySponsor =
+                !fundingRepository.existsByIdeaIdAndSponsorIdAndStatusAndAmountAppliedToIdeaTrueAndIdNot(
+                        funding.getIdeaId(),
+                        funding.getSponsorId(),
+                        FundingStatus.PAID,
+                        funding.getId()
+                );
+
         funding.markAsRefunded();
         payment.markAsRefunded();
 
-        idea.subtractFundingAmount(funding.getAmount());
+        idea.subtractFundingAmount(funding.getAmount(), lastPaidFundingBySponsor);
         // 후원자 직접 취소 환불은 실제 출금으로 보아 가상계좌 장부 잔액에서 차감한다.
         vbankLedgerService.recordOut(
                 funding.getIdeaId(),
