@@ -11,9 +11,11 @@ import com.team04.global.response.ApiResponse;
 import com.team04.global.security.CustomUserDetails;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/users")
@@ -35,6 +37,19 @@ public class UserController {
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestBody @Valid UserUpdateRequest request){
         return ApiResponse.ofSuccess(userService.updateMe(userDetails.getUserId(), request));
+    }
+
+    @PatchMapping(value = "/me/profile-image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ApiResponse<UserResponse> updateProfileImage(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestParam("file") MultipartFile file) {
+        return ApiResponse.ofSuccess(userService.updateProfileImage(userDetails.getUserId(), file));
+    }
+
+    @DeleteMapping("/me/profile-image")
+    public ApiResponse<UserResponse> deleteProfileImage(
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        return ApiResponse.ofSuccess(userService.deleteProfileImage(userDetails.getUserId()));
     }
 
     @PatchMapping("/me/password")

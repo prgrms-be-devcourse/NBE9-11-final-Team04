@@ -8,8 +8,8 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 
-/** 로컬 개발 환경에서 OpenAI API 호출 없이 고정 응답을 반환하는 Mock 클라이언트입니다. */
-@Profile("local")
+/** 로컬 및 테스트 환경에서 OpenAI API 호출 없이 고정 응답을 반환하는 Mock 클라이언트입니다. */
+@Profile({"local", "test"})
 @Primary
 @Component
 public class MockOpenAiVerificationClient implements OpenAiVerificationClient {
