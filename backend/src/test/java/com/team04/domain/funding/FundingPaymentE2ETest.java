@@ -64,7 +64,7 @@ class FundingPaymentE2ETest {
                 "proposer-" + suffix + "@test.com",
                 passwordEncoder.encode("password1!"),
                 "창작자",
-                "창작자닉",
+                "창작자닉-" + suffix,
                 30,
                 Role.USER
         ));
@@ -73,7 +73,7 @@ class FundingPaymentE2ETest {
                 "sponsor-" + suffix + "@test.com",
                 passwordEncoder.encode("password1!"),
                 "후원자",
-                "후원자닉",
+                "후원자닉-" + suffix,
                 28,
                 Role.USER
         ));

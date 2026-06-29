@@ -114,6 +114,8 @@ public class Idea extends BaseEntity {
     @Column(nullable = false)
     private int rejectCount = 0;
 
+    private int adminRejectedCount = 0;
+
     /** 신규 아이디어를 심사 대기 기본값과 함께 생성합니다. */
     public Idea(
             Long userId,
@@ -334,5 +336,17 @@ public class Idea extends BaseEntity {
     /** 신뢰도 점수를 갱신합니다. */
     public void updateTrustScore(Integer totalScore) {
         this.trustScore = totalScore;
+    }
+
+    /** 관리자 반려 횟수를 증가시킵니다. */
+    public void increaseAdminRejectedCount() {
+        this.adminRejectedCount++;
+    }
+
+    /** 관리자 반려 횟수 기준으로 신뢰도 점수를 반환합니다. */
+    public int calculateAdminApprovalScore() {
+        if (adminRejectedCount == 0) return 20;
+        if (adminRejectedCount == 1) return 10;
+        return 5;
     }
 }

@@ -5,9 +5,11 @@ import com.team04.domain.payment.entity.PaymentTypes.PaymentStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import jakarta.persistence.LockModeType;
 import java.util.List;
 import java.util.Optional;
 
@@ -20,6 +22,10 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     List<Payment> findByFundingIdOrderByCreatedAtDesc(Long fundingId);
 
     Optional<Payment> findByOrderId(String orderId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT p FROM Payment p WHERE p.id = :paymentId")
+    Optional<Payment> findByIdForUpdate(@Param("paymentId") Long paymentId);
 
     Optional<Payment> findFirstByFundingIdAndStatusOrderByCreatedAtDesc(Long fundingId, PaymentStatus status);
 
