@@ -2,6 +2,7 @@ package com.team04.domain.match.controller;
 
 import com.team04.domain.idea.entity.Idea;
 import com.team04.domain.idea.repository.IdeaRepository;
+import com.team04.domain.idea.service.IdeaService;
 import com.team04.domain.match.dto.request.ExpertMatchRespondRequest;
 import com.team04.domain.match.dto.request.ExpertReviewRequest;
 import com.team04.domain.match.dto.request.MatchRequest;
@@ -30,7 +31,7 @@ public class MatchController {
 
     private final ExpertMatchService expertMatchService;
     private final ExpertReviewService expertReviewService;
-    private final IdeaRepository ideaRepository;
+    private final IdeaService ideaService;
 
     /* 제안자 -> 전문가 매칭 요청 목록 조회 API */
     @GetMapping
@@ -87,12 +88,9 @@ public class MatchController {
             @PathVariable Long ideaId,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
+        // ADMIN이 아닌 경우 IdeaService 내부에서 소유자 검증 처리
         if (userDetails.getRole() != Role.ADMIN) {
-            Idea idea = ideaRepository.findByIdAndDeletedAtIsNull(ideaId)
-                    .orElseThrow(() -> new CustomException(ErrorCode.IDEA_NOT_FOUND));
-            if (!idea.getUserId().equals(userDetails.getUserId())) {
-                throw new CustomException(ErrorCode.FORBIDDEN);
-            }
+            ideaService.getIdea(ideaId, userDetails.getUserId(), userDetails.getRole());
         }
         return ResponseEntity.ok(ApiResponse.ofSuccess(
                 expertReviewService.getReviewsByIdeaId(ideaId)

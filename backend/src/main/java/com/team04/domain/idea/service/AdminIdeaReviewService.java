@@ -53,7 +53,10 @@ public class AdminIdeaReviewService {
             verification = verificationService
                     .getVerificationByIdeaId(ideaId, userDetails.getUserId(), userDetails.getRole());
         } catch (CustomException e) {
-            // 검증 데이터 없을 경우 null 허용
+            if (e.getErrorCode() != ErrorCode.VERIFICATION_NOT_FOUND) {
+                throw e;
+            }
+            // VERIFICATION_NOT_FOUND인 경우만 null 허용
         }
 
         // 전문가 검토 의견 조회
