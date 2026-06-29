@@ -34,7 +34,7 @@ jobs:
         working-directory: backend
         run: ./gradlew build -x test
 
-      - name: Docker 이미지 빌드
+      - name: 백엔드 Docker 이미지 빌드
         run: |
           mkdir -p infra
           ls -al backend/build/libs
@@ -48,8 +48,18 @@ jobs:
           cp "$JAR_FILE" infra/app.jar
           docker build -t seedlink-app:latest infra/
 
-      - name: Docker 이미지 저장
+      - name: 백엔드 Docker 이미지 저장
         run: docker save seedlink-app:latest | gzip > seedlink-app.tar.gz
+
+      - name: 프론트엔드 Docker 이미지 빌드
+        run: |
+          docker build \
+            --build-arg NEXT_PUBLIC_API_BASE_URL=${{ secrets.NEXT_PUBLIC_API_BASE_URL }} \
+            -t seedlink-frontend:latest \
+            ./frontend
+
+      - name: 프론트엔드 Docker 이미지 저장
+        run: docker save seedlink-frontend:latest | gzip > seedlink-frontend.tar.gz
 
       - name: EC2로 파일 전송
         uses: appleboy/scp-action@v0.1.7
@@ -57,7 +67,7 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
-          source: "seedlink-app.tar.gz,infra/docker-compose.yml,infra/nginx.conf.template,infra/payment.env,frontend"
+          source: "seedlink-app.tar.gz,seedlink-frontend.tar.gz,infra/docker-compose.yml,infra/nginx.conf.template,infra/payment.env"
           target: "/home/${{ secrets.EC2_USER }}/seedlink"
 
       - name: EC2 배포
@@ -69,6 +79,7 @@ jobs:
           script: |
             cd /home/${{ secrets.EC2_USER }}/seedlink
             docker load < seedlink-app.tar.gz
+            docker load < seedlink-frontend.tar.gz
             cp infra/docker-compose.yml docker-compose.yml
             cp infra/payment.env payment.env
 
@@ -114,4 +125,4 @@ jobs:
             sudo nginx -t && sudo systemctl reload nginx
 
             docker compose down
-            docker compose up -d --build
+            docker compose up -d
