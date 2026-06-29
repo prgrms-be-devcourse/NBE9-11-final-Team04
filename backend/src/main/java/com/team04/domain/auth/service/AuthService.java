@@ -149,7 +149,7 @@ public class AuthService {
 
     public void sendAdminInvite(Long adminId, AdminInviteRequest request) {
         String token = adminInviteRepository.generate(request.email());
-        String inviteUrl = baseUrl + "/admin/signup?token=" + token;
+        String inviteUrl = baseUrl + "/admin-signup?token=" + token + "&email=" + request.email();
         emailService.sendAdminInvite(request.email(), inviteUrl);
     }
 
