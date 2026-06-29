@@ -8,6 +8,9 @@ import com.team04.global.exception.CustomException;
 import com.team04.global.exception.ErrorCode;
 import com.team04.global.response.ApiResponse;
 import com.team04.global.security.CustomUserDetails;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -15,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+@Tag(name = "Fund Usage", description = "프로젝트 자금 사용 내역 API")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/fund-usages")
@@ -23,6 +27,11 @@ public class FundUsageController {
     private final FundUsageService fundUsageService;
 
     /** 자금 사용 내역을 입력합니다. 제안자만 가능하며 본인 프로젝트만 입력 가능합니다. */
+    @Operation(
+            summary = "자금 사용 내역 등록",
+            description = "제안자가 실제 지급받은 선정산 금액 범위 안에서 프로젝트 자금 사용 내역을 등록합니다.",
+            security = @SecurityRequirement(name = "bearerAuth")
+    )
     @PostMapping("/{ideaId}")
     public ApiResponse<FundUsageResponse> addFundUsage(
             @PathVariable Long ideaId,
@@ -38,6 +47,11 @@ public class FundUsageController {
      * 자금 사용 내역을 조회합니다.
      * 관리자, 제안자(본인 프로젝트만), 결제 성공 후원자 조회 가능합니다.
      */
+    @Operation(
+            summary = "자금 사용 내역 조회",
+            description = "아이디어별 자금 사용 내역을 조회합니다. 관리자, 제안자, 결제 성공 후원자만 접근할 수 있습니다.",
+            security = @SecurityRequirement(name = "bearerAuth")
+    )
     @GetMapping("/{ideaId}")
     public ApiResponse<List<FundUsageResponse>> getFundUsages(
             @PathVariable Long ideaId,

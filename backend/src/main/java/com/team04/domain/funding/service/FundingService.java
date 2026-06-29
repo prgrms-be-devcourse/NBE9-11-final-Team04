@@ -211,7 +211,7 @@ public class FundingService {
     // 내 후원 취소 — PAID면 5단계 환불, PENDING_PAYMENT면 결제 실패 처리
     @Transactional
     public void cancelMySponsorship(Long fundingId, Long sponsorId) {
-        Funding funding = fundingRepository
+        Funding candidate = fundingRepository
                 .findFirstByIdeaIdAndSponsorIdAndStatusInOrderByCreatedAtDesc(
                         fundingId,
                         sponsorId,
@@ -219,19 +219,36 @@ public class FundingService {
                 )
                 .orElseThrow(() -> new CustomException(ErrorCode.FUNDING_NOT_FOUND));
 
+        Funding funding = fundingRepository.findByIdForUpdate(candidate.getId())
+                .orElseThrow(() -> new CustomException(ErrorCode.FUNDING_NOT_FOUND));
+
+        if (!funding.getSponsorId().equals(sponsorId)) {
+            throw new CustomException(ErrorCode.FORBIDDEN);
+        }
+
+        if (funding.getStatus() == FundingStatus.CANCELLED) {
+            return;
+        }
+
         if (funding.getStatus() == FundingStatus.PAID) {
             validateFundingNotLockedByMilestone(funding);
 
             Payment payment = paymentRepository
-                    .findFirstByFundingIdAndStatusOrderByCreatedAtDesc(funding.getId(), PaymentStatus.SUCCESS)
+                    .findFirstByFundingIdAndStatusForUpdate(
+                            funding.getId(), PaymentStatus.SUCCESS.name())
                     .orElseThrow(() -> new CustomException(ErrorCode.PAYMENT_NOT_FOUND));
             paymentService.refundPayment(payment.getId(), sponsorId);
             return;
         }
 
+        if (funding.getStatus() != FundingStatus.PENDING_PAYMENT) {
+            throw new CustomException(ErrorCode.PAYMENT_NOT_READY);
+        }
+
         Payment payment = paymentRepository
-                .findFirstByFundingIdAndStatusOrderByCreatedAtDesc(funding.getId(), PaymentStatus.PENDING)
-                .orElseThrow(() -> new CustomException(ErrorCode.PAYMENT_NOT_FOUND));
+                .findFirstByFundingIdAndStatusForUpdate(funding.getId(), PaymentStatus.PENDING.name())
+                .orElseThrow(() -> new CustomException(ErrorCode.PAYMENT_NOT_READY));
+
         payment.fail();
         funding.markAsCancelled();
     }

@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
@@ -14,6 +14,8 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { ProgressBar } from '@/components/ui/ProgressBar'
+import { PaymentCheckoutModal } from '@/components/views/PaymentCheckoutModal'
+import { startPaymentCheckout } from '@/lib/paymentCheckout'
 import type { CreateFundingResponse, FundingProgressEvent, VbankInfo } from '@/types/funding'
 import { formatCurrency, calcAchievementRate, getErrorMessage } from '@/utils/format'
 
@@ -28,8 +30,16 @@ export default function FundingDetailPage() {
   const [paymentMethod, setPaymentMethod] = useState<'CARD' | 'VIRTUAL_ACCOUNT'>('CARD')
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [cancelNotice, setCancelNotice] = useState('')
   const [liveProgress, setLiveProgress] = useState<FundingProgressEvent | null>(null)
   const [vbankInfo, setVbankInfo] = useState<VbankInfo | null>(null)
+  const [checkoutOpen, setCheckoutOpen] = useState(false)
+  const [pendingPaymentId, setPendingPaymentId] = useState<number | null>(null)
+
+  const { data: paymentConfig } = useQuery({
+    queryKey: ['payments', 'config'],
+    queryFn: () => paymentsApi.getConfig(),
+  })
 
   const { data: funding, isLoading: fundingLoading } = useQuery({
     queryKey: ['fundings', fundingId],
@@ -81,24 +91,47 @@ export default function FundingDetailPage() {
     mutationFn: (paymentId: number) => paymentsApi.demoConfirm(paymentId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ideas', effectiveIdeaId] })
+      setCheckoutOpen(false)
+      setPendingPaymentId(null)
       queryClient.invalidateQueries({ queryKey: ['payments', 'me'] })
       setSuccess('후원이 완료되었습니다! 🎉')
     },
     onError: (err) => setError(getErrorMessage(err)),
   })
 
+  const cancelSponsorMutation = useMutation({
+    mutationFn: () => fundingsApi.cancelSponsor(effectiveIdeaId!),
+    onSuccess: () => {
+      setCheckoutOpen(false)
+      setPendingPaymentId(null)
+      setCancelNotice('결제가 취소되었습니다.')
+      setSuccess('')
+    },
+    onError: (err) => setError(getErrorMessage(err)),
+  })
+
   const sponsorMutation = useMutation({
     mutationFn: () => fundingsApi.sponsor(effectiveIdeaId!, { amount, paymentMethod }),
-    onSuccess: (data: CreateFundingResponse) => {
-      const { payment } = data
-      const isMockUrl = payment.redirectUrl?.includes('mock-pg.local')
-      if (payment.redirectUrl && !isMockUrl) {
-        window.location.href = payment.redirectUrl
-      } else if (payment.vbank) {
-        setVbankInfo(payment.vbank)
-      } else {
-        demoConfirmMutation.mutate(payment.paymentId)
-      }
+    onSuccess: async (data: CreateFundingResponse) => {
+      setError('')
+      await startPaymentCheckout(
+        data.payment,
+        paymentConfig,
+        paymentMethod,
+        effectiveIdeaId!,
+        idea?.title ?? 'SeedLink 후원',
+        'sponsor',
+        {
+          onMockModal: (paymentId) => {
+            setPendingPaymentId(paymentId)
+            setCheckoutOpen(true)
+            setCancelNotice('')
+          },
+          onVbank: (vbank) => setVbankInfo(vbank),
+          onUserCancel: () => cancelSponsorMutation.mutate(),
+          onError: (msg) => setError(msg),
+        },
+      )
     },
     onError: (err) => setError(getErrorMessage(err)),
   })
@@ -128,6 +161,15 @@ export default function FundingDetailPage() {
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
+      <PaymentCheckoutModal
+        open={checkoutOpen}
+        amount={amount}
+        method={paymentMethod}
+        orderLabel={idea.title}
+        loading={demoConfirmMutation.isPending || cancelSponsorMutation.isPending}
+        onConfirm={() => pendingPaymentId && demoConfirmMutation.mutate(pendingPaymentId)}
+        onCancel={() => cancelSponsorMutation.mutate()}
+      />
       <Link href={`/ideas/${idea.ideaId}`} className="text-sm text-primary-600">← 아이디어 상세</Link>
       <h1 className="mt-4 text-2xl font-bold">{idea.title}</h1>
       <Card className="mt-6">
@@ -182,7 +224,18 @@ export default function FundingDetailPage() {
             <Button onClick={() => sponsorMutation.mutate()} loading={sponsorMutation.isPending}>후원</Button>
           </div>
           {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
-          {success && <p className="mt-2 text-sm text-emerald-600 font-medium">{success}</p>}
+          {cancelNotice && <p className="mt-2 text-sm text-amber-600">{cancelNotice}</p>}
+          {success && (
+            <div className="mt-3 space-y-2">
+              <p className="text-sm font-medium text-emerald-600">{success}</p>
+              <Link
+                href={`/workspaces/${idea.ideaId}`}
+                className="inline-block text-sm font-semibold text-indigo-600"
+              >
+                → 워크스페이스 입장
+              </Link>
+            </div>
+          )}
         </Card>
       )}
       {milestones && milestones.length > 0 && (
