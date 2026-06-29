@@ -1,4 +1,4 @@
-﻿package com.team04.domain.payment.repository;
+package com.team04.domain.payment.repository;
 
 import com.team04.domain.payment.entity.Payment;
 import com.team04.domain.payment.entity.PaymentTypes.PaymentStatus;
