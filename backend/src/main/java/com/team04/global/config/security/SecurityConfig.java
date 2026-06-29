@@ -73,7 +73,6 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/auth/logout").authenticated()
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers("/actuator/health").permitAll() // 헬스체크
-                        .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll() // Swagger
                         .requestMatchers("/payments/webhooks/**").permitAll()
                         .requestMatchers(HttpMethod.PATCH, "/pre-settlements/*/complete").permitAll()
                         .requestMatchers(HttpMethod.PATCH, "/pre-settlements/*/fail").permitAll()
