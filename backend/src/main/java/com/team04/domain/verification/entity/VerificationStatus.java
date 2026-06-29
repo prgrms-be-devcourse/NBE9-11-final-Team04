@@ -40,6 +40,7 @@ public enum VerificationStatus {
                     || targetStatus == CANCELLED;
 
             case EXPERT_MATCHING -> targetStatus == AI_VERIFYING
+                    || targetStatus == PENDING_ADMIN_REVIEW
                     || targetStatus == CANCELLED;
 
             case CANCELLED -> false;

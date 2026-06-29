@@ -4,11 +4,14 @@ import com.team04.domain.expert.dto.request.ExpertProfileRequest;
 import com.team04.domain.expert.dto.response.ExpertAppealResponse;
 import com.team04.domain.expert.dto.response.ExpertProfileListResponse;
 import com.team04.domain.expert.dto.response.ExpertProfileResponse;
+import com.team04.domain.expert.dto.response.ExpertVerifyResponse;
 import com.team04.domain.expert.entity.ExpertProfile;
 import com.team04.domain.expert.entity.ExpertStatus;
 import com.team04.domain.expert.entity.TechStack;
 import com.team04.domain.expert.repository.ExpertAppealRepository;
 import com.team04.domain.expert.repository.ExpertProfileRepository;
+import com.team04.domain.user.entity.Role;
+import com.team04.domain.user.entity.User;
 import com.team04.domain.user.repository.UserRepository;
 import com.team04.global.exception.CustomException;
 import com.team04.global.exception.ErrorCode;
@@ -47,6 +50,10 @@ public class ExpertProfileService {
                 request.career()
         );
 
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+        user.changeRole(Role.EXPERT);
+
         return ExpertProfileResponse.from(profile);
     }
 
@@ -69,6 +76,21 @@ public class ExpertProfileService {
     public Page<ExpertProfileResponse> getProfilesByStatus(ExpertStatus status, Pageable pageable) {
         return expertProfileRepository.findProfilesByStatus(status, pageable)
                 .map(ExpertProfileResponse::from);
+    }
+
+    @Transactional(readOnly = true)
+    public ExpertProfileResponse getMyProfile(Long userId) {
+        ExpertProfile profile = expertProfileRepository.findByUserId(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.EXPERT_NOT_FOUND));
+        return ExpertProfileResponse.from(profile);
+    }
+
+    @Transactional
+    public ExpertProfileResponse updateProfile(Long userId, ExpertProfileRequest request) {
+        ExpertProfile profile = expertProfileRepository.findByUserId(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.EXPERT_NOT_FOUND));
+        profile.updateProfile(request.techStack(), request.portfolioUrl(), request.career());
+        return ExpertProfileResponse.from(profile);
     }
 
     // 소명 자료 목록 조회

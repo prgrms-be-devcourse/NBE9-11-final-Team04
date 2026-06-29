@@ -3,14 +3,28 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useRef, useState, useCallback } from 'react'
+import axios from 'axios'
 import type { Notification } from '@/types/notification'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { authApi } from '@/api/auth'
 import { notificationsApi } from '@/api/notifications'
 import { usersApi } from '@/api/users'
 import { useAuthStore } from '@/store/authStore'
+import { setTokens } from '@/api/client'
 import { useNotifications } from '@/hooks/useNotifications'
 import { type Role } from '@/types/enums'
+import { API_BASE_URL, TOKEN_KEYS } from '@/utils/constants'
+import type { ApiResponse } from '@/types/api'
+import type { TokenResponse } from '@/types/auth'
+
+function parseJwtExp(token: string): number | null {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]))
+    return typeof payload.exp === 'number' ? payload.exp : null
+  } catch {
+    return null
+  }
+}
 
 export function Unb() {
   const { isAuthenticated } = useAuthStore()
@@ -97,6 +111,36 @@ export function Gnb() {
   useEffect(() => {
     if (me) setUser(me)
   }, [me, setUser])
+
+  // 토큰 만료 자동 감지: 이미 만료됐으면 즉시 리프레시, 아니면 타이머 예약
+  useEffect(() => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem(TOKEN_KEYS.ACCESS) : null
+    if (!token) return
+
+    const exp = parseJwtExp(token)
+    if (!exp) return
+
+    const doRefresh = () =>
+      axios
+        .post<ApiResponse<TokenResponse>>(`${API_BASE_URL}/auth/token-refresh`, null, { withCredentials: true })
+        .then(({ data }) => setTokens(data.data))
+        .catch(() => {
+          useAuthStore.getState().logout()
+          window.location.href = '/login'
+        })
+
+    const msUntilExpiry = exp * 1000 - Date.now()
+
+    if (msUntilExpiry <= 0) {
+      // 이미 만료 → 즉시 리프레시 시도
+      doRefresh()
+    } else {
+      // 만료 1분 전에 자동 리프레시
+      const timer = setTimeout(doRefresh, Math.max(0, msUntilExpiry - 60_000))
+      return () => clearTimeout(timer)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const handleLogout = async () => {
     try { await authApi.logout() } catch { /* ignore */ }

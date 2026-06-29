@@ -47,6 +47,7 @@ export interface DisputeAppealInfo {
   createdAt: string
 }
 
+
 export interface DisputeResponse {
   id: number
   targetType: TargetType

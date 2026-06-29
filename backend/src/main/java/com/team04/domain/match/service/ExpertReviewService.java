@@ -15,6 +15,8 @@ import com.team04.domain.match.entity.MatchStatus;
 import com.team04.domain.notification.entity.NotificationPriority;
 import com.team04.domain.notification.entity.NotificationType;
 import com.team04.domain.verification.entity.TrustScore;
+import com.team04.domain.verification.entity.VerificationStatus;
+import com.team04.domain.verification.repository.ProjectVerificationRepository;
 import com.team04.domain.verification.repository.TrustScoreRepository;
 import com.team04.global.event.NotificationEvent;
 import com.team04.global.exception.CustomException;
@@ -35,11 +37,13 @@ public class ExpertReviewService {
     private final ExpertReviewRepository expertReviewRepository;
     private final IdeaRepository ideaRepository;
     private final TrustScoreRepository trustScoreRepository;
+    private final ProjectVerificationRepository projectVerificationRepository;
     private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public ExpertReviewResponse createReview(Long userId, Long matchId, ExpertReviewRequest request) {
 
+        // 전문가 프로필 조회 및 검증 완료 여부 확인
         ExpertProfile expertProfile = expertProfileRepository.findByUserId(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.EXPERT_NOT_FOUND));
 
@@ -47,13 +51,16 @@ public class ExpertReviewService {
             throw new CustomException(ErrorCode.EXPERT_NOT_VERIFIED);
         }
 
+        // 매칭 조회 및 본인 매칭인지 확인
         ExpertMatch match = expertMatchRepository.findByIdAndUserId(matchId, userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.MATCH_NOT_FOUND));
 
+        // 수락된 매칭인지 확인
         if (match.getStatus() != MatchStatus.ACCEPTED) {
             throw new CustomException(ErrorCode.MATCH_NOT_ACCEPTED);
         }
 
+        // 이미 리뷰가 작성된 매칭인지 확인
         if (expertReviewRepository.existsByExpertMatch_Id(matchId)) {
             throw new CustomException(ErrorCode.REVIEW_ALREADY_EXISTS);
         }
@@ -77,6 +84,10 @@ public class ExpertReviewService {
             idea.changeStatus(IdeaStatus.ADMIN_PENDING);
             ideaRepository.save(idea);
         }
+
+        // ProjectVerification 상태를 PENDING_ADMIN_REVIEW로 전이
+        projectVerificationRepository.findByIdeaId(idea.getId())
+                .ifPresent(v -> v.changeStatus(VerificationStatus.PENDING_ADMIN_REVIEW));
 
         // 신뢰도 점수 반영 (Feasibility 기반)
         trustScoreRepository.findByIdeaId(idea.getId()).ifPresent(trustScore -> {

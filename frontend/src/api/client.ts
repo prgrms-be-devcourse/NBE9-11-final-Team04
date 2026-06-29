@@ -2,6 +2,7 @@ import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios'
 import { API_BASE_URL, TOKEN_KEYS } from '@/utils/constants'
 import type { ApiResponse } from '@/types/api'
 import type { TokenResponse } from '@/types/auth'
+import { useAuthStore } from '@/store/authStore'
 
 let isRefreshing = false
 let refreshQueue: Array<() => void> = []
@@ -65,8 +66,8 @@ apiClient.interceptors.response.use(
       refreshQueue = []
       return apiClient(originalRequest)
     } catch {
-      clearTokens()
       refreshQueue = []
+      useAuthStore.getState().logout()
       if (typeof window !== 'undefined') window.location.href = '/login'
       return Promise.reject(error)
     } finally {
