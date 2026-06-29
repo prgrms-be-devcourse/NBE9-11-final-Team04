@@ -67,8 +67,11 @@ public class ExpertController {
         return ResponseEntity.ok(ApiResponse.ofSuccess(response));
     }
 
-
     /* 내 전문가 프로필 조회 API */
+    @Operation(
+            summary = "내 전문가 프로필 조회",
+            description = "로그인한 전문가 본인의 프로필을 조회합니다. 로그인한 사용자만 접근 가능합니다."
+    )
     @GetMapping("/me")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<ExpertProfileResponse>> getMyProfile(
@@ -78,7 +81,11 @@ public class ExpertController {
         return ResponseEntity.ok(ApiResponse.ofSuccess(response));
     }
 
-    /* 내 전문가 프로필 수정 API */
+    /* 전문가 프로필 수정 API */
+    @Operation(
+            summary = " 전문가 프로필 수정",
+            description = "로그인한 전문가 본인의 기술 스택, 포트폴리오, 경력을 수정합니다. EXPERT 권한 필요."
+    )
     @PatchMapping("/profile")
     @PreAuthorize("hasRole('EXPERT')")
     public ResponseEntity<ApiResponse<ExpertProfileResponse>> updateProfile(
@@ -96,6 +103,7 @@ public class ExpertController {
             description = "사업자 등록번호(국세청 API) 또는 국가자격증(수동 검토)으로 전문가 자격을 검증합니다. 로그인한 사용자만 접근 가능합니다."
     )
     @PostMapping("/verify")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<ExpertVerifyResponse>> verify(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @Valid @RequestBody ExpertVerifyRequest request
