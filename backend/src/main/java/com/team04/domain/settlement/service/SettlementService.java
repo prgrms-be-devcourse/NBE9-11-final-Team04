@@ -199,7 +199,10 @@ public class SettlementService {
     public SettlementResponse createAdminDepositRefundSettlement(Long ideaId) {
         // 관리자 보증금 환급/몰수 판정은 같은 ideaId에서 하나만 가능해야 하므로 아이디어 단위로 직렬화한다.
         lockIdeaForDepositDecision(ideaId);
-        if (settlementExists(ideaId, "DEPOSIT-FORFEITED")) {
+        if (settlementExists(ideaId, "DEPOSIT-FORFEITED")
+                || settlementExists(ideaId, "DEPOSIT-COMPLETED")
+                || settlementExists(ideaId, "DEPOSIT-GOAL-NOT-MET")
+                || settlementExists(ideaId, "DEPOSIT-REFUND")) {
             throw new CustomException(ErrorCode.SETTLEMENT_DUPLICATE);
         }
 

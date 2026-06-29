@@ -577,12 +577,21 @@ public class PaymentService {
     // 환불 요청 — Payment/Funding REFUNDED + Idea 누적 후원금 차감 (후원자 본인)
     @Transactional
     public void refundPayment(Long paymentId, Long sponsorId) {
-        // 동일 결제건 환불 요청이 동시에 들어와도 한 요청만 SUCCESS 상태를 선점하도록 결제 row를 먼저 잠근다.
-        Payment payment = paymentRepository.findByIdForUpdate(paymentId)
+        Payment paymentForRelation = paymentRepository.findById(paymentId)
                 .orElseThrow(() -> new CustomException(ErrorCode.PAYMENT_NOT_FOUND));
 
-        Funding funding = fundingRepository.findByIdForUpdate(payment.getFundingId())
+        Funding fundingForRelation = fundingRepository.findById(paymentForRelation.getFundingId())
                 .orElseThrow(() -> new CustomException(ErrorCode.FUNDING_NOT_FOUND));
+
+        // 데드락 방지를 위해 같은 아이디어의 환불/정산 흐름은 상위 엔티티부터 같은 순서로 잠근다.
+        Idea idea = ideaRepository.findByIdForUpdate(fundingForRelation.getIdeaId())
+                .orElseThrow(() -> new CustomException(ErrorCode.IDEA_NOT_FOUND));
+
+        Funding funding = fundingRepository.findByIdForUpdate(fundingForRelation.getId())
+                .orElseThrow(() -> new CustomException(ErrorCode.FUNDING_NOT_FOUND));
+
+        Payment payment = paymentRepository.findByIdForUpdate(paymentForRelation.getId())
+                .orElseThrow(() -> new CustomException(ErrorCode.PAYMENT_NOT_FOUND));
 
         if (!funding.getSponsorId().equals(sponsorId)) {
             throw new CustomException(ErrorCode.FORBIDDEN);
@@ -613,8 +622,7 @@ public class PaymentService {
         funding.markAsRefunded();
         payment.markAsRefunded();
 
-        ideaRepository.findByIdForUpdate(funding.getIdeaId())
-                .ifPresent(idea -> idea.subtractFundingAmount(funding.getAmount()));
+        idea.subtractFundingAmount(funding.getAmount());
         // 후원자 직접 취소 환불은 실제 출금으로 보아 가상계좌 장부 잔액에서 차감한다.
         vbankLedgerService.recordOut(
                 funding.getIdeaId(),
