@@ -23,6 +23,7 @@ export default function FundingDetailPage() {
   const fundingId = params.fundingId ? Number(params.fundingId) : undefined
   const queryClient = useQueryClient()
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  const user = useAuthStore((s) => s.user)
   const [amount, setAmount] = useState(10000)
   const [paymentMethod, setPaymentMethod] = useState<'CARD' | 'VIRTUAL_ACCOUNT'>('CARD')
   const [error, setError] = useState('')
@@ -30,7 +31,7 @@ export default function FundingDetailPage() {
   const [liveProgress, setLiveProgress] = useState<FundingProgressEvent | null>(null)
   const [vbankInfo, setVbankInfo] = useState<VbankInfo | null>(null)
 
-  const { data: funding } = useQuery({
+  const { data: funding, isLoading: fundingLoading } = useQuery({
     queryKey: ['fundings', fundingId],
     queryFn: () => fundingsApi.getById(fundingId!),
     enabled: !!fundingId && !ideaId,
@@ -38,11 +39,13 @@ export default function FundingDetailPage() {
 
   const effectiveIdeaId = ideaId ?? funding?.ideaId
 
-  const { data: idea, isLoading } = useQuery({
+  const { data: idea, isLoading: ideaLoading } = useQuery({
     queryKey: ['ideas', effectiveIdeaId],
     queryFn: () => ideasApi.getById(effectiveIdeaId!),
     enabled: !!effectiveIdeaId,
   })
+
+  const isLoading = fundingLoading || ideaLoading
 
   const { data: milestones } = useQuery({
     queryKey: ['fundings', effectiveIdeaId, 'milestones'],
@@ -50,6 +53,20 @@ export default function FundingDetailPage() {
     enabled: !!effectiveIdeaId,
     retry: false,
   })
+
+  const isOwner = !!user && !!idea && user.id === idea.userId
+
+  const { data: myPayments } = useQuery({
+    queryKey: ['payments', 'me'],
+    queryFn: () => paymentsApi.getMyPayments(0, 200),
+    enabled: isAuthenticated && !isOwner,
+  })
+
+  const hasSponsored = myPayments?.content.some(
+    (p) => p.ideaId === effectiveIdeaId && p.status === 'SUCCESS',
+  ) ?? false
+
+  const canAccessWorkspace = isOwner || hasSponsored
 
   useSse<FundingProgressEvent>({
     url: `/fundings/${effectiveIdeaId}/sse`,
@@ -64,6 +81,7 @@ export default function FundingDetailPage() {
     mutationFn: (paymentId: number) => paymentsApi.demoConfirm(paymentId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ideas', effectiveIdeaId] })
+      queryClient.invalidateQueries({ queryKey: ['payments', 'me'] })
       setSuccess('후원이 완료되었습니다! 🎉')
     },
     onError: (err) => setError(getErrorMessage(err)),
@@ -121,7 +139,20 @@ export default function FundingDetailPage() {
         </div>
         {liveProgress && <p className="mt-2 text-center text-xs text-emerald-600">● LIVE</p>}
       </Card>
-      {isAuthenticated && (idea.status === 'OPEN' || idea.status === 'IN_PROGRESS') && (
+      {isAuthenticated && canAccessWorkspace && (idea.status === 'OPEN' || idea.status === 'IN_PROGRESS') && (
+        <Link
+          href={`/workspaces/${idea.ideaId}`}
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+            marginTop: '24px', padding: '14px', borderRadius: '10px',
+            background: '#059669', color: '#fff',
+            fontSize: '15px', fontWeight: 700, textDecoration: 'none',
+          }}
+        >
+          🚀 워크스페이스 입장
+        </Link>
+      )}
+      {isAuthenticated && user?.id !== idea.userId && (idea.status === 'OPEN' || idea.status === 'IN_PROGRESS') && (
         <Card className="mt-6">
           <h2 className="font-semibold">후원하기</h2>
           <div className="mt-4 flex gap-2">
