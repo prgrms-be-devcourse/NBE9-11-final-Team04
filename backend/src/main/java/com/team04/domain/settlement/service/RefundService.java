@@ -188,7 +188,8 @@ public class RefundService {
      */
     @Transactional
     public RefundResponse completeRefund(Long refundId) {
-        Refund refund = refundRepository.findById(refundId)
+        // PG 콜백이 중복으로 들어와도 환불 완료와 가상계좌 장부 기록은 한 번만 처리되도록 잠근다.
+        Refund refund = refundRepository.findByIdForUpdate(refundId)
                 .orElseThrow(() -> new CustomException(ErrorCode.REFUND_NOT_FOUND));
 
         Payment payment = paymentRepository.findById(refund.getPaymentId())

@@ -111,8 +111,7 @@ public class Idea extends BaseEntity {
     @Column(nullable = false)
     private int rejectedMatchCount = 0;
 
-    @Column(nullable = false)
-    private int rejectCount = 0;
+    private int adminRejectedCount = 0;
 
     /** 신규 아이디어를 심사 대기 기본값과 함께 생성합니다. */
     public Idea(
@@ -214,16 +213,6 @@ public class Idea extends BaseEntity {
         this.deletedAt = LocalDateTime.now();
     }
 
-    /** 결제 완료 이벤트 금액을 현재 모금액에 더합니다. */
-    public void addCurrentAmount(Long amount) {
-        this.currentAmount += amount;
-    }
-
-    /** 첫 후원자 결제 완료 시 인기 점수 계산용 후원자 수를 증가시킵니다. */
-    public void increaseSponsorCount() {
-        this.sponsorCount++;
-    }
-
     /** 마지막 후원 취소 시 인기 점수 계산용 후원자 수를 0 아래로 내려가지 않게 감소시킵니다. */
     public void decreaseSponsorCount() {
         if (this.sponsorCount > 0) {
@@ -248,11 +237,6 @@ public class Idea extends BaseEntity {
     /** 아이디어 검증 이력 또는 인증 상태 배지를 변경합니다. */
     public void changeBadge(IdeaBadge badge) {
         this.badge = badge;
-    }
-
-    /** 이미 소프트 삭제된 아이디어인지 확인합니다. */
-    public boolean isDeleted() {
-        return deletedAt != null;
     }
 
     /** 후원 결제 완료 시 누적 후원금과 후원자 수를 갱신합니다. */
@@ -281,25 +265,14 @@ public class Idea extends BaseEntity {
         }
     }
 
-    /** AI 검증 완료 후 전문가 심사 대기 상태로 전이합니다. */
-    public void completeAiVerification() {
-        changeStatus(IdeaStatus.EXPERT_PENDING);
-    }
-
-    /** 전문가 검토 완료 후 관리자 심사 대기 상태로 전이합니다. */
-    public void completeExpertReview() {
-        changeStatus(IdeaStatus.ADMIN_PENDING);
-    }
-
     /** 관리자 승인 후 펀딩 공개 상태로 전이합니다. */
     public void open() {
         changeStatus(IdeaStatus.OPEN);
     }
 
-    /** 관리자 반려 후 반려 횟수와 반려 사유를 저장하고 반려 상태로 전이합니다. */
+    /** 관리자 반려 후 반려 사유를 저장하고 반려 상태로 전이합니다. */
     public void reject(String reason) {
         this.rejectReason = reason;
-        this.rejectCount++;
         changeStatus(IdeaStatus.REJECTED);
     }
 
@@ -334,5 +307,17 @@ public class Idea extends BaseEntity {
     /** 신뢰도 점수를 갱신합니다. */
     public void updateTrustScore(Integer totalScore) {
         this.trustScore = totalScore;
+    }
+
+    /** 관리자 반려 횟수를 증가시킵니다. */
+    public void increaseAdminRejectedCount() {
+        this.adminRejectedCount++;
+    }
+
+    /** 관리자 반려 횟수 기준으로 신뢰도 점수를 반환합니다. */
+    public int calculateAdminApprovalScore() {
+        if (adminRejectedCount == 0) return 20;
+        if (adminRejectedCount == 1) return 10;
+        return 5;
     }
 }

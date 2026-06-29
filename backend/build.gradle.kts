@@ -33,9 +33,11 @@ dependencies {
     implementation("io.github.openfeign.querydsl:querydsl-jpa:5.6.1:jakarta")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("software.amazon.awssdk:s3")
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.3")
 
     implementation("io.github.resilience4j:resilience4j-spring-boot3:2.1.0")
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.3")
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.2")
 
     compileOnly("org.projectlombok:lombok")
     developmentOnly("org.springframework.boot:spring-boot-devtools")

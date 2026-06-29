@@ -69,6 +69,7 @@ public class SecurityConfig {
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .dispatcherTypeMatchers(DispatcherType.ERROR, DispatcherType.ASYNC).permitAll()
+                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/users/me/business").hasRole("USER")
                         .requestMatchers(HttpMethod.POST, "/auth/logout").authenticated()
                         .requestMatchers("/auth/**").permitAll()
@@ -94,6 +95,9 @@ public class SecurityConfig {
                         .requestMatchers("/workspaces/**").authenticated()
                         .requestMatchers(HttpMethod.GET, "/experts/{expertId}").authenticated()
                         .requestMatchers("/experts/verify").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/experts/me").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/experts/profile").authenticated()
+                        .requestMatchers(HttpMethod.PATCH, "/experts/profile").hasRole("EXPERT")
                         .requestMatchers(HttpMethod.POST, "/matches/experts/{expertProfileId}").hasRole("USER")
                         .requestMatchers(HttpMethod.GET, "/experts").authenticated()
                         .requestMatchers("/experts/**").hasRole("EXPERT")

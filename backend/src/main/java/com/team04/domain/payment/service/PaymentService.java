@@ -585,13 +585,26 @@ public class PaymentService {
     // 환불 요청 — Payment/Funding REFUNDED + Idea 누적 후원금 차감 (후원자 본인)
     @Transactional
     public void refundPayment(Long paymentId, Long sponsorId) {
-        validateSponsorOwnsPayment(paymentId, sponsorId);
-
-        Payment payment = paymentRepository.findById(paymentId)
+        Long fundingId = paymentRepository.findFundingIdById(paymentId)
                 .orElseThrow(() -> new CustomException(ErrorCode.PAYMENT_NOT_FOUND));
 
-        Funding funding = fundingRepository.findByIdForUpdate(payment.getFundingId())
+        Long ideaId = fundingRepository.findIdeaIdById(fundingId)
                 .orElseThrow(() -> new CustomException(ErrorCode.FUNDING_NOT_FOUND));
+
+        // 관계 ID만 먼저 읽고 엔티티는 락 조회로만 올린다.
+        // 일반 조회 엔티티가 영속성 컨텍스트에 남으면 락 대기 후에도 오래된 SUCCESS/PAID 상태로 중복 환불될 수 있다.
+        Idea idea = ideaRepository.findByIdForUpdate(ideaId)
+                .orElseThrow(() -> new CustomException(ErrorCode.IDEA_NOT_FOUND));
+
+        Funding funding = fundingRepository.findByIdForUpdate(fundingId)
+                .orElseThrow(() -> new CustomException(ErrorCode.FUNDING_NOT_FOUND));
+
+        Payment payment = paymentRepository.findByIdForUpdate(paymentId)
+                .orElseThrow(() -> new CustomException(ErrorCode.PAYMENT_NOT_FOUND));
+
+        if (!funding.getSponsorId().equals(sponsorId)) {
+            throw new CustomException(ErrorCode.FORBIDDEN);
+        }
 
         if (payment.getStatus() != PaymentStatus.SUCCESS) {
             throw new CustomException(ErrorCode.PAYMENT_NOT_READY);
@@ -618,8 +631,7 @@ public class PaymentService {
         funding.markAsRefunded();
         payment.markAsRefunded();
 
-        ideaRepository.findByIdForUpdate(funding.getIdeaId())
-                .ifPresent(idea -> idea.subtractFundingAmount(funding.getAmount()));
+        idea.subtractFundingAmount(funding.getAmount());
         // 후원자 직접 취소 환불은 실제 출금으로 보아 가상계좌 장부 잔액에서 차감한다.
         vbankLedgerService.recordOut(
                 funding.getIdeaId(),
