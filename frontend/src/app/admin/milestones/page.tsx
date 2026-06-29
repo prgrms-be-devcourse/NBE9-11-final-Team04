@@ -1,16 +1,22 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, Suspense } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient, unwrap } from '@/api/client'
 import { Badge } from '@/components/ui/Badge'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
-import type { ApiResponse } from '@/types/api'
+import type { ApiResponse, PageResponse } from '@/types/api'
 import { formatDateTime } from '@/utils/format'
 
 type MilestoneStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
 type CompletionReportType = 'COMPLETION' | 'APPEAL'
 type CompletionReportStatus = 'SUBMITTED' | 'APPROVED' | 'REJECTED'
+
+interface IdeaOption {
+  ideaId: number
+  title: string
+}
 
 interface MilestoneResponse {
   id: number
@@ -41,19 +47,26 @@ const milestoneApi = {
     unwrap(apiClient.get<ApiResponse<CompletionReportResponse[]>>(`/milestones/${milestoneId}/reports`)),
 
   approveCompletion: (milestoneId: number) =>
-    unwrap(apiClient.post<ApiResponse<void>>(`/milestones/${milestoneId}/reports/approve/completion`)),
+    unwrap(apiClient.post<ApiResponse<void>>(`/admin/milestones/${milestoneId}/reports/approve/completion`)),
 
   approveAppeal: (milestoneId: number) =>
-    unwrap(apiClient.post<ApiResponse<void>>(`/milestones/${milestoneId}/reports/approve/appeal`)),
+    unwrap(apiClient.post<ApiResponse<void>>(`/admin/milestones/${milestoneId}/reports/approve/appeal`)),
 
-  reject: (milestoneId: number) =>
-    unwrap(apiClient.post<ApiResponse<void>>(`/milestones/${milestoneId}/reports/reject`)),
+  reject: (milestoneId: number, reason: string) =>
+    unwrap(apiClient.post<ApiResponse<void>>(`/admin/milestones/${milestoneId}/reports/reject`, { reason })),
 
   refund: (milestoneId: number) =>
-    unwrap(apiClient.post<ApiResponse<void>>(`/milestones/${milestoneId}/reports/refund`)),
+    unwrap(apiClient.post<ApiResponse<void>>(`/admin/milestones/${milestoneId}/reports/refund`)),
 
   cancelByIdea: (ideaId: number) =>
-    unwrap(apiClient.post<ApiResponse<void>>(`/milestones/ideas/${ideaId}/cancel`)),
+    unwrap(apiClient.post<ApiResponse<void>>(`/admin/milestones/ideas/${ideaId}/cancel`)),
+
+  getInProgressIdeas: () =>
+    unwrap(
+      apiClient.get<ApiResponse<PageResponse<IdeaOption>>>('/admin/ideas', {
+        params: { status: 'IN_PROGRESS', page: 0, size: 100 },
+      }),
+    ),
 }
 
 const MILESTONE_STATUS_BADGE: Record<MilestoneStatus, { variant: 'green' | 'orange' | 'red' | 'gray'; label: string }> = {
@@ -84,7 +97,7 @@ function MilestoneCard({ milestone }: { milestone: MilestoneResponse }) {
   })
 
   const rejectMutation = useMutation({
-    mutationFn: () => milestoneApi.reject(milestone.id),
+    mutationFn: (reason: string) => milestoneApi.reject(milestone.id, reason),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'milestone', milestone.id, 'reports'] }),
     onError: () => alert('반려 처리 중 오류가 발생했습니다.'),
   })
@@ -109,7 +122,6 @@ function MilestoneCard({ milestone }: { milestone: MilestoneResponse }) {
       background: '#fff', border: '1px solid var(--border)',
       borderRadius: '12px', padding: '20px',
     }}>
-      {/* 마일스톤 헤더 */}
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', marginBottom: '14px' }}>
         <div style={{
           width: '32px', height: '32px', borderRadius: '50%',
@@ -134,7 +146,6 @@ function MilestoneCard({ milestone }: { milestone: MilestoneResponse }) {
         </div>
       </div>
 
-      {/* 보고서 섹션 */}
       {reportsLoading ? (
         <div style={{ padding: '12px 0', display: 'flex', justifyContent: 'center' }}>
           <LoadingSpinner />
@@ -188,10 +199,9 @@ function MilestoneCard({ milestone }: { milestone: MilestoneResponse }) {
                       textDecoration: 'underline', wordBreak: 'break-all',
                     }}
                   >
-                    📎 첨부 파일 보기
+                    첨부 파일 보기
                   </a>
                 )}
-                {/* 액션 버튼 */}
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                   {isCompletion ? (
                     <>
@@ -214,8 +224,9 @@ function MilestoneCard({ milestone }: { milestone: MilestoneResponse }) {
                       </button>
                       <button
                         onClick={() => {
-                          if (confirm('보고서를 반려하시겠습니까?')) {
-                            rejectMutation.mutate()
+                          const reason = prompt('반려 사유를 입력하세요:')
+                          if (reason && reason.trim()) {
+                            rejectMutation.mutate(reason.trim())
                           }
                         }}
                         disabled={isMutating}
@@ -268,8 +279,9 @@ function MilestoneCard({ milestone }: { milestone: MilestoneResponse }) {
                       </button>
                       <button
                         onClick={() => {
-                          if (confirm('소명 보고서를 반려하시겠습니까?')) {
-                            rejectMutation.mutate()
+                          const reason = prompt('반려 사유를 입력하세요:')
+                          if (reason && reason.trim()) {
+                            rejectMutation.mutate(reason.trim())
                           }
                         }}
                         disabled={isMutating}
@@ -295,75 +307,125 @@ function MilestoneCard({ milestone }: { milestone: MilestoneResponse }) {
   )
 }
 
-export default function AdminMilestonesPage() {
+function AdminMilestonesContent() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
   const queryClient = useQueryClient()
-  const [ideaIdInput, setIdeaIdInput] = useState('')
-  const [searchedIdeaId, setSearchedIdeaId] = useState<number | null>(null)
+  const [selectedIdeaId, setSelectedIdeaId] = useState<number | null>(null)
 
-  const { data: milestones, isLoading } = useQuery({
-    queryKey: ['admin', 'milestones', 'idea', searchedIdeaId],
-    queryFn: () => milestoneApi.getByIdea(searchedIdeaId!),
-    enabled: searchedIdeaId !== null,
+  const { data: ideasPage, isLoading: ideasLoading } = useQuery({
+    queryKey: ['admin', 'ideas', 'IN_PROGRESS', 'all'],
+    queryFn: milestoneApi.getInProgressIdeas,
+    staleTime: 30_000,
+  })
+
+  const ideas = ideasPage?.content ?? []
+
+  useEffect(() => {
+    const param = searchParams.get('ideaId')
+    if (param) {
+      const parsed = parseInt(param, 10)
+      if (!isNaN(parsed) && parsed > 0) {
+        setSelectedIdeaId(parsed)
+      }
+    }
+  }, [searchParams])
+
+  const { data: milestones, isLoading: milestonesLoading } = useQuery({
+    queryKey: ['admin', 'milestones', 'idea', selectedIdeaId],
+    queryFn: () => milestoneApi.getByIdea(selectedIdeaId!),
+    enabled: selectedIdeaId !== null,
   })
 
   const cancelMutation = useMutation({
     mutationFn: (ideaId: number) => milestoneApi.cancelByIdea(ideaId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'milestones', 'idea', searchedIdeaId] })
+      queryClient.invalidateQueries({ queryKey: ['admin', 'milestones', 'idea', selectedIdeaId] })
     },
     onError: () => alert('마일스톤 강제 취소 중 오류가 발생했습니다.'),
   })
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault()
-    const parsed = parseInt(ideaIdInput, 10)
-    if (!isNaN(parsed) && parsed > 0) {
-      setSearchedIdeaId(parsed)
+  const handleSelect = (ideaId: number | null) => {
+    setSelectedIdeaId(ideaId)
+    if (ideaId) {
+      router.replace(`/admin/milestones?ideaId=${ideaId}`, { scroll: false })
+    } else {
+      router.replace('/admin/milestones', { scroll: false })
     }
   }
 
+  const selectedIdea = ideas.find((i) => i.ideaId === selectedIdeaId)
+
   return (
     <>
-      {/* 헤더 */}
       <div style={{ marginBottom: '24px' }}>
         <h1 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--fg)', marginBottom: '4px' }}>
           📋 마일스톤 관리
         </h1>
         <p style={{ fontSize: '14px', color: 'var(--fg-muted)' }}>
-          아이디어 ID로 마일스톤을 조회하고 보고서를 승인·반려합니다.
+          사업 진행 중인 아이디어의 마일스톤 보고서를 승인·반려합니다.
         </p>
       </div>
 
-      {/* ideaId 검색 */}
-      <form onSubmit={handleSearch} style={{ display: 'flex', gap: '10px', marginBottom: '28px' }}>
-        <input
-          type="number"
-          min={1}
-          value={ideaIdInput}
-          onChange={(e) => setIdeaIdInput(e.target.value)}
-          placeholder="아이디어 ID 입력"
-          style={{
-            flex: 1, maxWidth: '240px',
-            padding: '10px 14px', borderRadius: '8px',
-            border: '1.5px solid var(--border)', fontSize: '14px',
-            color: 'var(--fg)', outline: 'none', boxSizing: 'border-box',
-          }}
-        />
-        <button
-          type="submit"
-          style={{
-            padding: '10px 22px', borderRadius: '8px', border: 'none',
-            background: 'var(--brand)', color: '#fff',
-            fontWeight: 700, fontSize: '14px', cursor: 'pointer',
-          }}
-        >
-          조회
-        </button>
-      </form>
+      {/* 아이디어 선택 드롭다운 */}
+      <div style={{ marginBottom: '28px' }}>
+        <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--fg-muted)', marginBottom: '8px' }}>
+          아이디어 선택 <span style={{ color: 'var(--fg-muted)', fontWeight: 400 }}>(사업 진행 중)</span>
+        </label>
+        {ideasLoading ? (
+          <div style={{ padding: '10px 0' }}><LoadingSpinner /></div>
+        ) : ideas.length === 0 ? (
+          <div style={{
+            padding: '14px 16px', borderRadius: '8px',
+            background: 'var(--bg-alt)', border: '1.5px solid var(--border)',
+            fontSize: '14px', color: 'var(--fg-muted)',
+          }}>
+            현재 사업 진행 중인 아이디어가 없습니다.
+          </div>
+        ) : (
+          <select
+            value={selectedIdeaId ?? ''}
+            onChange={(e) => {
+              const val = e.target.value
+              handleSelect(val ? parseInt(val, 10) : null)
+            }}
+            style={{
+              width: '100%', maxWidth: '520px',
+              padding: '11px 14px', borderRadius: '8px',
+              border: '1.5px solid var(--border)', fontSize: '14px',
+              color: 'var(--fg)', background: '#fff',
+              outline: 'none', cursor: 'pointer',
+              appearance: 'none',
+              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23888' d='M6 8L1 3h10z'/%3E%3C/svg%3E")`,
+              backgroundRepeat: 'no-repeat',
+              backgroundPosition: 'right 14px center',
+              paddingRight: '36px',
+            }}
+          >
+            <option value="">아이디어를 선택하세요</option>
+            {ideas.map((idea) => (
+              <option key={idea.ideaId} value={idea.ideaId}>
+                #{idea.ideaId} — {idea.title}
+              </option>
+            ))}
+          </select>
+        )}
+      </div>
 
-      {/* 결과 */}
-      {searchedIdeaId !== null && (
-        isLoading ? (
+      {/* 선택된 아이디어가 드롭다운에 없는 경우 (URL 직접 접근) */}
+      {selectedIdeaId !== null && !ideasLoading && ideas.length > 0 && !selectedIdea && (
+        <div style={{
+          padding: '12px 16px', borderRadius: '8px', marginBottom: '16px',
+          background: '#fff4e8', border: '1.5px solid #fed7aa',
+          fontSize: '13px', color: '#a05c00',
+        }}>
+          아이디어 #{selectedIdeaId}는 목록에 없습니다. 상태가 변경되었을 수 있습니다.
+        </div>
+      )}
+
+      {/* 마일스톤 결과 */}
+      {selectedIdeaId !== null && (
+        milestonesLoading ? (
           <LoadingSpinner />
         ) : !milestones || milestones.length === 0 ? (
           <div style={{
@@ -371,12 +433,12 @@ export default function AdminMilestonesPage() {
             background: 'var(--bg-alt)', borderRadius: '12px',
             color: 'var(--fg-muted)', fontSize: '15px',
           }}>
-            아이디어 #{searchedIdeaId}에 마일스톤이 없습니다.
+            아이디어 #{selectedIdeaId}에 마일스톤이 없습니다.
           </div>
         ) : (
           <>
             <div style={{ fontSize: '13px', color: 'var(--fg-muted)', marginBottom: '14px' }}>
-              아이디어 #{searchedIdeaId} · 총 {milestones.length}개 마일스톤
+              {selectedIdea ? `"${selectedIdea.title}"` : `아이디어 #${selectedIdeaId}`} · 총 {milestones.length}개 마일스톤
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
@@ -385,7 +447,6 @@ export default function AdminMilestonesPage() {
               ))}
             </div>
 
-            {/* 강제 취소 */}
             <div style={{
               padding: '20px', borderRadius: '12px',
               border: '1.5px solid #fca5a5', background: '#fff5f5',
@@ -394,12 +455,12 @@ export default function AdminMilestonesPage() {
                 위험 구역
               </p>
               <p style={{ fontSize: '13px', color: '#dc2626', marginBottom: '14px', opacity: 0.8 }}>
-                아이디어 #{searchedIdeaId}의 모든 마일스톤을 강제 취소합니다. 이 작업은 되돌릴 수 없습니다.
+                {selectedIdea ? `"${selectedIdea.title}"` : `아이디어 #${selectedIdeaId}`}의 모든 마일스톤을 강제 취소합니다. 이 작업은 되돌릴 수 없습니다.
               </p>
               <button
                 onClick={() => {
-                  if (confirm(`아이디어 #${searchedIdeaId}의 마일스톤을 강제 취소하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) {
-                    cancelMutation.mutate(searchedIdeaId)
+                  if (confirm(`이 아이디어의 마일스톤을 강제 취소하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) {
+                    cancelMutation.mutate(selectedIdeaId)
                   }
                 }}
                 disabled={cancelMutation.isPending}
@@ -417,5 +478,13 @@ export default function AdminMilestonesPage() {
         )
       )}
     </>
+  )
+}
+
+export default function AdminMilestonesPage() {
+  return (
+    <Suspense fallback={<LoadingSpinner />}>
+      <AdminMilestonesContent />
+    </Suspense>
   )
 }

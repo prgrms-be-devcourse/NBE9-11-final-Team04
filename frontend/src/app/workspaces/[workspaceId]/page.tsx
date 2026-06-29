@@ -250,17 +250,24 @@ function MessagesTab({
 
 function MilestoneReportForm({
   milestoneId,
+  type,
   onClose,
 }: {
   milestoneId: number
+  type: 'COMPLETION' | 'APPEAL'
   onClose: () => void
 }) {
   const queryClient = useQueryClient()
   const [reportContent, setReportContent] = useState('')
   const [file, setFile] = useState<File | null>(null)
 
+  const isAppeal = type === 'APPEAL'
+
   const submitMutation = useMutation({
-    mutationFn: () => milestonesApi.submitCompletionReport(milestoneId, reportContent, file ?? undefined),
+    mutationFn: () =>
+      isAppeal
+        ? milestonesApi.submitAppealReport(milestoneId, reportContent, file ?? undefined)
+        : milestonesApi.submitCompletionReport(milestoneId, reportContent, file ?? undefined),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['workspace', 'milestone', milestoneId, 'reports'] })
       onClose()
@@ -274,17 +281,17 @@ function MilestoneReportForm({
         marginTop: '12px',
         padding: '16px',
         borderRadius: '10px',
-        border: '1.5px solid var(--border)',
-        background: 'var(--bg-alt)',
+        border: `1.5px solid ${isAppeal ? '#fca5a5' : 'var(--border)'}`,
+        background: isAppeal ? '#fff5f5' : 'var(--bg-alt)',
       }}
     >
-      <p style={{ fontSize: '13px', fontWeight: 700, color: 'var(--fg)', marginBottom: '10px' }}>
-        완료 보고서 제출
+      <p style={{ fontSize: '13px', fontWeight: 700, color: isAppeal ? '#dc2626' : 'var(--fg)', marginBottom: '10px' }}>
+        {isAppeal ? '소명 보고서 제출' : '완료 보고서 제출'}
       </p>
       <textarea
         value={reportContent}
         onChange={(e) => setReportContent(e.target.value)}
-        placeholder="완료 내용을 상세히 작성하세요..."
+        placeholder={isAppeal ? '소명 내용을 상세히 작성하세요...' : '완료 내용을 상세히 작성하세요...'}
         rows={4}
         style={{
           width: '100%',
@@ -362,7 +369,9 @@ function MilestoneCard({
   })
 
   const statusBadge = MILESTONE_STATUS_BADGE[milestone.status]
-  const canSubmit = milestone.status === 'IN_PROGRESS' && isCreator
+  const latestReport = reports?.[0]
+  const canSubmitCompletion = milestone.status === 'IN_PROGRESS' && isCreator && !latestReport
+  const canSubmitAppeal = milestone.status === 'IN_PROGRESS' && isCreator && latestReport?.status === 'REJECTED'
 
   return (
     <div
@@ -456,26 +465,30 @@ function MilestoneCard({
         )
       )}
 
-      {canSubmit && !showForm && (
+      {(canSubmitCompletion || canSubmitAppeal) && !showForm && (
         <button
           onClick={() => setShowForm(true)}
           style={{
             padding: '8px 16px',
             borderRadius: '8px',
-            border: '1.5px solid var(--brand)',
-            background: 'var(--brand-tint)',
-            color: 'var(--brand-dark)',
+            border: `1.5px solid ${canSubmitAppeal ? '#fca5a5' : 'var(--brand)'}`,
+            background: canSubmitAppeal ? '#fff5f5' : 'var(--brand-tint)',
+            color: canSubmitAppeal ? '#dc2626' : 'var(--brand-dark)',
             fontSize: '13px',
             fontWeight: 700,
             cursor: 'pointer',
           }}
         >
-          완료 보고서 제출
+          {canSubmitAppeal ? '📝 소명 보고서 제출' : '✅ 완료 보고서 제출'}
         </button>
       )}
 
       {showForm && (
-        <MilestoneReportForm milestoneId={milestone.id} onClose={() => setShowForm(false)} />
+        <MilestoneReportForm
+          milestoneId={milestone.id}
+          type={canSubmitAppeal ? 'APPEAL' : 'COMPLETION'}
+          onClose={() => setShowForm(false)}
+        />
       )}
     </div>
   )
