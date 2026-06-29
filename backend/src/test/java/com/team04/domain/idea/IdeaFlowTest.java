@@ -157,12 +157,12 @@ class IdeaFlowTest {
         );
 
         assertIdeaStatus(ideaId, IdeaStatus.ADMIN_PENDING);
-        assertVerificationStatus(ideaId, VerificationStatus.EXPERT_MATCHING);
+        assertVerificationStatus(ideaId, VerificationStatus.PENDING_ADMIN_REVIEW);
 
         ideaAdminService.approve(ideaId);
 
         assertIdeaStatus(ideaId, IdeaStatus.OPEN);
-        assertVerificationStatus(ideaId, VerificationStatus.EXPERT_MATCHING);
+        assertVerificationStatus(ideaId, VerificationStatus.PENDING_ADMIN_REVIEW);
     }
 
     @Test
