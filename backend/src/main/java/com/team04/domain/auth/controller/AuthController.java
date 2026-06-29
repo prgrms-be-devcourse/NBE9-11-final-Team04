@@ -10,6 +10,10 @@ import com.team04.global.exception.CustomException;
 import com.team04.global.exception.ErrorCode;
 import com.team04.global.response.ApiResponse;
 import com.team04.global.security.CustomUserDetails;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -25,6 +29,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.Duration;
 
+@Tag(name = "인증", description = "회원가입 / 로그인 / OAuth / 토큰 갱신 API")
 @RestController
 @RequestMapping("/auth")
 @RequiredArgsConstructor
@@ -33,6 +38,7 @@ public class AuthController {
     private final AuthService authService;
     private final OAuthService oAuthService;
 
+    @Operation(summary = "회원가입", description = "이메일·비밀번호 기반 회원가입. 성공 시 accessToken·refreshToken을 쿠키로 발급합니다.")
     @PostMapping("/signup")
     public ResponseEntity<ApiResponse<TokenResponse>> signup(
             @RequestBody @Valid SignupRequest request,
@@ -43,6 +49,7 @@ public class AuthController {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ofSuccess(tokenResponse));
     }
 
+    @Operation(summary = "이메일 인증 코드 발송", description = "입력한 이메일로 6자리 OTP 인증 코드를 발송합니다.")
     @PostMapping("/email-verify/send")
     public ApiResponse<Void> sendOtp(
             @RequestBody @Valid EmailSendRequest request
@@ -51,6 +58,7 @@ public class AuthController {
         return ApiResponse.ofSuccessWithoutBody();
     }
 
+    @Operation(summary = "이메일 인증 코드 확인", description = "발송된 OTP 코드를 검증합니다.")
     @PostMapping("/email-verify/confirm")
     public ApiResponse<Void> verifyOtp(
             @RequestBody @Valid EmailVerifyRequest request
@@ -59,6 +67,7 @@ public class AuthController {
         return ApiResponse.ofSuccessWithoutBody();
     }
 
+    @Operation(summary = "로그인", description = "이메일·비밀번호로 로그인합니다. 성공 시 accessToken·refreshToken을 쿠키로 발급합니다.")
     @PostMapping("/login")
     public ApiResponse<TokenResponse> login(
             @RequestBody @Valid LoginRequest request,
@@ -69,6 +78,8 @@ public class AuthController {
         return ApiResponse.ofSuccess(tokenResponse);
     }
 
+    @Operation(summary = "로그아웃", description = "Refresh Token을 무효화하고 인증 쿠키를 삭제합니다.")
+    @SecurityRequirement(name = "bearerAuth")
     @PostMapping("/logout")
     public ApiResponse<Void> logout(
             @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -79,6 +90,8 @@ public class AuthController {
         return ApiResponse.ofSuccessWithoutBody();
     }
 
+    @Operation(summary = "관리자 초대 이메일 발송", description = "ADMIN 권한 필요. 초대 토큰이 포함된 이메일을 발송합니다.")
+    @SecurityRequirement(name = "bearerAuth")
     @PostMapping("/admin-invitations")
     @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<Void> sendAdminInvite(
@@ -89,6 +102,7 @@ public class AuthController {
         return ApiResponse.ofSuccessWithoutBody();
     }
 
+    @Operation(summary = "관리자 회원가입", description = "초대 토큰을 검증하여 관리자 계정을 생성합니다.")
     @PostMapping("/admin-signup")
     public ResponseEntity<ApiResponse<TokenResponse>> adminSignup(
             @RequestBody @Valid AdminSignupRequest request,
@@ -99,20 +113,23 @@ public class AuthController {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ofSuccess(tokenResponse));
     }
 
+    @Operation(summary = "구글 OAuth 인가 URL 조회", description = "Google 소셜 로그인을 위한 인가 URL을 반환합니다.")
     @GetMapping("/oauth2/google/authorize")
     public ApiResponse<OAuthAuthorizeResponse> getGoogleAuthorizeUrl(
-            @RequestParam String redirectUri
+            @Parameter(description = "OAuth 콜백 후 리다이렉트할 프론트엔드 URI") @RequestParam String redirectUri
     ) {
         return ApiResponse.ofSuccess(oAuthService.getGoogleAuthorizeUrl(redirectUri));
     }
 
+    @Operation(summary = "카카오 OAuth 인가 URL 조회", description = "Kakao 소셜 로그인을 위한 인가 URL을 반환합니다.")
     @GetMapping("/oauth2/kakao/authorize")
     public ApiResponse<OAuthAuthorizeResponse> getKakaoAuthorizeUrl(
-            @RequestParam String redirectUri
+            @Parameter(description = "OAuth 콜백 후 리다이렉트할 프론트엔드 URI") @RequestParam String redirectUri
     ) {
         return ApiResponse.ofSuccess(oAuthService.getKakaoAuthorizeUrl(redirectUri));
     }
 
+    @Operation(summary = "구글 OAuth 로그인/연동", description = "Google 인가 코드로 로그인(LOGIN) 또는 추가정보 입력 필요(REGISTER) 여부를 반환합니다.")
     @PostMapping("/oauth2/google")
     public ApiResponse<OAuthResponse> processGoogle(
             @RequestBody @Valid OAuthLoginRequest request,
@@ -125,6 +142,7 @@ public class AuthController {
         return ApiResponse.ofSuccess(oAuthResponse);
     }
 
+    @Operation(summary = "카카오 OAuth 로그인/연동", description = "Kakao 인가 코드로 로그인(LOGIN) 또는 추가정보 입력 필요(REGISTER) 여부를 반환합니다.")
     @PostMapping("/oauth2/kakao")
     public ApiResponse<OAuthResponse> processKakao(
             @RequestBody @Valid OAuthLoginRequest request,
@@ -137,6 +155,7 @@ public class AuthController {
         return ApiResponse.ofSuccess(oAuthResponse);
     }
 
+    @Operation(summary = "OAuth 추가정보 등록", description = "소셜 로그인 후 닉네임·나이 등 추가정보를 등록하여 회원가입을 완료합니다.")
     @PostMapping("/oauth2/register")
     public ResponseEntity<ApiResponse<TokenResponse>> oauthRegister(
             @RequestBody @Valid OAuthRegisterRequest request,
@@ -147,6 +166,7 @@ public class AuthController {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ofSuccess(tokenResponse));
     }
 
+    @Operation(summary = "액세스 토큰 갱신", description = "쿠키의 refreshToken을 이용해 새 accessToken·refreshToken을 발급합니다.")
     @PostMapping("/token-refresh")
     public ApiResponse<TokenResponse> tokenRefresh(
             HttpServletRequest request,
