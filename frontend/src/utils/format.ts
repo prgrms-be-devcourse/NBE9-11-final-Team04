@@ -43,3 +43,11 @@ export function getErrorMessage(error: unknown): string {
   if (error instanceof Error) return error.message
   return '알 수 없는 오류가 발생했습니다.'
 }
+
+export function getResponseCode(error: unknown): string | null {
+  if (error && typeof error === 'object' && 'response' in error) {
+    const axiosError = error as { response?: { data?: { code?: string } } }
+    return axiosError.response?.data?.code ?? null
+  }
+  return null
+}

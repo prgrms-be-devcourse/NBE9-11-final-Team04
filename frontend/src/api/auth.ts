@@ -47,6 +47,9 @@ export const authApi = {
 
   logout: () => unwrap(apiClient.post<ApiResponse<void>>('/auth/logout')).finally(clearTokens),
 
+  checkNickname: (nickname: string) =>
+    unwrap(apiClient.get<ApiResponse<void>>('/auth/check-nickname', { params: { nickname } })),
+
   sendEmailVerify: (body: EmailSendRequest) =>
     unwrap(apiClient.post<ApiResponse<void>>('/auth/email-verify/send', body)),
 

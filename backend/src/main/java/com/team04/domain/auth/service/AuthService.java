@@ -123,6 +123,12 @@ public class AuthService {
         return new TokenResponse(newAccessToken, newRefreshToken);
     }
 
+    public void checkNickname(String nickname) {
+        if (userRepository.existsByNickname(nickname)) {
+            throw new CustomException(ErrorCode.DUPLICATE_NICKNAME);
+        }
+    }
+
     public void sendOtp(EmailSendRequest request){
         String otp = generateOtp();
         otpRepository.save(request.email(), otp, OTP_TTL);
