@@ -15,6 +15,8 @@ import com.team04.domain.match.entity.MatchStatus;
 import com.team04.domain.notification.entity.NotificationPriority;
 import com.team04.domain.notification.entity.NotificationType;
 import com.team04.domain.verification.entity.TrustScore;
+import com.team04.domain.verification.entity.VerificationStatus;
+import com.team04.domain.verification.repository.ProjectVerificationRepository;
 import com.team04.domain.verification.repository.TrustScoreRepository;
 import com.team04.global.event.NotificationEvent;
 import com.team04.global.exception.CustomException;
@@ -35,6 +37,7 @@ public class ExpertReviewService {
     private final ExpertReviewRepository expertReviewRepository;
     private final IdeaRepository ideaRepository;
     private final TrustScoreRepository trustScoreRepository;
+    private final ProjectVerificationRepository projectVerificationRepository;
     private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
@@ -81,6 +84,10 @@ public class ExpertReviewService {
             idea.changeStatus(IdeaStatus.ADMIN_PENDING);
             ideaRepository.save(idea);
         }
+
+        // ProjectVerification 상태를 PENDING_ADMIN_REVIEW로 전이
+        projectVerificationRepository.findByIdeaId(idea.getId())
+                .ifPresent(v -> v.changeStatus(VerificationStatus.PENDING_ADMIN_REVIEW));
 
         // 신뢰도 점수 반영 (Feasibility 기반)
         trustScoreRepository.findByIdeaId(idea.getId()).ifPresent(trustScore -> {
