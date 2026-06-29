@@ -83,10 +83,4 @@ public class TrustScore extends BaseEntity {
                 + proposerHistoryScore;
         return Math.min(total, ITEM_MAX_SCORE * 5);
     }
-
-    /** 관리자 승인 점수를 갱신하고 총점을 재계산합니다. */
-    public void updateAdminApprovalScore(Integer score) {
-        this.adminApprovalScore = limitItemScore(score);
-        this.totalScore = calculateTotalScore();
-    }
 }
