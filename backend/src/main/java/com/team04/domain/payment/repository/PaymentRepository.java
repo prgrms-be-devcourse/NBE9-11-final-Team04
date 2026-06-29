@@ -1,15 +1,13 @@
-package com.team04.domain.payment.repository;
+﻿package com.team04.domain.payment.repository;
 
 import com.team04.domain.payment.entity.Payment;
 import com.team04.domain.payment.entity.PaymentTypes.PaymentStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import jakarta.persistence.LockModeType;
 import java.util.List;
 import java.util.Optional;
 
@@ -25,10 +23,6 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
     @Query("SELECT p.fundingId FROM Payment p WHERE p.id = :paymentId")
     Optional<Long> findFundingIdById(@Param("paymentId") Long paymentId);
-
-    @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("SELECT p FROM Payment p WHERE p.id = :paymentId")
-    Optional<Payment> findByIdForUpdate(@Param("paymentId") Long paymentId);
 
     Optional<Payment> findFirstByFundingIdAndStatusOrderByCreatedAtDesc(Long fundingId, PaymentStatus status);
 
