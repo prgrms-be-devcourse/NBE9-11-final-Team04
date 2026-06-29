@@ -20,5 +20,3 @@ tsconfig.tsbuildinfo
 .DS_Store
 *.log
 .cursor
-
-next-env.d.ts
