@@ -42,7 +42,7 @@ public class ExpertController {
 
     /* 전문가 프로필 등록 API */
     @PostMapping("/profile")
-    @PreAuthorize("hasRole('EXPERT')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<ExpertProfileResponse>> registerProfile(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @Valid @RequestBody ExpertProfileRequest request
@@ -58,6 +58,28 @@ public class ExpertController {
             @PathVariable Long expertId
     ) {
         ExpertProfileResponse response = expertProfileService.getProfile(expertId);
+        return ResponseEntity.ok(ApiResponse.ofSuccess(response));
+    }
+
+
+    /* 내 전문가 프로필 조회 API */
+    @GetMapping("/me")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<ExpertProfileResponse>> getMyProfile(
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        ExpertProfileResponse response = expertProfileService.getMyProfile(userDetails.getUserId());
+        return ResponseEntity.ok(ApiResponse.ofSuccess(response));
+    }
+
+    /* 내 전문가 프로필 수정 API */
+    @PatchMapping("/profile")
+    @PreAuthorize("hasRole('EXPERT')")
+    public ResponseEntity<ApiResponse<ExpertProfileResponse>> updateProfile(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @Valid @RequestBody ExpertProfileRequest request
+    ) {
+        ExpertProfileResponse response = expertProfileService.updateProfile(userDetails.getUserId(), request);
         return ResponseEntity.ok(ApiResponse.ofSuccess(response));
     }
 
