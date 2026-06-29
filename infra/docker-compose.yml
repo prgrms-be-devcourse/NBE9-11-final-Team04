@@ -81,8 +81,5 @@ services:
       - "3000:3000"
     restart: unless-stopped
 
-  volumes:
-    mysql-data:
-
 volumes:
   mysql-data:
