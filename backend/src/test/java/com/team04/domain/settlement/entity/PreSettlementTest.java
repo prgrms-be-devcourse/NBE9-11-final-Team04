@@ -20,6 +20,7 @@ class PreSettlementTest {
     @DisplayName("COMPLETED 상태에서 완료 콜백 재수신 시 멱등 처리")
     void complete_alreadyCompleted_noOp() {
         PreSettlement preSettlement = createPreSettlement();
+        preSettlement.markProcessing();
         preSettlement.complete();
 
         preSettlement.complete();
@@ -46,6 +47,16 @@ class PreSettlementTest {
 
         assertThatThrownBy(preSettlement::complete)
                 .isInstanceOf(CustomException.class);
+    }
+
+    @Test
+    @DisplayName("REQUESTED 상태에서 PROCESSING으로 지급 처리 선점 성공")
+    void markProcessing_requested_success() {
+        PreSettlement preSettlement = createPreSettlement();
+
+        preSettlement.markProcessing();
+
+        assertThat(preSettlement.getStatus()).isEqualTo(PreSettlementStatus.PROCESSING);
     }
 
     @Test

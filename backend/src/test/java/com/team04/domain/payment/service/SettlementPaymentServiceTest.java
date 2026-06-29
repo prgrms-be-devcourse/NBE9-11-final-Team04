@@ -17,6 +17,7 @@ import com.team04.domain.payment.event.PreSettlementPayoutRequestedEvent;
 import com.team04.domain.payment.event.SettlementPayoutRequestedEvent;
 import com.team04.domain.payment.repository.PaymentRepository;
 import com.team04.domain.settlement.entity.PreSettlement;
+import com.team04.domain.settlement.entity.PreSettlementStatus;
 import com.team04.domain.settlement.entity.Refund;
 import com.team04.domain.settlement.entity.RefundReason;
 import com.team04.domain.settlement.entity.Settlement;
@@ -109,7 +110,11 @@ class SettlementPaymentServiceTest {
                 .amount(50_000L)
                 .build();
         setField(preSettlement, "id", 1L);
+        preSettlement.markProcessing();
 
+        given(preSettlementRepository.markProcessingIfRequested(
+                1L, PreSettlementStatus.REQUESTED, PreSettlementStatus.PROCESSING
+        )).willReturn(1);
         given(preSettlementRepository.findById(1L)).willReturn(Optional.of(preSettlement));
         given(ideaService.getIdea(10L)).willReturn(sampleIdea(10L, 100L));
         given(userRepository.findById(100L)).willReturn(Optional.of(sampleUser(100L)));
@@ -214,7 +219,11 @@ class SettlementPaymentServiceTest {
                 .amount(50_000L)
                 .build();
         setField(preSettlement, "id", 1L);
+        preSettlement.markProcessing();
 
+        given(preSettlementRepository.markProcessingIfRequested(
+                1L, PreSettlementStatus.REQUESTED, PreSettlementStatus.PROCESSING
+        )).willReturn(1);
         given(preSettlementRepository.findById(1L)).willReturn(Optional.of(preSettlement));
         given(ideaService.getIdea(10L)).willThrow(new RuntimeException("unexpected"));
 

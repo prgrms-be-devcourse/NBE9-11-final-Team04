@@ -3,6 +3,7 @@ package com.team04.domain.settlement.repository;
 import com.team04.domain.settlement.entity.PreSettlement;
 import com.team04.domain.settlement.entity.PreSettlementStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -13,6 +14,18 @@ public interface PreSettlementRepository extends JpaRepository<PreSettlement, Lo
     List<PreSettlement> findByIdeaId(Long ideaId);
 
     List<PreSettlement> findByStatus(PreSettlementStatus status);
+
+    /**
+     * 외부 지급 API 호출 전 REQUESTED 건을 PROCESSING으로 선점합니다.
+     * 영향받은 행이 1개일 때만 해당 스케줄러 인스턴스가 지급을 진행합니다.
+     */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("UPDATE PreSettlement p SET p.status = :processingStatus " +
+            "WHERE p.id = :preSettlementId AND p.status = :requestedStatus")
+    int markProcessingIfRequested(
+            @Param("preSettlementId") Long preSettlementId,
+            @Param("requestedStatus") PreSettlementStatus requestedStatus,
+            @Param("processingStatus") PreSettlementStatus processingStatus);
 
     /**
      * 프로젝트의 유효 누적 선정산 금액 조회 (FAILED 제외)

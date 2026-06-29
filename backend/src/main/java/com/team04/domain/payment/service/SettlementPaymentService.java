@@ -44,6 +44,7 @@ import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.List;
+import java.util.function.Supplier;
 
 /**
  * 정산 장부와 PG 연동을 잇는 최소 오케스트레이터.
@@ -97,33 +98,44 @@ public class SettlementPaymentService {
 
     /** 선정산 REQUESTED 건에 대해 지급대행을 요청하고 결과에 따라 complete/fail 처리 */
     public void processPreSettlementPayout(Long preSettlementId) {
+        // 외부 지급 API 호출 전에 REQUESTED -> PROCESSING 전이를 먼저 커밋해 중복 지급을 방지한다.
+        if (!markPreSettlementProcessing(preSettlementId)) {
+            return;
+        }
+
         PreSettlement preSettlement = preSettlementRepository.findById(preSettlementId).orElse(null);
-        if (preSettlement == null || preSettlement.getStatus() != PreSettlementStatus.REQUESTED) {
+        if (preSettlement == null || preSettlement.getStatus() != PreSettlementStatus.PROCESSING) {
             return;
         }
 
-        // afterCommit 이벤트 리스너에서는 기존 트랜잭션이 이미 종료된 상태라 비관락 조회를 새 트랜잭션에서 수행한다.
-        runInNewTransaction(() ->
-                vbankLedgerService.validateSufficientBalanceForOut(preSettlement.getIdeaId(), preSettlement.getAmount())
-        );
+        try {
+            // afterCommit 이벤트 리스너에서는 기존 트랜잭션이 이미 종료된 상태라 비관락 조회를 새 트랜잭션에서 수행한다.
+            runInNewTransaction(() ->
+                    vbankLedgerService.validateSufficientBalanceForOut(preSettlement.getIdeaId(), preSettlement.getAmount())
+            );
 
-        PayoutRequest request = buildPreSettlementPayoutRequest(preSettlement);
-        PayoutResult result = paymentPayoutService.payout(request);
+            PayoutRequest request = buildPreSettlementPayoutRequest(preSettlement);
+            PayoutResult result = paymentPayoutService.payout(request);
 
-        if (result.success() && shouldAutoCompletePayout(result)) {
-            try {
-                // 상태 변경과 가상계좌 장부 기록은 payout 호출 이후 별도 트랜잭션에서 확정한다.
-                runInNewTransaction(() -> preSettlementService.completePreSettlement(preSettlementId));
-            } catch (Exception e) {
-                log.error("CRITICAL: 선정산 외부 지급은 성공했으나 DB 완료 처리에 실패했습니다. 수동 확인이 필요합니다. preSettlementId={}, payoutId={}",
-                        preSettlementId, result.payoutId(), e);
+            if (result.success() && shouldAutoCompletePayout(result)) {
+                try {
+                    // 상태 변경과 가상계좌 장부 기록은 payout 호출 이후 별도 트랜잭션에서 확정한다.
+                    runInNewTransaction(() -> preSettlementService.completePreSettlement(preSettlementId));
+                } catch (Exception e) {
+                    log.error("CRITICAL: 선정산 외부 지급은 성공했으나 DB 완료 처리에 실패했습니다. 수동 확인이 필요합니다. preSettlementId={}, payoutId={}",
+                            preSettlementId, result.payoutId(), e);
+                }
+                return;
             }
-            return;
-        }
-        if (!result.success()) {
-            log.error("선정산 지급 실패 preSettlementId={}, message={}",
-                    preSettlementId, result.failureMessage());
-            runInNewTransaction(() -> preSettlementService.failPreSettlement(preSettlementId));
+            if (!result.success()) {
+                log.error("선정산 지급 실패 preSettlementId={}, message={}",
+                        preSettlementId, result.failureMessage());
+                runInNewTransaction(() -> preSettlementService.failPreSettlement(preSettlementId));
+            }
+        } catch (Exception e) {
+            log.error("선정산 지급 처리 중 예외 발생 preSettlementId={}, error={}",
+                    preSettlementId, e.getMessage(), e);
+            runInNewTransaction(() -> failPreSettlementAfterUnexpectedError(preSettlementId));
         }
     }
 
@@ -174,6 +186,11 @@ public class SettlementPaymentService {
     }
 
     @Transactional(readOnly = true)
+    public List<PreSettlement> findRequestedPreSettlements() {
+        return preSettlementRepository.findByStatus(PreSettlementStatus.REQUESTED);
+    }
+
+    @Transactional(readOnly = true)
     public List<Settlement> findFailedSettlements() {
         return settlementRepository.findByStatus(SettlementStatus.FAILED);
     }
@@ -220,10 +237,27 @@ public class SettlementPaymentService {
         }
     }
 
+    private boolean markPreSettlementProcessing(Long preSettlementId) {
+        return runInNewTransaction(() ->
+                preSettlementRepository.markProcessingIfRequested(
+                        preSettlementId,
+                        PreSettlementStatus.REQUESTED,
+                        PreSettlementStatus.PROCESSING
+                ) == 1
+        );
+    }
+
     private void runInNewTransaction(Runnable action) {
+        runInNewTransaction(() -> {
+            action.run();
+            return null;
+        });
+    }
+
+    private <T> T runInNewTransaction(Supplier<T> action) {
         TransactionTemplate transactionTemplate = new TransactionTemplate(transactionManager);
         transactionTemplate.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
-        transactionTemplate.executeWithoutResult(status -> action.run());
+        return transactionTemplate.execute(status -> action.get());
     }
 
     /** PENDING 환불 건을 PG 환불 후 Payment/Funding 동기화 및 Refund complete */
@@ -319,16 +353,6 @@ public class SettlementPaymentService {
 
         ideaRepository.findByIdForUpdate(funding.getIdeaId())
                 .ifPresent(idea -> idea.subtractFundingAmount(funding.getAmount()));
-        // 시스템 환불 완료 시 실제 환불 출금도 아이디어 가상계좌 장부에 반영한다.
-        vbankLedgerService.recordOut(
-                funding.getIdeaId(),
-                VbankLedgerType.SPONSOR_REFUND_PAID,
-                payment.getAmount(),
-                "refund-" + payment.getId() + "-SPONSOR-REFUND",
-                "Payment",
-                payment.getId(),
-                "후원자 환불 지급"
-        );
     }
 
     private String resolveCancelReason(RefundReason reason) {

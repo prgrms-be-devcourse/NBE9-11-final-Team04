@@ -9,7 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-/** 지급대행 실패 건을 주기적으로 다시 처리하는 스케줄러입니다. */
+/** 지급대행 대기/실패 건을 주기적으로 처리하는 스케줄러입니다. */
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -17,13 +17,26 @@ public class PayoutRetryScheduler {
 
     private final SettlementPaymentService settlementPaymentService;
 
-    /** 1분마다 FAILED 선정산/정산 지급 건을 재처리합니다. */
+    /** 1분마다 REQUESTED 선정산 지급 건과 FAILED 선정산/정산 지급 건을 처리합니다. */
     @Scheduled(fixedDelayString = "${payment.payout.retry.scheduler-delay-ms:60000}")
     public void retryFailedPayouts() {
-        log.debug("FAILED 지급대행 재처리 스케줄러 시작");
+        log.debug("지급대행 처리 스케줄러 시작");
+        processRequestedPreSettlements();
         retryFailedPreSettlements();
         retryFailedSettlements();
-        log.debug("FAILED 지급대행 재처리 스케줄러 종료");
+        log.debug("지급대행 처리 스케줄러 종료");
+    }
+
+    private void processRequestedPreSettlements() {
+        for (PreSettlement preSettlement : settlementPaymentService.findRequestedPreSettlements()) {
+            try {
+                // 선정산 신청 API는 REQUESTED 저장까지만 수행하고, 실제 지급은 스케줄러가 비동기로 처리한다.
+                settlementPaymentService.processPreSettlementPayout(preSettlement.getId());
+            } catch (Exception e) {
+                log.error("선정산 지급 처리 실패 preSettlementId={}, error={}",
+                        preSettlement.getId(), e.getMessage(), e);
+            }
+        }
     }
 
     private void retryFailedPreSettlements() {
