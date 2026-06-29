@@ -4,6 +4,7 @@ import com.team04.domain.idea.entity.Idea;
 import com.team04.domain.idea.entity.IdeaCategory;
 import com.team04.domain.idea.entity.RewardType;
 import com.team04.domain.idea.repository.IdeaRepository;
+import com.team04.domain.match.repository.ExpertMatchRepository;
 import com.team04.domain.user.entity.Role;
 import com.team04.domain.verification.dto.request.VerificationRequest;
 import com.team04.domain.verification.entity.ProjectVerification;
@@ -50,6 +51,8 @@ class VerificationServiceTest {
     private IdeaRepository ideaRepository;
     @Mock
     private ApplicationEventPublisher eventPublisher;
+    @Mock
+    private ExpertMatchRepository expertMatchRepository;
 
     @InjectMocks
     private VerificationService verificationService;
@@ -192,6 +195,7 @@ class VerificationServiceTest {
     @Test
     @DisplayName("관리자 검증 결과 조회 성공")
     void getVerificationByIdeaId_관리자조회성공() {
+        given(ideaRepository.findByIdAndDeletedAtIsNull(1L)).willReturn(Optional.of(idea(1L))); // 추가
         ProjectVerification verification = new ProjectVerification(1L);
         given(projectVerificationRepository.findByIdeaId(1L)).willReturn(Optional.of(verification));
         given(verificationResultRepository.findAllByIdeaId(1L)).willReturn(List.of());
@@ -199,6 +203,19 @@ class VerificationServiceTest {
         var response = verificationService.getVerificationByIdeaId(1L, 99L, Role.ADMIN);
 
         assertThat(response.status()).isEqualTo(VerificationStatus.DRAFT);
-        then(ideaRepository).should(never()).findByIdAndDeletedAtIsNull(1L);
+    }
+
+    @Test
+    @DisplayName("매칭되지 않은 전문가가 비공개 아이디어 검증 조회 시 권한 예외 발생")
+    void getVerificationByIdeaId_비매칭전문가비공개아이디어권한예외() {
+        given(ideaRepository.findByIdAndDeletedAtIsNull(1L)).willReturn(Optional.of(idea(1L)));
+        given(expertMatchRepository.existsByIdeaIdAndUserId(1L, 2L)).willReturn(false);
+
+        assertThatThrownBy(() -> verificationService.getVerificationByIdeaId(1L, 2L, Role.EXPERT))
+                .isInstanceOf(CustomException.class)
+                .extracting(e -> ((CustomException) e).getErrorCode())
+                .isEqualTo(ErrorCode.FORBIDDEN);
+
+        then(projectVerificationRepository).should(never()).findByIdeaId(1L);
     }
 }

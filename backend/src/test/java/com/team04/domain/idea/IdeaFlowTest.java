@@ -81,9 +81,6 @@ class IdeaFlowTest {
     @Autowired
     private ProjectVerificationRepository projectVerificationRepository;
 
-    @Autowired
-    private PasswordEncoder passwordEncoder;
-
     private CreateIdeaRequest savedIdeaRequest;
 
     private Long proposerId;
@@ -96,7 +93,7 @@ class IdeaFlowTest {
 
         User proposer = userRepository.save(User.create(
                 "idea-flow-proposer-" + suffix + "@test.com",
-                passwordEncoder.encode("password1!"),
+                "password1!",
                 "제안자",
                 "제안자" + suffix,
                 30,
@@ -106,7 +103,7 @@ class IdeaFlowTest {
 
         User expert = userRepository.save(User.create(
                 "idea-flow-expert-" + suffix + "@test.com",
-                passwordEncoder.encode("password1!"),
+                "password1!",
                 "전문가",
                 "전문가" + suffix,
                 35,

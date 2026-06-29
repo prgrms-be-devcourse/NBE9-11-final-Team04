@@ -239,12 +239,28 @@ class IdeaServiceTest {
     void 아이디어수정_반려상태_성공_AI재검증요청() {
         Idea idea = rejectedIdea(1L, 10L);
         given(ideaRepository.findByIdAndDeletedAtIsNull(10L)).willReturn(Optional.of(idea));
-        given(milestoneRepository.findByIdeaIdOrderByStep(10L)).willReturn(List.of());
+        given(milestoneRepository.findByIdeaIdOrderByStep(10L)).willReturn(milestones().stream()
+                .map(m -> com.team04.domain.milestone.entity.Milestone.builder()
+                        .ideaId(10L)
+                        .step(m.step())
+                        .goal(m.goal())
+                        .expectedResult(m.expectedResult())
+                        .expectedDate(m.expectedDate())
+                        .build())
+                .toList());
+        ArgumentCaptor<VerificationRequest> verificationRequestCaptor = ArgumentCaptor.forClass(VerificationRequest.class);
 
         ideaService.updateIdea(10L, 1L, updateRequest());
 
         assertThat(idea.getStatus()).isEqualTo(IdeaStatus.AI_PENDING);
-        then(verificationService).should().requestVerification(any(), eq(1L));
+        then(verificationService).should().requestVerification(verificationRequestCaptor.capture(), eq(1L));
+
+        VerificationRequest capturedRequest = verificationRequestCaptor.getValue();
+        assertThat(capturedRequest.ideaId()).isEqualTo(10L);
+        assertThat(capturedRequest.milestones()).hasSize(3);
+        assertThat(capturedRequest.milestones().get(0).goal()).isEqualTo("목표 1");
+        assertThat(capturedRequest.milestones().get(1).goal()).isEqualTo("목표 2");
+        assertThat(capturedRequest.milestones().get(2).goal()).isEqualTo("목표 3");
     }
 
     @Test
