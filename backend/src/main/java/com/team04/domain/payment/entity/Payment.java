@@ -129,7 +129,13 @@ public class Payment extends BaseEntity {
     }
 
     public void fail() {
-        this.status = PaymentTypes.PaymentStatus.FAILED;
+        if (this.status == PaymentTypes.PaymentStatus.PENDING) {
+            this.status = PaymentTypes.PaymentStatus.FAILED;
+            return;
+        }
+        if (this.status == PaymentTypes.PaymentStatus.SUCCESS) {
+            throw new CustomException(ErrorCode.PAYMENT_ALREADY_DONE);
+        }
     }
 
     public void markAsRefunded() {
