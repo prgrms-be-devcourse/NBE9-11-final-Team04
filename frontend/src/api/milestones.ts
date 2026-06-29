@@ -43,4 +43,14 @@ export const milestonesApi = {
       formData,
     ))
   },
+
+  submitAppealReport: (milestoneId: number, content: string, file?: File) => {
+    const formData = new FormData()
+    formData.append('request', new Blob([JSON.stringify({ content })], { type: 'application/json' }))
+    if (file) formData.append('file', file)
+    return unwrap(apiClient.post<ApiResponse<CompletionReportResponse>>(
+      `/milestones/${milestoneId}/appeal-reports`,
+      formData,
+    ))
+  },
 }

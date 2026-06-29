@@ -419,6 +419,53 @@ export default function AdminIdeasPage() {
                   </div>
                 )}
 
+                {/* IN_PROGRESS: 마일스톤/정산 버튼 */}
+                {idea.status === 'IN_PROGRESS' && (
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    <Link
+                      href={`/admin/milestones?ideaId=${idea.ideaId}`}
+                      style={{
+                        padding: '10px 24px', borderRadius: '8px', border: 'none',
+                        background: 'var(--brand-tint)', color: 'var(--brand-dark)',
+                        fontWeight: 700, fontSize: '14px', textDecoration: 'none',
+                        display: 'inline-block',
+                      }}
+                    >
+                      📋 마일스톤 관리
+                    </Link>
+                    <Link
+                      href={`/admin/settlements?ideaId=${idea.ideaId}`}
+                      style={{
+                        padding: '10px 24px', borderRadius: '8px',
+                        border: '1.5px solid var(--border)', background: '#fff',
+                        color: 'var(--fg-muted)',
+                        fontWeight: 700, fontSize: '14px', textDecoration: 'none',
+                        display: 'inline-block',
+                      }}
+                    >
+                      💼 정산/보증금
+                    </Link>
+                  </div>
+                )}
+
+                {/* COMPLETED / CANCELLED / CANCELLATION_REQUESTED: 정산 버튼 */}
+                {(idea.status === 'COMPLETED' || idea.status === 'CANCELLED' || idea.status === 'CANCELLATION_REQUESTED') && (
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    <Link
+                      href={`/admin/settlements?ideaId=${idea.ideaId}`}
+                      style={{
+                        padding: '10px 24px', borderRadius: '8px',
+                        border: '1.5px solid var(--border)', background: '#fff',
+                        color: 'var(--fg-muted)',
+                        fontWeight: 700, fontSize: '14px', textDecoration: 'none',
+                        display: 'inline-block',
+                      }}
+                    >
+                      💼 정산/보증금
+                    </Link>
+                  </div>
+                )}
+
                 {/* ADMIN_PENDING: 승인/반려 버튼 */}
                 {idea.status === 'ADMIN_PENDING' && (
                   <div style={{ display: 'flex', gap: '10px' }}>
