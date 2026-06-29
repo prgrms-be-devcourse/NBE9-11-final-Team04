@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
+import { Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient, unwrap } from '@/api/client'
@@ -76,7 +76,9 @@ function AdminSettlementsContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const queryClient = useQueryClient()
-  const [selectedIdeaId, setSelectedIdeaId] = useState<number | null>(null)
+  const ideaIdParam = searchParams.get('ideaId')
+  const parsedIdeaId = ideaIdParam ? parseInt(ideaIdParam, 10) : null
+  const selectedIdeaId = parsedIdeaId && !isNaN(parsedIdeaId) && parsedIdeaId > 0 ? parsedIdeaId : null
 
   const { data: ideasPage, isLoading: ideasLoading } = useQuery({
     queryKey: ['admin', 'ideas', 'all', 'settlement'],
@@ -85,16 +87,6 @@ function AdminSettlementsContent() {
   })
 
   const ideas = ideasPage?.content ?? []
-
-  useEffect(() => {
-    const param = searchParams.get('ideaId')
-    if (param) {
-      const parsed = parseInt(param, 10)
-      if (!isNaN(parsed) && parsed > 0) {
-        setSelectedIdeaId(parsed)
-      }
-    }
-  }, [searchParams])
 
   const { data: deposit, isLoading: depositLoading } = useQuery({
     queryKey: ['admin', 'settlements', 'deposit', selectedIdeaId],
@@ -123,7 +115,6 @@ function AdminSettlementsContent() {
   const isMutating = releaseMutation.isPending || forfeitMutation.isPending || forceRefundMutation.isPending
 
   const handleSelect = (ideaId: number | null) => {
-    setSelectedIdeaId(ideaId)
     if (ideaId) {
       router.replace(`/admin/settlements?ideaId=${ideaId}`, { scroll: false })
     } else {
