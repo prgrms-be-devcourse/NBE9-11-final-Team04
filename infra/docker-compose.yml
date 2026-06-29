@@ -29,6 +29,8 @@ services:
       - TOSS_SECRET_KEY=${TOSS_SECRET_KEY:-}
       - TOSS_CLIENT_KEY=${TOSS_CLIENT_KEY:-}
       - PAYMENT_WEBHOOK_SECRET=${PAYMENT_WEBHOOK_SECRET:-dev-webhook-secret}
+      - ADMIN_INIT_EMAIL=${ADMIN_INIT_EMAIL}
+      - ADMIN_INIT_PASSWORD=${ADMIN_INIT_PASSWORD}
     env_file:
       - payment.env
     depends_on:
@@ -67,6 +69,16 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ../frontend
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL}
+    container_name: seedlink-frontend
+    ports:
+      - "3000:3000"
     restart: unless-stopped
 
 volumes:
