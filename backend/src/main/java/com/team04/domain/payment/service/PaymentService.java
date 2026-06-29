@@ -859,9 +859,26 @@ public class PaymentService {
             String redirectUrl,
             PaymentResponse.VbankInfo vbankInfo
     ) {
+        Long ideaId = null;
+        String ideaTitle = null;
+        if (payment.getFundingId() != null) {
+            ideaId = fundingRepository.findById(payment.getFundingId())
+                    .map(com.team04.domain.funding.entity.Funding::getIdeaId)
+                    .orElse(null);
+        } else if (payment.getIdeaId() != null) {
+            ideaId = payment.getIdeaId();
+        }
+        if (ideaId != null) {
+            final Long id = ideaId;
+            ideaTitle = ideaRepository.findById(id)
+                    .map(com.team04.domain.idea.entity.Idea::getTitle)
+                    .orElse(null);
+        }
         return new PaymentResponse(
                 payment.getId(),
                 payment.getFundingId(),
+                ideaId,
+                ideaTitle,
                 payment.getOrderId(),
                 payment.getAmount(),
                 payment.getStatus(),
@@ -883,6 +900,8 @@ public class PaymentService {
         return new PaymentResponse(
                 created.id(),
                 created.fundingId(),
+                null,
+                null,
                 created.orderId(),
                 created.amount(),
                 PaymentStatus.PENDING,
