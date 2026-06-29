@@ -35,6 +35,7 @@ dependencies {
     implementation("software.amazon.awssdk:s3")
 
     implementation("io.github.resilience4j:resilience4j-spring-boot3:2.1.0")
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.2")
 
     compileOnly("org.projectlombok:lombok")
     developmentOnly("org.springframework.boot:spring-boot-devtools")
