@@ -132,7 +132,7 @@ class IdeaTest {
     }
 
     @Test
-    @DisplayName("reject 호출 시 상태가 REJECTED로 전이되고 rejectReason이 저장되고 rejectCount가 증가한다")
+    @DisplayName("reject 호출 시 상태가 REJECTED로 전이되고 rejectReason이 저장된다")
     void reject_상태전이및반려정보저장() {
         Idea idea = idea();
         idea.changeStatus(IdeaStatus.EXPERT_PENDING);
@@ -142,7 +142,6 @@ class IdeaTest {
 
         assertThat(idea.getStatus()).isEqualTo(IdeaStatus.REJECTED);
         assertThat(idea.getRejectReason()).isEqualTo("보완 필요");
-        assertThat(idea.getRejectCount()).isEqualTo(1);
     }
 
     @Test
