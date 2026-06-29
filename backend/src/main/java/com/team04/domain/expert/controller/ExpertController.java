@@ -41,7 +41,7 @@ public class ExpertController {
     /* 전문가 프로필 등록 API */
     @Operation(
             summary = "전문가 프로필 등록",
-            description = "자격 검증이 완료된 전문가의 기술 스택, 포트폴리오, 경력을 등록합니다. EXPERT 권한 필요."
+            description = "자격 검증이 완료된 전문가의 기술 스택, 포트폴리오, 경력을 등록합니다. 등록 완료 시 EXPERT 권한으로 변경됩니다."
     )
     @PostMapping("/profile")
     @PreAuthorize("isAuthenticated()")
