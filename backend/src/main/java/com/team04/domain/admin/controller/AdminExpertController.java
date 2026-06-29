@@ -4,6 +4,8 @@ import com.team04.domain.expert.dto.response.AdminExpertAppealSummaryResponse;
 import com.team04.domain.expert.dto.response.AdminExpertSuspendedResponse;
 import com.team04.domain.expert.service.AdminExpertService;
 import com.team04.global.response.ApiResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -14,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+@Tag(name = "관리자 전문가 API", description = "관리자 전문가 계정 조회, 복구, 강등 API")
 @RestController
 @RequestMapping("/admin/experts")
 @RequiredArgsConstructor
@@ -23,6 +26,10 @@ public class AdminExpertController {
     private final AdminExpertService adminExpertService;
 
     /* 전문가 목록 조회 API (status 미입력 시 전체) */
+    @Operation(
+            summary = "전문가 목록 조회",
+            description = "status 파라미터로 상태별 전문가 목록을 조회합니다. 생략 시 전체 조회합니다."
+    )
     @GetMapping
     public ResponseEntity<ApiResponse<Page<AdminExpertSuspendedResponse>>> getExperts(
             @RequestParam(required = false) String status,
@@ -34,6 +41,10 @@ public class AdminExpertController {
     }
 
     /* 격리된 전문가 목록 조회 API */
+    @Operation(
+            summary = "격리 전문가 목록 조회",
+            description = "SUSPENDED 상태의 격리된 전문가 목록을 조회합니다."
+    )
     @GetMapping("/suspended")
     public ResponseEntity<ApiResponse<Page<AdminExpertSuspendedResponse>>> getSuspendedExperts(
             @PageableDefault(size = 10) Pageable pageable
@@ -44,6 +55,10 @@ public class AdminExpertController {
     }
 
     /* 소명 자료 목록 조회 API */
+    @Operation(
+            summary = "소명 자료 목록 조회",
+            description = "특정 전문가의 소명 자료 목록을 제출 시각 최신순으로 조회합니다."
+    )
     @GetMapping("/{expertProfileId}/appeals")
     public ResponseEntity<ApiResponse<List<AdminExpertAppealSummaryResponse>>> getAppeals(
             @PathVariable Long expertProfileId
@@ -54,6 +69,10 @@ public class AdminExpertController {
     }
 
     /* 계정 복구 API */
+    @Operation(
+            summary = "전문가 계정 복구",
+            description = "SUSPENDED 상태의 전문가 계정을 ACTIVE로 복구합니다."
+    )
     @PostMapping("/{expertProfileId}/restore")
     public ResponseEntity<ApiResponse<Void>> restoreExpert(
             @PathVariable Long expertProfileId
@@ -63,6 +82,10 @@ public class AdminExpertController {
     }
 
     /* 권한 강등 API */
+    @Operation(
+            summary = "전문가 권한 강등",
+            description = "전문가 계정을 USER 역할로 강등하고 상태를 DEMOTED로 변경합니다."
+    )
     @PostMapping("/{expertProfileId}/demote")
     public ResponseEntity<ApiResponse<Void>> demoteExpert(
             @PathVariable Long expertProfileId
