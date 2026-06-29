@@ -556,7 +556,7 @@ export default function IdeaDetailPage() {
 
           {/* CTA 버튼들 */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {isFunding && !isUpcoming && (
+            {isFunding && !isUpcoming && !isOwner && !isExpert && (
               <Link href={`/fundings/idea/${idea.ideaId}`} style={{
                 display: 'block', textAlign: 'center',
                 padding: '14px', fontSize: '16px', fontWeight: 700,
@@ -575,6 +575,16 @@ export default function IdeaDetailPage() {
               }}>
                 ⏳ D-{daysUntilStart} 후 오픈
               </div>
+            )}
+            {(idea.status === 'OPEN' || idea.status === 'IN_PROGRESS') && user && !isExpert && (
+              <Link href={`/workspaces/${ideaId}`} style={{
+                display: 'block', textAlign: 'center',
+                padding: '14px', fontSize: '15px', fontWeight: 700,
+                background: '#059669', color: '#fff',
+                borderRadius: '10px', textDecoration: 'none',
+              }}>
+                🚀 워크스페이스 입장
+              </Link>
             )}
             {isOwner && !['OPEN', 'IN_PROGRESS', 'COMPLETED'].includes(idea.status) && (
               <Link href={`/ideas/${idea.ideaId}/edit`} style={{
