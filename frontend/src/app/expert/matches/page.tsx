@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useQuery, useQueries, useMutation, useQueryClient } from '@tanstack/react-query'
 import { matchesApi } from '@/api/matches'
 import { ideasApi } from '@/api/ideas'
@@ -91,14 +92,11 @@ function RejectModal({ onConfirm, onCancel }: { onConfirm: (reason: string) => v
 }
 
 export default function ExpertMatchesPage() {
+  const router = useRouter()
   const queryClient = useQueryClient()
   const [categoryFilter, setCategoryFilter] = useState<IdeaCategory | 'ALL'>('ALL')
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDING' | 'ACCEPTED' | 'REJECTED'>('ALL')
   const [rejectTarget, setRejectTarget] = useState<number | null>(null)
-
-  const isReviewed = (matchId: number) => {
-    try { return !!localStorage.getItem(`reviewed_match_${matchId}`) } catch { return false }
-  }
 
   const { data: matches, isLoading: matchesLoading } = useQuery({
     queryKey: ['matches'],
@@ -114,12 +112,28 @@ export default function ExpertMatchesPage() {
     })),
   })
   const ideaMap = Object.fromEntries(ideaIds.map((id, i) => [id, ideaQueries[i].data]))
+  const acceptedIdeaIds = [...new Set((matches ?? []).filter((m) => m.status === 'ACCEPTED').map((m) => m.ideaId))]
+  const reviewQueries = useQueries({
+    queries: acceptedIdeaIds.map((id) => ({
+      queryKey: ['matches', 'reviews', 'idea', id],
+      queryFn: () => matchesApi.getReviewsByIdea(id),
+      staleTime: 30_000,
+    })),
+  })
+  const reviewedMatchIds = new Set(
+    reviewQueries.flatMap((query) => query.data ?? []).map((review) => review.matchId),
+  )
 
   const respondMutation = useMutation({
     mutationFn: ({ matchId, status, rejectReason }: {
       matchId: number; status: 'ACCEPTED' | 'REJECTED'; rejectReason?: string
     }) => matchesApi.respond(matchId, status, rejectReason),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['matches'] }),
+    onSuccess: async (_, variables) => {
+      await queryClient.invalidateQueries({ queryKey: ['matches'] })
+      if (variables.status === 'ACCEPTED') {
+        router.push(`/expert/matches/${variables.matchId}/review`)
+      }
+    },
     onError: () => alert('처리 중 오류가 발생했습니다.'),
   })
 
@@ -134,7 +148,10 @@ export default function ExpertMatchesPage() {
     setRejectTarget(null)
   }
 
-  const isLoading = matchesLoading || ideaQueries.some((q) => q.isLoading && q.fetchStatus !== 'idle')
+  const isLoading =
+    matchesLoading ||
+    ideaQueries.some((q) => q.isLoading && q.fetchStatus !== 'idle') ||
+    reviewQueries.some((q) => q.isLoading && q.fetchStatus !== 'idle')
 
   const filtered = (matches ?? []).filter((m) => {
     if (statusFilter !== 'ALL' && m.status !== statusFilter) return false
@@ -216,7 +233,10 @@ export default function ExpertMatchesPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             {filtered.map((match) => {
               const idea = ideaMap[match.ideaId]
-              const reviewed = isReviewed(match.matchId)
+              const reviewed = reviewedMatchIds.has(match.matchId)
+              const titleHref = match.status === 'ACCEPTED' && !reviewed
+                ? `/expert/matches/${match.matchId}/review`
+                : `/ideas/${match.ideaId}`
               return (
                 <div key={match.matchId} style={{
                   background: '#fff', border: '1px solid var(--border)',
@@ -227,7 +247,7 @@ export default function ExpertMatchesPage() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <Link
-                        href={`/ideas/${match.ideaId}`}
+                        href={titleHref}
                         style={{
                           fontSize: '16px', fontWeight: 700, color: 'var(--fg)',
                           textDecoration: 'none', display: 'block', marginBottom: '6px',

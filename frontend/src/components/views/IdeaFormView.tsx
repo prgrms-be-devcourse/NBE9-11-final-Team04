@@ -37,6 +37,8 @@ const defaultForm: CreateIdeaRequest = {
 }
 
 const MILESTONE_LABELS = ['1단계', '2단계', '3단계']
+const FUNDING_MIN_WEEKS = 2
+const FUNDING_MAX_WEEKS = 8
 
 const FIELD_PLACEHOLDERS: Partial<Record<keyof CreateIdeaRequest, string>> = {
   problemDefinition: '해결하려는 문제를 설명해주세요',
@@ -61,10 +63,30 @@ function toIsoDateTime(value: string): string {
   return value.length === 16 ? `${value}:00` : value
 }
 
-function nowDatetimeLocal(): string {
+function formatDatetimeLocal(date: Date): string {
+  const pad = (value: number) => String(value).padStart(2, '0')
+  return [
+    date.getFullYear(),
+    pad(date.getMonth() + 1),
+    pad(date.getDate()),
+  ].join('-') + `T${pad(date.getHours())}:${pad(date.getMinutes())}`
+}
+
+function minStartDatetimeLocal(): string {
   const now = new Date()
   now.setMinutes(now.getMinutes() + 1)
-  return now.toISOString().slice(0, 16)
+  return formatDatetimeLocal(now)
+}
+
+function addWeeksToDatetimeLocal(value: string, weeks: number): string {
+  if (!value) return ''
+  const date = new Date(value)
+  date.setDate(date.getDate() + weeks * 7)
+  return formatDatetimeLocal(date)
+}
+
+function toDateInputValue(value: string): string {
+  return value ? value.slice(0, 10) : ''
 }
 
 function StepIndicator({ current }: { current: 1 | 2 }) {
@@ -120,7 +142,14 @@ export default function IdeaFormView() {
   const [form, setForm] = useState<CreateIdeaRequest>(defaultForm)
   const [preSettlement, setPreSettlement] = useState<boolean | null>(null)
   const [error, setError] = useState('')
-  const minDatetime = nowDatetimeLocal()
+  const minDatetime = minStartDatetimeLocal()
+  const fundingEndMin = form.fundingStartAt
+    ? addWeeksToDatetimeLocal(form.fundingStartAt, FUNDING_MIN_WEEKS)
+    : ''
+  const fundingEndMax = form.fundingStartAt
+    ? addWeeksToDatetimeLocal(form.fundingStartAt, FUNDING_MAX_WEEKS)
+    : ''
+  const milestoneMinDate = toDateInputValue(form.fundingEndAt)
   const maxDeposit = Math.floor(form.goalAmount * 0.3)
 
   useQuery({
@@ -191,6 +220,10 @@ export default function IdeaFormView() {
     if (!form.goalAmount || form.goalAmount <= 0) return '목표 금액을 입력해주세요.'
     if (!form.fundingStartAt) return '펀딩 시작일을 입력해주세요.'
     if (!form.fundingEndAt) return '펀딩 종료일을 입력해주세요.'
+    if (!isEdit && form.fundingStartAt < minDatetime) return '펀딩 시작일은 현재 시각 이후로 선택해주세요.'
+    if (form.fundingEndAt < fundingEndMin || form.fundingEndAt > fundingEndMax) {
+      return `펀딩 종료일은 시작일 기준 ${FUNDING_MIN_WEEKS}~${FUNDING_MAX_WEEKS}주 후로 선택해주세요.`
+    }
     if (!form.problemDefinition.trim()) return '문제 정의를 입력해주세요.'
     if (!form.solution.trim()) return '해결 방안을 입력해주세요.'
     if (!form.goal.trim()) return '목표를 입력해주세요.'
@@ -209,8 +242,32 @@ export default function IdeaFormView() {
       if (!ms.goal.trim()) return `${MILESTONE_LABELS[i]} 목표를 입력해주세요.`
       if (!ms.expectedResult?.trim()) return `${MILESTONE_LABELS[i]} 기대 결과를 입력해주세요.`
       if (!ms.expectedDate) return `${MILESTONE_LABELS[i]} 목표 완료일을 입력해주세요.`
+      if (milestoneMinDate && ms.expectedDate < milestoneMinDate) return `${MILESTONE_LABELS[i]} 목표 완료일은 펀딩 종료일 이후로 선택해주세요.`
     }
     return ''
+  }
+
+  const handleFundingStartChange = (value: string) => {
+    const nextEndMin = addWeeksToDatetimeLocal(value, FUNDING_MIN_WEEKS)
+    const nextEndMax = addWeeksToDatetimeLocal(value, FUNDING_MAX_WEEKS)
+    const fundingEndAt = form.fundingEndAt >= nextEndMin && form.fundingEndAt <= nextEndMax
+      ? form.fundingEndAt
+      : ''
+    const milestoneMin = toDateInputValue(fundingEndAt)
+    const milestones = milestoneMin
+      ? form.milestones.map((ms) => ms.expectedDate && ms.expectedDate < milestoneMin ? { ...ms, expectedDate: '' } : ms)
+      : form.milestones
+
+    setForm({ ...form, fundingStartAt: value, fundingEndAt, milestones })
+  }
+
+  const handleFundingEndChange = (value: string) => {
+    const nextMilestoneMin = toDateInputValue(value)
+    const milestones = nextMilestoneMin
+      ? form.milestones.map((ms) => ms.expectedDate && ms.expectedDate < nextMilestoneMin ? { ...ms, expectedDate: '' } : ms)
+      : form.milestones
+
+    setForm({ ...form, fundingEndAt: value, milestones })
   }
 
   const handleNext = () => {
@@ -308,8 +365,17 @@ export default function IdeaFormView() {
               </div>
               <Input label="한 줄 소개" value={form.oneLineIntro} onChange={(e) => setForm({ ...form, oneLineIntro: e.target.value })} required />
               <Input label="목표 금액 (원)" type="number" value={form.goalAmount} onChange={(e) => setForm({ ...form, goalAmount: Number(e.target.value) })} required />
-              <Input label="펀딩 시작일" type="datetime-local" value={form.fundingStartAt} min={minDatetime} onChange={(e) => setForm({ ...form, fundingStartAt: e.target.value })} required />
-              <Input label="펀딩 종료일 (시작일 기준 2~8주 후)" type="datetime-local" value={form.fundingEndAt} min={form.fundingStartAt || minDatetime} onChange={(e) => setForm({ ...form, fundingEndAt: e.target.value })} required />
+              <Input label="펀딩 시작일" type="datetime-local" value={form.fundingStartAt} min={isEdit ? undefined : minDatetime} onChange={(e) => handleFundingStartChange(e.target.value)} required />
+              <Input
+                label="펀딩 종료일 (시작일 기준 2~8주 후)"
+                type="datetime-local"
+                value={form.fundingEndAt}
+                min={fundingEndMin || undefined}
+                max={fundingEndMax || undefined}
+                disabled={!form.fundingStartAt}
+                onChange={(e) => handleFundingEndChange(e.target.value)}
+                required
+              />
               <div>
                 <label className="mb-1 block text-sm font-medium text-slate-700">보상 방식</label>
                 <select value={form.rewardType} onChange={(e) => setForm({ ...form, rewardType: e.target.value as RewardType })} className="w-full rounded-lg border px-3 py-2 text-sm">
@@ -457,6 +523,8 @@ export default function IdeaFormView() {
                   <input
                     type="date"
                     value={ms.expectedDate}
+                    min={milestoneMinDate || undefined}
+                    disabled={!form.fundingEndAt}
                     onChange={(e) => updateMilestone(i, 'expectedDate', e.target.value)}
                     className="w-full rounded-lg border px-3 py-2 text-sm"
                   />

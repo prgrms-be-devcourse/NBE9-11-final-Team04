@@ -20,6 +20,10 @@ public record FundingSummaryResponse(
 ) {
 
     public static FundingSummaryResponse from(Idea idea) {
+        return from(idea, idea.getSponsorCount());
+    }
+
+    public static FundingSummaryResponse from(Idea idea, int sponsorCount) {
         double rate = idea.getGoalAmount() > 0
                 ? idea.getCurrentAmount() * 100.0 / idea.getGoalAmount()
                 : 0.0;
@@ -31,7 +35,7 @@ public record FundingSummaryResponse(
                 idea.getOneLineIntro(),
                 idea.getGoalAmount(),
                 idea.getCurrentAmount(),
-                idea.getSponsorCount(),
+                sponsorCount,
                 Math.min(rate, 100.0),
                 idea.getFundingStartAt(),
                 idea.getFundingEndAt(),

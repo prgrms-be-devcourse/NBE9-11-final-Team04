@@ -29,7 +29,7 @@ public class IdeaRepositoryImpl implements IdeaRepositoryCustom {
 
     private static final String SORT_DEADLINE = "deadline";
     private static final int TOP_IDEA_LIMIT = 5;
-    private static final int MIN_TRUST_SCORE = 80;
+    private static final int MIN_TRUST_SCORE = 20;
 
 
     private final JPAQueryFactory queryFactory;
@@ -75,7 +75,7 @@ public class IdeaRepositoryImpl implements IdeaRepositoryCustom {
         return new PageImpl<>(ideas, pageable, total == null ? 0L : total);
     }
 
-    /** 신뢰도 80 이상 프로젝트를 가중치 합산 점수 내림차순으로 최대 5개 조회합니다. */
+    /** 신뢰도 기준을 충족한 프로젝트를 가중치 합산 점수 내림차순으로 최대 5개 조회합니다. */
     @Override
     public List<Idea> findTop5PopularIdeas() {
         QIdea idea = QIdea.idea;

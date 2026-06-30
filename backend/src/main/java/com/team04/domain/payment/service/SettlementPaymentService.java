@@ -1,6 +1,7 @@
 package com.team04.domain.payment.service;
 
 import com.team04.domain.funding.entity.Funding;
+import com.team04.domain.funding.entity.FundingTypes.FundingStatus;
 import com.team04.domain.funding.repository.FundingRepository;
 import com.team04.domain.idea.dto.response.IdeaResponse;
 import com.team04.domain.idea.repository.IdeaRepository;
@@ -348,11 +349,19 @@ public class SettlementPaymentService {
         Funding funding = fundingRepository.findByIdForUpdate(payment.getFundingId())
                 .orElseThrow(() -> new CustomException(ErrorCode.FUNDING_NOT_FOUND));
 
+        boolean lastPaidFundingBySponsor =
+                !fundingRepository.existsByIdeaIdAndSponsorIdAndStatusAndAmountAppliedToIdeaTrueAndIdNot(
+                        funding.getIdeaId(),
+                        funding.getSponsorId(),
+                        FundingStatus.PAID,
+                        funding.getId()
+                );
+
         funding.markAsRefunded();
         payment.markAsRefunded();
 
         ideaRepository.findByIdForUpdate(funding.getIdeaId())
-                .ifPresent(idea -> idea.subtractFundingAmount(funding.getAmount()));
+                .ifPresent(idea -> idea.subtractFundingAmount(funding.getAmount(), lastPaidFundingBySponsor));
     }
 
     private String resolveCancelReason(RefundReason reason) {

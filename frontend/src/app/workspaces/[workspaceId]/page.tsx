@@ -47,6 +47,33 @@ interface PreSettlementResponse {
   requestedAt: string
 }
 
+type VbankLedgerType =
+  | 'LEGACY_OPENING_BALANCE'
+  | 'DEPOSIT_PAID'
+  | 'FUNDING_PAID'
+  | 'PRE_SETTLEMENT_PAID'
+  | 'SPONSOR_REFUND_PAID'
+  | 'DEPOSIT_REFUNDED'
+  | 'DEPOSIT_FORFEITED'
+  | 'FINAL_SETTLEMENT_PAID'
+  | 'FUND_USAGE_RECORDED'
+
+type VbankLedgerDirection = 'IN' | 'OUT'
+
+interface VbankLedgerResponse {
+  ledgerId: number
+  ideaId: number
+  type: VbankLedgerType
+  direction: VbankLedgerDirection
+  amount: number
+  balanceAfter: number
+  affectsBalance: boolean
+  referenceType: string | null
+  referenceId: number | null
+  memo: string | null
+  createdAt: string
+}
+
 const workspaceApi = {
   getInfo: (workspaceId: number) =>
     unwrap(apiClient.get<ApiResponse<WorkspaceInfo>>(`/workspaces/${workspaceId}`)),
@@ -77,6 +104,11 @@ const preSettlementApi = {
     unwrap(apiClient.get<ApiResponse<PreSettlementResponse[]>>(`/pre-settlements/ideas/${ideaId}`)),
 }
 
+const vbankLedgerApi = {
+  getByIdea: (ideaId: number) =>
+    unwrap(apiClient.get<ApiResponse<VbankLedgerResponse[]>>(`/payments/vbank-ledgers/ideas/${ideaId}`)),
+}
+
 const MILESTONE_STATUS_BADGE: Record<MilestoneStatus, { variant: 'green' | 'orange' | 'red' | 'gray'; label: string }> = {
   PENDING:     { variant: 'gray',   label: '대기' },
   IN_PROGRESS: { variant: 'orange', label: '진행중' },
@@ -96,13 +128,40 @@ const PRE_SETTLEMENT_STATUS_BADGE: Record<string, { variant: 'green' | 'orange' 
   FAILED:    { variant: 'red',    label: '실패' },
 }
 
-type TabKey = 'messages' | 'milestones' | 'fundUsage' | 'preSettlement'
+const LEDGER_TYPE_LABEL: Record<VbankLedgerType, string> = {
+  LEGACY_OPENING_BALANCE:  '시작 잔액',
+  DEPOSIT_PAID:            '보증금 납부',
+  FUNDING_PAID:            '후원금 입금',
+  PRE_SETTLEMENT_PAID:     '선정산 출금',
+  SPONSOR_REFUND_PAID:     '후원 환불',
+  DEPOSIT_REFUNDED:        '보증금 환급',
+  DEPOSIT_FORFEITED:       '보증금 몰수',
+  FINAL_SETTLEMENT_PAID:   '최종 정산 출금',
+  FUND_USAGE_RECORDED:     '자금 사용 기록',
+}
 
-const TABS: { key: TabKey; label: string }[] = [
+function getLedgerMemo(ledger: VbankLedgerResponse): string | null {
+  const title = LEDGER_TYPE_LABEL[ledger.type] ?? ledger.type
+  if (ledger.memo === title) {
+    return null
+  }
+  return ledger.memo
+}
+
+type TabKey = 'messages' | 'milestones' | 'fundUsage' | 'preSettlement' | 'vbankLedger'
+
+const BASE_TABS: { key: TabKey; label: string }[] = [
   { key: 'messages',      label: '💬 메시지' },
   { key: 'milestones',    label: '📋 마일스톤' },
+]
+
+const CREATOR_ONLY_TABS: { key: TabKey; label: string }[] = [
   { key: 'fundUsage',     label: '💰 자금 사용 내역' },
   { key: 'preSettlement', label: '💸 선정산 신청' },
+]
+
+const TRANSPARENCY_TABS: { key: TabKey; label: string }[] = [
+  { key: 'vbankLedger',   label: '🏦 가상계좌 장부' },
 ]
 
 function MessagesTab({
@@ -826,6 +885,152 @@ function PreSettlementTab({ ideaId, isCreator }: { ideaId: number; isCreator: bo
   )
 }
 
+function VbankLedgerTab({ ideaId }: { ideaId: number }) {
+  const { data: ledgers, isLoading, isError } = useQuery({
+    queryKey: ['workspace', 'vbank-ledgers', ideaId],
+    queryFn: () => vbankLedgerApi.getByIdea(ideaId),
+  })
+
+  if (isLoading) return <LoadingSpinner />
+
+  const items = ledgers ?? []
+  const balance = items[0]?.balanceAfter ?? 0
+  const totalIn = items
+    .filter((item) => item.direction === 'IN' && item.affectsBalance)
+    .reduce((sum, item) => sum + item.amount, 0)
+  const totalOut = items
+    .filter((item) => item.direction === 'OUT' && item.affectsBalance)
+    .reduce((sum, item) => sum + item.amount, 0)
+
+  if (isError) {
+    return (
+      <div
+        style={{
+          padding: '60px',
+          textAlign: 'center',
+          background: 'var(--bg-alt)',
+          borderRadius: '12px',
+          color: 'var(--fg-muted)',
+          fontSize: '15px',
+        }}
+      >
+        가상계좌 장부를 불러올 수 없습니다.
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 260px), 1fr))', gap: '18px', alignItems: 'start' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        {items.length === 0 ? (
+          <div
+            style={{
+              padding: '60px',
+              textAlign: 'center',
+              background: 'var(--bg-alt)',
+              borderRadius: '12px',
+              color: 'var(--fg-muted)',
+              fontSize: '15px',
+            }}
+          >
+            아직 가상계좌 장부 내역이 없습니다.
+          </div>
+        ) : (
+          items.map((ledger) => {
+            const isIn = ledger.direction === 'IN'
+            const title = LEDGER_TYPE_LABEL[ledger.type] ?? ledger.type
+            const memo = getLedgerMemo(ledger)
+
+            return (
+              <div
+                key={ledger.ledgerId}
+                style={{
+                  background: '#fff',
+                  border: '1px solid var(--border)',
+                  borderRadius: '10px',
+                  padding: '15px 18px',
+                  display: 'grid',
+                  gridTemplateColumns: '1fr auto',
+                  gap: '12px',
+                  alignItems: 'center',
+                }}
+              >
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '6px' }}>
+                    <span
+                      style={{
+                        fontSize: '12px',
+                        fontWeight: 800,
+                        color: isIn ? '#047857' : '#dc2626',
+                        background: isIn ? '#dcfce7' : '#fee2e2',
+                        borderRadius: '999px',
+                        padding: '3px 9px',
+                      }}
+                    >
+                      {isIn ? '입금' : '출금'}
+                    </span>
+                    <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--fg)' }}>{title}</span>
+                    {!ledger.affectsBalance && (
+                      <span style={{ fontSize: '12px', color: 'var(--fg-muted)' }}>잔액 미반영</span>
+                    )}
+                  </div>
+                  {memo && (
+                    <p style={{ fontSize: '13px', color: 'var(--fg-muted)', lineHeight: 1.6, marginBottom: '4px' }}>
+                      {memo}
+                    </p>
+                  )}
+                  <p style={{ fontSize: '12px', color: 'var(--fg-muted)' }}>
+                    {formatDateTime(ledger.createdAt)}
+                    {ledger.referenceType && ledger.referenceId ? ` · ${ledger.referenceType} #${ledger.referenceId}` : ''}
+                  </p>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <p style={{ fontSize: '15px', fontWeight: 800, color: isIn ? '#059669' : '#ef4444', marginBottom: '4px' }}>
+                    {isIn ? '+' : '-'}{formatCurrency(ledger.amount)}
+                  </p>
+                  <p style={{ fontSize: '12px', color: 'var(--fg-muted)' }}>
+                    잔액 {formatCurrency(ledger.balanceAfter)}
+                  </p>
+                </div>
+              </div>
+            )
+          })
+        )}
+      </div>
+
+      <aside
+        style={{
+          borderRadius: '12px',
+          overflow: 'hidden',
+          border: '1px solid var(--border)',
+          background: '#fff',
+          position: 'sticky',
+          top: 'calc(var(--unb-height) + var(--nav-height) + 20px)',
+        }}
+      >
+        <div style={{ background: '#222', color: '#fff', padding: '22px 20px' }}>
+          <p style={{ fontSize: '12px', opacity: 0.72, marginBottom: '8px' }}>가상계좌 현재 잔액</p>
+          <p style={{ fontSize: '26px', fontWeight: 800 }}>{formatCurrency(balance)}</p>
+        </div>
+        <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+            <span style={{ color: 'var(--fg-muted)' }}>총 입금</span>
+            <strong style={{ color: '#059669' }}>{formatCurrency(totalIn)}</strong>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+            <span style={{ color: 'var(--fg-muted)' }}>총 출금</span>
+            <strong style={{ color: '#ef4444' }}>{formatCurrency(totalOut)}</strong>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', paddingTop: '12px', borderTop: '1px solid var(--border)' }}>
+            <span style={{ color: 'var(--fg)' }}>장부 건수</span>
+            <strong>{items.length}건</strong>
+          </div>
+        </div>
+      </aside>
+    </div>
+  )
+}
+
 function WorkspaceContent({ workspaceId }: { workspaceId: number }) {
   const { user } = useAuthStore()
   const [activeTab, setActiveTab] = useState<TabKey>('messages')
@@ -855,6 +1060,11 @@ function WorkspaceContent({ workspaceId }: { workspaceId: number }) {
     )
   }
 
+  const visibleTabs = workspace.creator
+    ? [...BASE_TABS, ...CREATOR_ONLY_TABS, ...TRANSPARENCY_TABS]
+    : [...BASE_TABS, ...TRANSPARENCY_TABS]
+  const canViewCreatorOnly = workspace.creator
+
   return (
     <div
       style={{
@@ -878,9 +1088,10 @@ function WorkspaceContent({ workspaceId }: { workspaceId: number }) {
           gap: '4px',
           borderBottom: '2px solid var(--border)',
           marginBottom: '28px',
+          overflowX: 'auto',
         }}
       >
-        {TABS.map((tab) => (
+        {visibleTabs.map((tab) => (
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
@@ -910,10 +1121,13 @@ function WorkspaceContent({ workspaceId }: { workspaceId: number }) {
         <MilestonesTab ideaId={workspace.ideaId} isCreator={workspace.creator} />
       )}
       {activeTab === 'fundUsage' && (
-        <FundUsageTab workspaceId={workspaceId} ideaId={workspace.ideaId} isCreator={workspace.creator} />
+        canViewCreatorOnly && <FundUsageTab workspaceId={workspaceId} ideaId={workspace.ideaId} isCreator={workspace.creator} />
       )}
       {activeTab === 'preSettlement' && (
-        <PreSettlementTab ideaId={workspace.ideaId} isCreator={workspace.creator} />
+        canViewCreatorOnly && <PreSettlementTab ideaId={workspace.ideaId} isCreator={workspace.creator} />
+      )}
+      {activeTab === 'vbankLedger' && (
+        <VbankLedgerTab ideaId={workspace.ideaId} />
       )}
     </div>
   )

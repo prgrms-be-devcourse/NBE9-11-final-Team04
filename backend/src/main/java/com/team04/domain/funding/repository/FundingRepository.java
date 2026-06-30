@@ -30,11 +30,31 @@ public interface FundingRepository extends JpaRepository<Funding, Long> {
     @Query("SELECT COALESCE(SUM(f.amount), 0) FROM Funding f WHERE f.ideaId = :ideaId AND f.status = :status")
     Long sumAmountByIdeaIdAndStatus(@Param("ideaId") Long ideaId, @Param("status") FundingStatus status);
 
+    @Query("SELECT COUNT(DISTINCT f.sponsorId) FROM Funding f " +
+            "JOIN Payment p ON p.fundingId = f.id " +
+            "WHERE f.ideaId = :ideaId " +
+            "AND f.status = com.team04.domain.funding.entity.FundingTypes.FundingStatus.PAID " +
+            "AND p.status = com.team04.domain.payment.entity.PaymentTypes.PaymentStatus.SUCCESS")
+    long countDistinctPaidSponsorsByIdeaId(@Param("ideaId") Long ideaId);
+
     @Query("SELECT f.ideaId FROM Funding f WHERE f.id = :id")
     Optional<Long> findIdeaIdById(@Param("id") Long id);
 
     @Query(value = "SELECT * FROM fundings WHERE id = :id FOR UPDATE", nativeQuery = true)
     Optional<Funding> findByIdForUpdate(@Param("id") Long id);
+
+    boolean existsByIdeaIdAndSponsorIdAndStatusAndAmountAppliedToIdeaTrue(
+            Long ideaId,
+            Long sponsorId,
+            FundingStatus status
+    );
+
+    boolean existsByIdeaIdAndSponsorIdAndStatusAndAmountAppliedToIdeaTrueAndIdNot(
+            Long ideaId,
+            Long sponsorId,
+            FundingStatus status,
+            Long id
+    );
 
     /**
      * 후원자 접근 권한 체크용

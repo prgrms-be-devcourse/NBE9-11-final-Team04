@@ -172,8 +172,15 @@ export default function IdeaDetailPage() {
     enabled: isExpert,
   })
   const acceptedMatch = myMatches?.find((m) => m.ideaId === ideaId && m.status === 'ACCEPTED')
+
+  const { data: expertReviews } = useQuery({
+    queryKey: ['matches', 'reviews', 'idea', ideaId],
+    queryFn: () => matchesApi.getReviewsByIdea(ideaId),
+    enabled: !!acceptedMatch,
+    retry: false,
+  })
   const alreadyReviewed = acceptedMatch
-    ? (typeof window !== 'undefined' && !!localStorage.getItem(`reviewed_match_${acceptedMatch.matchId}`))
+    ? !!expertReviews?.some((review) => review.matchId === acceptedMatch.matchId)
     : false
 
   const isOwnerExpertPending = !!user && user.id === idea?.userId && idea?.status === 'EXPERT_PENDING'
