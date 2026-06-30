@@ -54,7 +54,7 @@ public class FundingController {
             @PathVariable Long ideaId,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        return ApiResponse.ofSuccess(fundingService.getDeposit(ideaId));
+        return ApiResponse.ofSuccess(fundingService.getDeposit(ideaId, userDetails.getUserId()));
     }
 
     @Operation(

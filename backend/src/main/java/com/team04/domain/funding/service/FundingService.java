@@ -71,7 +71,10 @@ public class FundingService {
 
     // 프로젝트 보증금 조회
     @Transactional(readOnly = true)
-    public DepositResponse getDeposit(Long ideaId) {
+    public DepositResponse getDeposit(Long ideaId, Long userId) {
+        Idea idea = ideaRepository.findByIdAndDeletedAtIsNull(ideaId)
+                .orElseThrow(() -> new CustomException(ErrorCode.IDEA_NOT_FOUND));
+        idea.validateOwner(userId);
         Deposit deposit = depositRepository.findByIdeaId(ideaId)
                 .orElseThrow(() -> new CustomException(ErrorCode.ESCROW_NOT_FOUND));
         return DepositResponse.from(deposit);
