@@ -21,6 +21,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -100,15 +101,16 @@ public class ExpertController {
     /* 전문가 프로필 검증 API */
     @Operation(
             summary = "전문가 자격 검증",
-            description = "사업자 등록번호(국세청 API) 또는 국가자격증(수동 검토)으로 전문가 자격을 검증합니다. 로그인한 사용자만 접근 가능합니다."
+            description = "사업자 등록번호(국세청 API) 또는 국가자격증(수동 검토)으로 전문가 자격을 검증합니다. 국가자격증은 파일 첨부 필수입니다."
     )
-    @PostMapping("/verify")
+    @PostMapping(value = "/verify", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<ExpertVerifyResponse>> verify(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @Valid @RequestBody ExpertVerifyRequest request
+            @Valid @RequestPart("data") ExpertVerifyRequest request,
+            @RequestPart(value = "file", required = false) MultipartFile file
     ) {
-        ExpertVerifyResponse response = expertVerifyService.verify(userDetails.getUserId(), request);
+        ExpertVerifyResponse response = expertVerifyService.verify(userDetails.getUserId(), request, file);
         return ResponseEntity.status(201).body(ApiResponse.ofSuccess(response));
     }
 
