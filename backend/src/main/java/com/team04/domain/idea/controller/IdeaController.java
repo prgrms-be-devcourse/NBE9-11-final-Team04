@@ -307,6 +307,16 @@ public class IdeaController {
         return ApiResponse.ofSuccessWithoutBody();
     }
 
+    /** 아이디어의 신뢰도 점수와 항목별 세부 점수를 조회합니다. */
+    @Operation(
+            summary = "아이디어 신뢰도 점수 조회",
+            description = "아이디어의 신뢰도 총점, 배지, 항목별 점수 세부 내역을 조회합니다."
+    )
+    @GetMapping("/{ideaId}/trust-score")
+    public ApiResponse<TrustScoreResponse> getTrustScore(@PathVariable Long ideaId) {
+        return ApiResponse.ofSuccess(ideaService.getTrustScore(ideaId));
+    }
+
     /** 로그인 사용자가 아이디어 도용 의심 신고를 접수합니다. */
     @Operation(
             summary = "아이디어 도용 의심 신고",

@@ -18,6 +18,7 @@ import com.team04.domain.user.entity.Role;
 import com.team04.domain.verification.dto.request.VerificationRequest;
 import com.team04.domain.verification.entity.VerificationStatus;
 import com.team04.domain.verification.repository.ProjectVerificationRepository;
+import com.team04.domain.verification.repository.TrustScoreRepository;
 import com.team04.domain.verification.service.VerificationService;
 import com.team04.global.exception.CustomException;
 import com.team04.global.exception.ErrorCode;
@@ -62,6 +63,7 @@ public class IdeaService {
     private final IdeaSettlementAccountRepository ideaSettlementAccountRepository;
     private final ExpertMatchRepository expertMatchRepository;
     private final IdeaDraftMilestoneConverter ideaDraftMilestoneConverter;
+    private final TrustScoreRepository trustScoreRepository;
 
     /** 아이디어를 등록하고 마일스톤을 함께 저장합니다. */
     @Transactional
@@ -675,5 +677,15 @@ public class IdeaService {
     public void cancelIdea(Long ideaId) {
         Idea idea = findActiveIdea(ideaId);
         idea.changeStatus(IdeaStatus.CANCELLED);
+    }
+
+    /** 아이디어의 신뢰도 점수와 항목별 세부 점수를 조회합니다. */
+    @Transactional(readOnly = true)
+    public TrustScoreResponse getTrustScore(Long ideaId) {
+        Idea idea = ideaRepository.findByIdAndDeletedAtIsNull(ideaId)
+                .orElseThrow(() -> new CustomException(ErrorCode.IDEA_NOT_FOUND));
+        return trustScoreRepository.findByIdeaId(ideaId)
+                .map(ts -> TrustScoreResponse.of(idea, ts))
+                .orElse(TrustScoreResponse.ofDefault(idea));
     }
 }

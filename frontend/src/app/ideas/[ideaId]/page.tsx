@@ -534,6 +534,30 @@ export default function IdeaDetailPage() {
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0',
           }}>
             <TrustScoreCircle score={score} />
+            {trustScore?.breakdown && (
+              <div style={{ width: '100%', marginTop: '20px', borderTop: '1px solid var(--border)', paddingTop: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {([
+                  { key: 'aiVerification', label: 'AI 검증' },
+                  { key: 'milestoneSpecificity', label: '마일스톤 구체성' },
+                  { key: 'expertMatching', label: '전문가 매칭' },
+                  { key: 'adminApproval', label: '관리자 승인' },
+                  { key: 'proposerHistory', label: '제안자 이력' },
+                ] as const).map(({ key, label }) => {
+                  const val = trustScore.breakdown[key] ?? 0
+                  return (
+                    <div key={key}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                        <span style={{ fontSize: '12px', color: 'var(--fg-muted)' }}>{label}</span>
+                        <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--fg)' }}>{val}/20</span>
+                      </div>
+                      <div style={{ height: '4px', background: 'var(--border)', borderRadius: '2px', overflow: 'hidden' }}>
+                        <div style={{ height: '100%', width: `${(val / 20) * 100}%`, background: val >= 16 ? '#059669' : val >= 8 ? 'var(--brand)' : '#d97706', borderRadius: '2px', transition: 'width 0.5s ease' }} />
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </div>
 
           {/* 리워드 + 펀딩 기간 정보 */}
