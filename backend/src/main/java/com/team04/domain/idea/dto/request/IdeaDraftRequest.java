@@ -28,6 +28,6 @@ public record IdeaDraftRequest(
         RewardType rewardType,
         @Size(max = 2048) String imageUrl,
         List<@Size(max = 2048) String> imageUrls,
-        @Valid @Size(max = 3) List<@Valid CreateMilestoneRequest> milestones
+        @Valid @Size(max = 3) List<@Valid DraftMilestoneRequest> milestones
 ) {
 }

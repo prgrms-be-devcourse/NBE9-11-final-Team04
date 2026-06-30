@@ -1,6 +1,6 @@
 package com.team04.global.util;
 
-import com.team04.domain.idea.dto.request.CreateMilestoneRequest;
+import com.team04.domain.idea.dto.request.DraftMilestoneRequest;
 import com.team04.global.exception.CustomException;
 import com.team04.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -17,7 +17,7 @@ public final class IdeaDraftMilestoneConverter {
 
     private final ObjectMapper objectMapper;
 
-    public String join(List<CreateMilestoneRequest> milestones) {
+    public String join(List<DraftMilestoneRequest> milestones) {
         if (milestones == null || milestones.isEmpty()) {
             return null;
         }
@@ -28,7 +28,7 @@ public final class IdeaDraftMilestoneConverter {
         }
     }
 
-    public List<CreateMilestoneRequest> parse(String milestones) {
+    public List<DraftMilestoneRequest> parse(String milestones) {
         if (milestones == null || milestones.isBlank()) {
             return List.of();
         }
