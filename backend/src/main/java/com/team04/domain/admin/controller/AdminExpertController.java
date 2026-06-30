@@ -93,4 +93,41 @@ public class AdminExpertController {
         adminExpertService.demoteExpert(expertProfileId);
         return ResponseEntity.ok(ApiResponse.ofSuccessWithoutBody());
     }
+
+    @Operation(
+            summary = "검토 대기 전문가 목록 조회",
+            description = "국가자격증 수동 검토 대기 중인 PENDING_VERIFICATION 상태의 전문가 목록을 조회합니다."
+    )
+    @GetMapping("/pending")
+    public ResponseEntity<ApiResponse<Page<AdminExpertSuspendedResponse>>> getPendingExperts(
+            @PageableDefault(size = 10) Pageable pageable
+    ) {
+        return ResponseEntity.ok(ApiResponse.ofSuccess(
+                adminExpertService.getPendingExperts(pageable)
+        ));
+    }
+
+    @Operation(
+            summary = "국가자격증 수동 승인",
+            description = "관리자가 국가자격증을 검토하고 전문가 자격을 승인합니다. verified=true, ACTIVE 상태로 전환됩니다."
+    )
+    @PostMapping("/{expertProfileId}/verify")
+    public ResponseEntity<ApiResponse<Void>> approvePendingExpert(
+            @PathVariable Long expertProfileId
+    ) {
+        adminExpertService.approvePendingExpert(expertProfileId);
+        return ResponseEntity.ok(ApiResponse.ofSuccessWithoutBody());
+    }
+
+    @Operation(
+            summary = "국가자격증 수동 거절",
+            description = "관리자가 국가자격증을 검토하고 자격을 거절합니다. 프로필이 삭제되며 재신청이 가능합니다."
+    )
+    @PostMapping("/{expertProfileId}/reject")
+    public ResponseEntity<ApiResponse<Void>> rejectPendingExpert(
+            @PathVariable Long expertProfileId
+    ) {
+        adminExpertService.rejectPendingExpert(expertProfileId);
+        return ResponseEntity.ok(ApiResponse.ofSuccessWithoutBody());
+    }
 }
