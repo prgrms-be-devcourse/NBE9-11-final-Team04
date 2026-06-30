@@ -564,7 +564,7 @@ public class IdeaService {
     private void resubmitRejectedIdea(Idea idea) {
         if (idea.getStatus() == IdeaStatus.REJECTED) {
             // 이전 전문가 리뷰 삭제 — 재심사 시 전문가가 새 리뷰를 제출할 수 있도록
-            expertReviewRepository.deleteAll(expertReviewRepository.findByIdeaId(idea.getId()));
+            expertReviewRepository.deleteAllInBatch(expertReviewRepository.findByIdeaId(idea.getId()));
             idea.changeStatus(IdeaStatus.AI_PENDING);
             verificationService.requestVerification(
                     new VerificationRequest(
