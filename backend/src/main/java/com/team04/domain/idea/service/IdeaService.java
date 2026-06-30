@@ -4,6 +4,8 @@ import com.team04.domain.dispute.dto.request.CreateDisputeRequest;
 import com.team04.domain.dispute.entity.DisputeCategory;
 import com.team04.domain.dispute.entity.TargetType;
 import com.team04.domain.dispute.service.DisputeService;
+import com.team04.domain.funding.entity.FundingTypes.DepositStatus;
+import com.team04.domain.funding.repository.DepositRepository;
 import com.team04.domain.idea.dto.request.*;
 import com.team04.domain.idea.dto.response.*;
 import com.team04.domain.idea.entity.*;
@@ -56,6 +58,7 @@ public class IdeaService {
     private final IdeaDraftRepository ideaDraftRepository;
     private final IdeaBookmarkRepository ideaBookmarkRepository;
     private final MilestoneRepository milestoneRepository;
+    private final DepositRepository depositRepository;
     private final DisputeService disputeService;
     private final StorageClient storageClient;
     private final VerificationService verificationService;
@@ -104,23 +107,6 @@ public class IdeaService {
                         .toList()
         );
 
-        verificationService.requestVerification(
-                new VerificationRequest(
-                        savedIdea.getId(),
-                        request.title(),
-                        buildVerificationDescription(request),
-                        request.milestones().stream()
-                                .map(m -> new VerificationRequest.MilestoneInfo(
-                                        m.goal(),
-                                        m.expectedResult(),
-                                        m.expectedDate(),
-                                        null
-                                ))
-                                .toList()
-                ),
-                userId
-        );
-
         return IdeaResponse.of(savedIdea);
     }
 
@@ -128,21 +114,6 @@ public class IdeaService {
         if (depositAmount * 10 > goalAmount * 3) {
             throw new CustomException(ErrorCode.INVALID_DEPOSIT_AMOUNT);
         }
-    }
-
-    /** AI 검증에 전달할 아이디어 상세 설명을 생성합니다. */
-    private String buildVerificationDescription(CreateIdeaRequest request) {
-        return Stream.of(
-                        request.oneLineIntro(),
-                        request.problemDefinition(),
-                        request.solution(),
-                        request.goal(),
-                        request.targetCustomer(),
-                        request.competitor(),
-                        request.teamIntro()
-                )
-                .filter(Objects::nonNull)
-                .collect(Collectors.joining("\n"));
     }
 
     /** 프로젝트 목록을 카테고리, 마감임박 필터, 정렬 조건에 따라 Page로 조회합니다. */
@@ -668,6 +639,9 @@ public class IdeaService {
     public void startFundingIfOpen(Long ideaId) {
         Idea idea = findActiveIdea(ideaId);
         if (idea.getStatus() == IdeaStatus.OPEN) {
+            if (!depositRepository.existsByIdeaIdAndStatus(ideaId, DepositStatus.HELD)) {
+                throw new CustomException(ErrorCode.ESCROW_NOT_FOUND);
+            }
             idea.changeStatus(IdeaStatus.IN_PROGRESS);
         }
     }

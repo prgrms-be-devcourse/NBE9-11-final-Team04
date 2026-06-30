@@ -8,6 +8,10 @@ import com.team04.domain.funding.repository.DepositRepository;
 import com.team04.domain.funding.repository.FundingRepository;
 import com.team04.domain.idea.entity.Idea;
 import com.team04.domain.idea.repository.IdeaRepository;
+import com.team04.domain.milestone.entity.Milestone;
+import com.team04.domain.milestone.repository.MilestoneRepository;
+import com.team04.domain.verification.dto.request.VerificationRequest;
+import com.team04.domain.verification.service.VerificationService;
 import com.team04.domain.payment.client.PaymentGateway;
 import com.team04.domain.payment.dto.request.ConfirmPaymentRequest;
 import com.team04.domain.payment.dto.request.CreatePaymentRequest;
@@ -45,7 +49,11 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import java.util.Objects;
 
 /**
  * 결제 도메인 비즈니스 로직을 담당하는 서비스입니다.
@@ -68,6 +76,8 @@ public class PaymentService {
     private final PaymentProperties paymentProperties;
     private final IdeaVbankPoolService ideaVbankPoolService;
     private final VbankLedgerService vbankLedgerService;
+    private final MilestoneRepository milestoneRepository;
+    private final VerificationService verificationService;
 
     // ── 결제 생성 ──────────────────────────────────────────────────────────
 
@@ -382,6 +392,41 @@ public class PaymentService {
                 deposit.getId(),
                 "보증금 입금"
         );
+        triggerAiVerification(idea);
+    }
+
+    private void triggerAiVerification(Idea idea) {
+        List<Milestone> milestones = milestoneRepository.findByIdeaIdOrderByStep(idea.getId());
+        verificationService.requestVerification(
+                new VerificationRequest(
+                        idea.getId(),
+                        idea.getTitle(),
+                        buildVerificationDescription(idea),
+                        milestones.stream()
+                                .map(m -> new VerificationRequest.MilestoneInfo(
+                                        m.getGoal(),
+                                        m.getExpectedResult(),
+                                        m.getExpectedDate(),
+                                        null
+                                ))
+                                .toList()
+                ),
+                idea.getUserId()
+        );
+    }
+
+    private String buildVerificationDescription(Idea idea) {
+        return Stream.of(
+                        idea.getOneLineIntro(),
+                        idea.getProblemDefinition(),
+                        idea.getSolution(),
+                        idea.getGoal(),
+                        idea.getTargetCustomer(),
+                        idea.getCompetitor(),
+                        idea.getTeamIntro()
+                )
+                .filter(Objects::nonNull)
+                .collect(Collectors.joining("\n"));
     }
 
     // ── 가상계좌 ───────────────────────────────────────────────────────────

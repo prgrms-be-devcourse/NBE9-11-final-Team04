@@ -45,6 +45,19 @@ public class FundingController {
     private final FundingService fundingService;
 
     @Operation(
+            summary = "보증금 조회",
+            description = "아이디어의 보증금 납부 상태를 조회합니다. 보증금이 없으면 404를 반환합니다.",
+            security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @GetMapping("/{ideaId}/deposit")
+    public ApiResponse<DepositResponse> getDeposit(
+            @PathVariable Long ideaId,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        return ApiResponse.ofSuccess(fundingService.getDeposit(ideaId));
+    }
+
+    @Operation(
             summary = "보증금 납부",
             description = "아이디어에 대한 보증금을 납부합니다. 사업가(USER) 본인만 호출할 수 있습니다.",
             security = @SecurityRequirement(name = "bearerAuth")
