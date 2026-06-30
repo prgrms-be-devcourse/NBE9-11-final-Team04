@@ -8,7 +8,9 @@ import { authApi } from '@/api/auth'
 import { usersApi } from '@/api/users'
 import { useAuthStore } from '@/store/authStore'
 import { Input } from '@/components/ui/Input'
-import { getErrorMessage } from '@/utils/format'
+import { getErrorMessage, getResponseCode } from '@/utils/format'
+
+const PASSWORD_REGEX = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&]).{8,20}$/
 
 const SHOW_SOCIAL = !!(process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || process.env.NEXT_PUBLIC_KAKAO_CLIENT_ID)
 
@@ -54,6 +56,7 @@ export default function SignupPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [step, setStep] = useState(0)
   const [error, setError] = useState('')
+  const [nicknameError, setNicknameError] = useState('')
   const [otpCode, setOtpCode] = useState('')
   const [profile, setProfile] = useState({ intro: '', portfolioUrl: '' })
   const [imagePreview, setImagePreview] = useState<string | null>(null)
@@ -64,6 +67,12 @@ export default function SignupPage() {
     email: '',
     password: '',
     confirmPassword: '',
+  })
+
+  const checkNicknameMutation = useMutation({
+    mutationFn: () => authApi.checkNickname(form.nickname),
+    onSuccess: () => sendOtpMutation.mutate(),
+    onError: (err) => setNicknameError(getErrorMessage(err)),
   })
 
   const sendOtpMutation = useMutation({
@@ -120,10 +129,12 @@ export default function SignupPage() {
   const handleInfoSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
+    if (!PASSWORD_REGEX.test(form.password)) {
+      setError('비밀번호는 8~20자, 영문·숫자·특수문자(@$!%*#?&)를 모두 포함해야 합니다.')
+      return
+    }
     if (form.password !== form.confirmPassword) { setError('비밀번호가 일치하지 않습니다.'); return }
-    if (form.password.length < 8) { setError('비밀번호는 8자 이상이어야 합니다.'); return }
-    if (!/[^A-Za-z0-9]/.test(form.password)) { setError('비밀번호에는 특수문자를 1개 이상 포함해야 합니다.'); return }
-    sendOtpMutation.mutate()
+    checkNicknameMutation.mutate()
   }
 
   return (
@@ -159,13 +170,24 @@ export default function SignupPage() {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
               <Input label="이름" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="홍길동" required />
-              <Input label="닉네임" value={form.nickname} onChange={(e) => setForm({ ...form, nickname: e.target.value })} placeholder="사용할 닉네임" required />
+              <div>
+                <Input label="닉네임" value={form.nickname} onChange={(e) => { setForm({ ...form, nickname: e.target.value }); setNicknameError('') }} placeholder="사용할 닉네임" required />
+                {nicknameError && <p style={{ fontSize: '12px', marginTop: '4px', color: 'var(--error)' }}>{nicknameError}</p>}
+              </div>
             </div>
 
             <Input label="나이" type="number" min={19} value={form.age || ''} onChange={(e) => setForm({ ...form, age: Number(e.target.value) })} placeholder="만 나이" required />
             <Input label="이메일" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="example@seedlink.com" required />
-            <Input label="비밀번호" type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="8자 이상, 특수문자 포함" required />
-            <Input label="비밀번호 확인" type="password" value={form.confirmPassword} onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })} placeholder="비밀번호 재입력" required />
+  
+            <Input label="비밀번호" type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="영문·숫자·특수문자 포함 8~20자" required />
+            <div>
+              <Input label="비밀번호 확인" type="password" value={form.confirmPassword} onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })} placeholder="비밀번호 재입력" required />
+              {form.confirmPassword && (
+                <p style={{ fontSize: '12px', marginTop: '4px', color: form.password === form.confirmPassword ? '#22c55e' : 'var(--error)' }}>
+                  {form.password === form.confirmPassword ? '비밀번호가 일치합니다.' : '비밀번호가 일치하지 않습니다.'}
+                </p>
+              )}
+            </div>
 
             {SHOW_SOCIAL && (
               <>
@@ -195,9 +217,9 @@ export default function SignupPage() {
               <p style={{ fontSize: '14px', color: 'var(--error)', background: '#fff5f5', padding: '10px 14px', borderRadius: 'var(--radius-md)' }}>{error}</p>
             )}
 
-            <button type="submit" disabled={sendOtpMutation.isPending}
-              style={{ width: '100%', height: '52px', fontSize: '17px', fontWeight: 700, background: sendOtpMutation.isPending ? 'var(--brand-tint)' : 'var(--brand)', color: sendOtpMutation.isPending ? 'var(--brand)' : '#fff', border: 'none', borderRadius: 'var(--radius-md)', cursor: sendOtpMutation.isPending ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
-              {sendOtpMutation.isPending ? '발송 중...' : '인증 코드 받기 →'}
+            <button type="submit" disabled={checkNicknameMutation.isPending || sendOtpMutation.isPending}
+              style={{ width: '100%', height: '52px', fontSize: '17px', fontWeight: 700, background: (checkNicknameMutation.isPending || sendOtpMutation.isPending) ? 'var(--brand-tint)' : 'var(--brand)', color: (checkNicknameMutation.isPending || sendOtpMutation.isPending) ? 'var(--brand)' : '#fff', border: 'none', borderRadius: 'var(--radius-md)', cursor: (checkNicknameMutation.isPending || sendOtpMutation.isPending) ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
+              {(checkNicknameMutation.isPending || sendOtpMutation.isPending) ? '확인 중...' : '인증 코드 받기 →'}
             </button>
           </form>
         )}

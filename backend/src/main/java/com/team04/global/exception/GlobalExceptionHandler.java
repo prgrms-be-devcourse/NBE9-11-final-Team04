@@ -25,9 +25,13 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse<Void>> handleValidationException(
             MethodArgumentNotValidException e) {
+        String message = e.getBindingResult().getFieldErrors().stream()
+                .map(fe -> fe.getField() + ": " + fe.getDefaultMessage())
+                .findFirst()
+                .orElse(ErrorCode.INVALID_INPUT.getMessage());
         return ResponseEntity
                 .status(400)
-                .body(ApiResponse.ofFailure(ErrorCode.INVALID_INPUT.getCode(), ErrorCode.INVALID_INPUT.getMessage()));
+                .body(ApiResponse.ofFailure(ErrorCode.INVALID_INPUT.getCode(), message));
     }
 
     // SSE 요청(Accept: text/event-stream)에서 예외 발생 시 JSON 응답 시도로 인해 발생하는 미디어 타입 협상 실패 처리
