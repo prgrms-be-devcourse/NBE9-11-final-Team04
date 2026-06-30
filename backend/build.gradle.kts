@@ -2,6 +2,7 @@
     java
     id("org.springframework.boot") version "4.0.6"
     id("io.spring.dependency-management") version "1.1.7"
+    jacoco
 }
 
 group = "com"
@@ -36,8 +37,6 @@ dependencies {
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.3")
 
     implementation("io.github.resilience4j:resilience4j-spring-boot3:2.1.0")
-    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.3")
-    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.2")
 
     compileOnly("org.projectlombok:lombok")
     developmentOnly("org.springframework.boot:spring-boot-devtools")
@@ -60,4 +59,26 @@ dependencies {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+}
+
+configure<JacocoPluginExtension> {
+    toolVersion = "0.8.13"
+}
+
+tasks.withType<Test> {
+    useJUnitPlatform()
+}
+
+tasks.test {
+    useJUnitPlatform()
+    finalizedBy(tasks.jacocoTestReport) // test 실행 후 자동으로 리포트 생성
+}
+
+tasks.jacocoTestReport {
+    dependsOn(tasks.test)
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+        csv.required.set(false)
+    }
 }

@@ -17,7 +17,6 @@ interface ExpertVerifyRequest {
   qualificationNumber: string
   startDate?: string
   representativeName?: string
-  fileUrl?: string
 }
 
 interface ExpertVerifyResponse {
@@ -38,7 +37,7 @@ const TYPE_INFO: Record<QualificationType, { label: string; icon: string; desc: 
     label: '국가자격증',
     icon: '📋',
     desc: '관리자 검토 후 승인됩니다.',
-    detail: '한국산업인력공단 국가자격 API로 자격번호를 검증합니다. 자격증 파일을 함께 제출하면 관리자가 수동 검토합니다.',
+    detail: '자격증 파일을 제출하면 관리자가 수동 검토합니다.',
   },
 }
 
@@ -80,25 +79,31 @@ function ExpertApplyContent() {
     qualificationNumber: '',
     startDate: '',
     representativeName: '',
-    fileUrl: '',
   })
+  const [file, setFile] = useState<File | null>(null)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
 
   const applyMutation = useMutation({
     mutationFn: () => {
-      const body: ExpertVerifyRequest = {
+      const data: ExpertVerifyRequest = {
         qualificationType: type as QualificationType,
         qualificationNumber: form.qualificationNumber,
         ...(type === 'BUSINESS_REGISTRATION' && {
           startDate: form.startDate,
           representativeName: form.representativeName,
         }),
-        ...(type === 'NATIONAL_QUALIFICATION' && {
-          fileUrl: form.fileUrl,
-        }),
       }
-      return unwrap(apiClient.post<ApiResponse<ExpertVerifyResponse>>('/experts/verify', body))
+
+      const formData = new FormData()
+      formData.append('data', new Blob([JSON.stringify(data)], { type: 'application/json' }))
+      if (file) {
+        formData.append('file', file)
+      }
+
+      return unwrap(apiClient.post<ApiResponse<ExpertVerifyResponse>>('/experts/verify', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      }))
     },
     onSuccess: (data) => {
       if (data.verified && user) setUser({ ...user, role: 'EXPERT' })
@@ -117,8 +122,8 @@ function ExpertApplyContent() {
       if (!form.startDate.trim()) { setError('개업일자를 입력해주세요.'); return }
       if (!form.representativeName.trim()) { setError('대표자명을 입력해주세요.'); return }
     }
-    if (type === 'NATIONAL_QUALIFICATION' && !form.fileUrl.trim()) {
-      setError('자격증 파일 URL을 입력해주세요.'); return
+    if (type === 'NATIONAL_QUALIFICATION' && !file) {
+      setError('자격증 파일을 첨부해주세요.'); return
     }
     applyMutation.mutate()
   }
@@ -276,25 +281,24 @@ function ExpertApplyContent() {
           </div>
         )}
 
-        {/* 국가자격증 파일 URL */}
+        {/* 국가자격증 파일 첨부 */}
         {type === 'NATIONAL_QUALIFICATION' && (
           <div>
             <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: 'var(--fg)', marginBottom: '6px' }}>
-              자격증 파일 URL
+              자격증 파일 첨부
             </label>
             <input
-              type="url"
-              value={form.fileUrl}
-              onChange={(e) => setForm({ ...form, fileUrl: e.target.value })}
-              placeholder="https://..."
+              type="file"
+              accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
               style={{
                 width: '100%', height: '48px', border: '1.5px solid var(--border)',
-                borderRadius: '10px', padding: '0 14px', fontSize: '15px',
+                borderRadius: '10px', padding: '10px 14px', fontSize: '15px',
                 fontFamily: 'inherit', outline: 'none', color: 'var(--fg)', boxSizing: 'border-box',
               }}
             />
             <p style={{ fontSize: '12px', color: 'var(--fg-muted)', marginTop: '4px' }}>
-              S3 등에 업로드 후 URL을 입력해주세요.
+              자격증 사본 파일을 첨부해주세요. (PDF, 이미지, 문서 파일)
             </p>
           </div>
         )}

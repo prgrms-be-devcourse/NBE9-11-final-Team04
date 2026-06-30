@@ -17,6 +17,7 @@ interface AdminExpertResponse {
   email: string
   qualificationType: string
   qualificationNumber: string
+  fileUrl: string | null
   status: ExpertStatusType
   suspendedAt: string | null
   appealCount: number
@@ -33,6 +34,10 @@ const adminExpertsApi = {
     unwrap(apiClient.post<ApiResponse<void>>(`/admin/experts/${expertProfileId}/restore`)),
   demote: (expertProfileId: number) =>
     unwrap(apiClient.post<ApiResponse<void>>(`/admin/experts/${expertProfileId}/demote`)),
+  approve: (expertProfileId: number) =>
+    unwrap(apiClient.post<ApiResponse<void>>(`/admin/experts/${expertProfileId}/verify`)),
+  reject: (expertProfileId: number) =>
+    unwrap(apiClient.post<ApiResponse<void>>(`/admin/experts/${expertProfileId}/reject`)),
 }
 
 const STATUS_BADGE: Record<ExpertStatusType, { variant: 'green' | 'orange' | 'red' | 'gray'; label: string }> = {
@@ -72,10 +77,26 @@ export default function AdminExpertsPage() {
     onError: () => alert('강등 처리 중 오류가 발생했습니다.'),
   })
 
+  const approveMutation = useMutation({
+    mutationFn: (expertProfileId: number) => adminExpertsApi.approve(expertProfileId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'experts'] }),
+    onError: () => alert('승인 처리 중 오류가 발생했습니다.'),
+  })
+
+  const rejectMutation = useMutation({
+    mutationFn: (expertProfileId: number) => adminExpertsApi.reject(expertProfileId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'experts'] }),
+    onError: () => alert('거절 처리 중 오류가 발생했습니다.'),
+  })
+
   const experts = data?.content ?? []
   const totalPages = data?.totalPages ?? 1
   const totalElements = data?.totalElements ?? 0
-  const isMutating = restoreMutation.isPending || demoteMutation.isPending
+  const isMutating =
+    restoreMutation.isPending ||
+    demoteMutation.isPending ||
+    approveMutation.isPending ||
+    rejectMutation.isPending
 
   const handleStatusChange = (value: ExpertStatusType | '') => {
     setStatusFilter(value)
@@ -163,6 +184,19 @@ export default function AdminExpertsPage() {
                         <span>격리 {formatDateTime(expert.suspendedAt)}</span>
                       </>
                     )}
+                    {expert.status === 'PENDING_VERIFICATION' && expert.fileUrl && (
+                      <>
+                        <span style={{ color: 'var(--border)' }}>|</span>
+                        <a
+                          href={expert.fileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ color: 'var(--brand-dark)', fontWeight: 600, textDecoration: 'underline' }}
+                        >
+                          📎 자격증 파일 보기
+                        </a>
+                      </>
+                    )}
                   </div>
                 </div>
 
@@ -201,6 +235,45 @@ export default function AdminExpertsPage() {
                       }}
                     >
                       ⛔ 강등
+                    </button>
+                  </div>
+                )}
+
+                {expert.status === 'PENDING_VERIFICATION' && (
+                  <div style={{ display: 'flex', gap: '8px', flexShrink: 0, flexWrap: 'wrap' }}>
+                    <button
+                      onClick={() => {
+                        if (confirm(`"${expert.name}" 전문가의 국가자격증을 승인하시겠습니까?`)) {
+                          approveMutation.mutate(expert.expertProfileId)
+                        }
+                      }}
+                      disabled={isMutating}
+                      style={{
+                        padding: '8px 16px', borderRadius: '8px',
+                        border: '1.5px solid #86efac', background: '#f0fdf4',
+                        color: '#1a7a3f', fontWeight: 700, fontSize: '13px',
+                        cursor: isMutating ? 'not-allowed' : 'pointer',
+                        opacity: isMutating ? 0.7 : 1,
+                      }}
+                    >
+                      ✅ 승인
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (confirm(`"${expert.name}" 전문가의 국가자격증을 거절하시겠습니까? 프로필이 삭제되며 재신청이 가능합니다.`)) {
+                          rejectMutation.mutate(expert.expertProfileId)
+                        }
+                      }}
+                      disabled={isMutating}
+                      style={{
+                        padding: '8px 16px', borderRadius: '8px',
+                        border: '1.5px solid #fca5a5', background: '#fff',
+                        color: '#dc2626', fontWeight: 700, fontSize: '13px',
+                        cursor: isMutating ? 'not-allowed' : 'pointer',
+                        opacity: isMutating ? 0.7 : 1,
+                      }}
+                    >
+                      ❌ 거절
                     </button>
                   </div>
                 )}

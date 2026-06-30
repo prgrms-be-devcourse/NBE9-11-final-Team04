@@ -13,12 +13,10 @@ public record ExpertVerifyRequest(
         String qualificationNumber,
 
         // BUSINESS_REGISTRATION 필수 항목
-        // YYYYMMDD 포맷의 날짜로 입력
         String startDate,
 
         // BUSINESS_REGISTRATION 필수 항목
-        String representativeName,
+        String representativeName
 
-        // NATIONAL_QUALIFICATION 필수
-        String fileUrl
+        // fileUrl 제거 — 파일은 MultipartFile로 별도 전달
 ) {}
