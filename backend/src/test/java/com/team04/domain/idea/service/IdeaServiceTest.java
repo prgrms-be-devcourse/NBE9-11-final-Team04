@@ -87,7 +87,7 @@ class IdeaServiceTest {
     }
 
     @Test
-    @DisplayName("아이디어 생성 성공 시 마일스톤을 저장하고 AI 검증을 요청한다")
+    @DisplayName("아이디어 생성 성공 시 아이디어와 마일스톤을 저장하고 AI_PENDING 상태로 등록된다")
     void 아이디어생성_성공_마일스톤저장_AI검증요청() {
         CreateIdeaRequest request = createRequest(1_000_000L, 300_000L, milestones());
         given(ideaRepository.save(any(Idea.class))).willAnswer(invocation -> {
@@ -96,33 +96,16 @@ class IdeaServiceTest {
             return savedIdea;
         });
         ArgumentCaptor<Idea> ideaCaptor = ArgumentCaptor.forClass(Idea.class);
-        ArgumentCaptor<VerificationRequest> verificationRequestCaptor =
-                ArgumentCaptor.forClass(VerificationRequest.class);
 
         ideaService.createIdea(1L, request);
 
         then(ideaRepository).should().save(ideaCaptor.capture());
         then(milestoneRepository).should().saveAll(anyList());
-        then(verificationService).should().requestVerification(verificationRequestCaptor.capture(), eq(1L));
+        verifyNoInteractions(verificationService);
 
         Idea savedIdea = ideaCaptor.getValue();
-        VerificationRequest verificationRequest = verificationRequestCaptor.getValue();
         assertThat(savedIdea.getStatus()).isEqualTo(IdeaStatus.AI_PENDING);
         assertThat(savedIdea.getId()).isEqualTo(10L);
-        assertThat(verificationRequest.ideaId()).isEqualTo(10L);
-        assertThat(verificationRequest.title()).isEqualTo(request.title());
-        assertThat(verificationRequest.description())
-                .contains(
-                        request.oneLineIntro(),
-                        request.problemDefinition(),
-                        request.solution(),
-                        request.goal(),
-                        request.targetCustomer(),
-                        request.competitor(),
-                        request.teamIntro()
-                );
-        assertThat(verificationRequest.milestones()).hasSize(3);
-        assertThat(verificationRequest.milestones().get(0).goal()).isEqualTo("목표 1");
     }
 
     @Test
@@ -138,7 +121,8 @@ class IdeaServiceTest {
         ideaService.createIdea(1L, request);
 
         then(ideaRepository).should().save(any(Idea.class));
-        then(verificationService).should().requestVerification(any(), eq(1L));
+        then(milestoneRepository).should().saveAll(anyList());
+        verifyNoInteractions(verificationService);
     }
 
     @Test
