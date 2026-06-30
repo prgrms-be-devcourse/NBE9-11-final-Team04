@@ -37,18 +37,18 @@ public class AdminExpertService {
             }
             return expertProfileRepository
                     .findProfilesByStatus(expertStatus, pageable)
-                    .map(AdminExpertSuspendedResponse::from);
+                    .map(profile -> AdminExpertSuspendedResponse.from(profile, appealStorageClient));
         }
         return expertProfileRepository
                 .findAllProfiles(pageable)
-                .map(AdminExpertSuspendedResponse::from);
+                .map(profile -> AdminExpertSuspendedResponse.from(profile, appealStorageClient));
     }
 
     @Transactional(readOnly = true)
     public Page<AdminExpertSuspendedResponse> getSuspendedExperts(Pageable pageable) {
         return expertProfileRepository
                 .findProfilesByStatus(ExpertStatus.SUSPENDED, pageable)
-                .map(AdminExpertSuspendedResponse::from);
+                .map(profile -> AdminExpertSuspendedResponse.from(profile, appealStorageClient));
     }
 
     @Transactional(readOnly = true)
@@ -76,7 +76,7 @@ public class AdminExpertService {
     public Page<AdminExpertSuspendedResponse> getPendingExperts(Pageable pageable) {
         return expertProfileRepository
                 .findProfilesByStatus(ExpertStatus.PENDING_VERIFICATION, pageable)
-                .map(AdminExpertSuspendedResponse::from);
+                .map(profile -> AdminExpertSuspendedResponse.from(profile, appealStorageClient));
     }
 
     // 국가자격증 수동 승인
