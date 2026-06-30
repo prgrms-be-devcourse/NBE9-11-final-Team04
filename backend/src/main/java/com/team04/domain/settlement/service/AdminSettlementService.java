@@ -17,7 +17,7 @@ public class AdminSettlementService {
     /** 보증금 납부 확인을 기존 펀딩 서비스에 위임합니다. */
     @Transactional(readOnly = true)
     public DepositResponse getDeposit(Long ideaId) {
-        return fundingService.getDeposit(ideaId);
+        return fundingService.getDepositAsAdmin(ideaId);
     }
 
     /** 보증금 환급 판정 흐름을 기존 정산 서비스에 위임합니다. */

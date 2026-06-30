@@ -69,12 +69,22 @@ public class FundingService {
 
     // ── 보증금 ──────────────────────────────────────────────────────────────
 
-    // 프로젝트 보증금 조회
+    // 프로젝트 보증금 조회 (소유자 전용)
     @Transactional(readOnly = true)
     public DepositResponse getDeposit(Long ideaId, Long userId) {
         Idea idea = ideaRepository.findByIdAndDeletedAtIsNull(ideaId)
                 .orElseThrow(() -> new CustomException(ErrorCode.IDEA_NOT_FOUND));
         idea.validateOwner(userId);
+        return fetchDeposit(ideaId);
+    }
+
+    // 프로젝트 보증금 조회 (관리자 전용 — 소유자 검증 없음)
+    @Transactional(readOnly = true)
+    public DepositResponse getDepositAsAdmin(Long ideaId) {
+        return fetchDeposit(ideaId);
+    }
+
+    private DepositResponse fetchDeposit(Long ideaId) {
         Deposit deposit = depositRepository.findByIdeaId(ideaId)
                 .orElseThrow(() -> new CustomException(ErrorCode.ESCROW_NOT_FOUND));
         return DepositResponse.from(deposit);
