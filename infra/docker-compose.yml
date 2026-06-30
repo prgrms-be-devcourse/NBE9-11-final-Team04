@@ -31,6 +31,9 @@ services:
       - PAYMENT_WEBHOOK_SECRET=${PAYMENT_WEBHOOK_SECRET:-dev-webhook-secret}
       - ADMIN_INIT_EMAIL=${ADMIN_INIT_EMAIL}
       - ADMIN_INIT_PASSWORD=${ADMIN_INIT_PASSWORD}
+      - MAIL_USERNAME=${MAIL_USERNAME}
+      - MAIL_PASSWORD=${MAIL_PASSWORD}
+      - ADMIN_INTERNAL_BASE_URL=${ADMIN_INTERNAL_BASE_URL}
     env_file:
       - payment.env
     depends_on:
