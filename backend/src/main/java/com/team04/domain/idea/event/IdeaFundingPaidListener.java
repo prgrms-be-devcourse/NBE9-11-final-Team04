@@ -1,6 +1,7 @@
 package com.team04.domain.idea.event;
 
 import com.team04.domain.funding.entity.Funding;
+import com.team04.domain.funding.entity.FundingTypes.FundingStatus;
 import com.team04.domain.funding.event.FundingAchievementListener;
 import com.team04.domain.funding.event.FundingPaidEvent;
 import com.team04.domain.funding.repository.FundingRepository;
@@ -50,7 +51,14 @@ public class IdeaFundingPaidListener {
         Idea idea = ideaRepository.findByIdForUpdate(event.ideaId())
                 .orElseThrow(() -> new CustomException(ErrorCode.IDEA_NOT_FOUND));
 
-        idea.addFundingAmount(event.amount());
+        boolean firstPaidFundingBySponsor =
+                !fundingRepository.existsByIdeaIdAndSponsorIdAndStatusAndAmountAppliedToIdeaTrue(
+                        event.ideaId(),
+                        event.sponsorId(),
+                        FundingStatus.PAID
+                );
+
+        idea.addFundingAmount(event.amount(), firstPaidFundingBySponsor);
         funding.markAmountAppliedToIdea();
     }
 }

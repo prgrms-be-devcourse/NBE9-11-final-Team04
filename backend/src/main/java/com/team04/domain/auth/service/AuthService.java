@@ -123,6 +123,12 @@ public class AuthService {
         return new TokenResponse(newAccessToken, newRefreshToken);
     }
 
+    public void checkNickname(String nickname) {
+        if (userRepository.existsByNickname(nickname)) {
+            throw new CustomException(ErrorCode.DUPLICATE_NICKNAME);
+        }
+    }
+
     public void sendOtp(EmailSendRequest request){
         String otp = generateOtp();
         otpRepository.save(request.email(), otp, OTP_TTL);
@@ -143,7 +149,7 @@ public class AuthService {
 
     public void sendAdminInvite(Long adminId, AdminInviteRequest request) {
         String token = adminInviteRepository.generate(request.email());
-        String inviteUrl = baseUrl + "/admin/signup?token=" + token;
+        String inviteUrl = baseUrl + "/admin-signup?token=" + token + "&email=" + request.email();
         emailService.sendAdminInvite(request.email(), inviteUrl);
     }
 

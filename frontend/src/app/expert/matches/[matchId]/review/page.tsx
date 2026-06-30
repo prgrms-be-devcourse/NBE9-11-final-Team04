@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { useQuery, useMutation } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { matchesApi, type ReviewRequest } from '@/api/matches'
 import { ideasApi } from '@/api/ideas'
 import { ProtectedRoute } from '@/components/layout/AppShell'
@@ -59,6 +59,7 @@ function IdeaSection({ icon, title, content }: { icon: string; title: string; co
 
 export default function ReviewWritePage() {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const params = useParams()
   const matchId = Number(params.matchId)
 
@@ -81,18 +82,28 @@ export default function ReviewWritePage() {
     enabled: !!match?.ideaId,
   })
 
+  const { data: reviews, isLoading: reviewsLoading } = useQuery({
+    queryKey: ['matches', 'reviews', 'idea', match?.ideaId],
+    queryFn: () => matchesApi.getReviewsByIdea(match!.ideaId),
+    enabled: !!match?.ideaId && match.status === 'ACCEPTED',
+  })
+
+  const existingReview = reviews?.find((review) => review.matchId === matchId)
+
   const reviewMutation = useMutation({
     mutationFn: () => matchesApi.createReview(matchId, form),
-    onSuccess: () => {
-      try {
-        localStorage.setItem(`reviewed_match_${matchId}`, 'true')
-      } catch { /* ignore */ }
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['matches'] }),
+        queryClient.invalidateQueries({ queryKey: ['matches', 'reviews', 'idea', match?.ideaId] }),
+        queryClient.invalidateQueries({ queryKey: ['ideas', match?.ideaId] }),
+      ])
       router.push('/expert/matches')
     },
     onError: () => setError('제출 중 오류가 발생했습니다. 다시 시도해주세요.'),
   })
 
-  const isLoading = matchesLoading || ideaLoading
+  const isLoading = matchesLoading || ideaLoading || reviewsLoading
   const isValid =
     form.expectedPeriod.trim() &&
     form.techStack.trim() &&
@@ -114,6 +125,35 @@ export default function ReviewWritePage() {
         }}>
           <div style={{ fontSize: '48px', marginBottom: '16px' }}>⚠️</div>
           <p style={{ fontSize: '16px' }}>유효하지 않은 매칭이거나 검증서를 작성할 수 없는 상태입니다.</p>
+          <button
+            onClick={() => router.push('/expert/matches')}
+            style={{
+              marginTop: '20px', padding: '10px 24px', borderRadius: '8px',
+              border: '1.5px solid var(--border)', background: '#fff',
+              color: 'var(--fg)', fontSize: '14px', fontWeight: 600, cursor: 'pointer',
+            }}
+          >
+            매칭 목록으로
+          </button>
+        </div>
+      </ProtectedRoute>
+    )
+  }
+
+  if (existingReview) {
+    return (
+      <ProtectedRoute roles={['EXPERT']}>
+        <div style={{
+          maxWidth: '600px', margin: '80px auto', padding: '0 24px',
+          textAlign: 'center', color: 'var(--fg-muted)',
+        }}>
+          <div style={{ fontSize: '48px', marginBottom: '16px' }}>✅</div>
+          <p style={{ fontSize: '16px', color: 'var(--fg)', fontWeight: 700 }}>
+            이미 검증서를 제출한 매칭입니다.
+          </p>
+          <p style={{ fontSize: '14px', marginTop: '8px' }}>
+            제출한 검증서는 관리자 최종 승인 단계에서 확인됩니다.
+          </p>
           <button
             onClick={() => router.push('/expert/matches')}
             style={{

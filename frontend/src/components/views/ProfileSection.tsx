@@ -7,7 +7,7 @@ import { useAuthStore } from '@/store/authStore'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
-import { getErrorMessage } from '@/utils/format'
+import { getErrorMessage, getResponseCode } from '@/utils/format'
 
 export default function ProfileSection() {
   const setUser = useAuthStore((s) => s.setUser)
@@ -15,6 +15,7 @@ export default function ProfileSection() {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [error, setError] = useState('')
+  const [nicknameError, setNicknameError] = useState('')
   const [success, setSuccess] = useState(false)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [form, setForm] = useState({ nickname: '', intro: '', portfolioUrl: '' })
@@ -58,10 +59,18 @@ export default function ProfileSection() {
       setUser(updated)
       setSuccess(true)
       setError('')
+      setNicknameError('')
       queryClient.invalidateQueries({ queryKey: ['users', 'me'] })
       setTimeout(() => setSuccess(false), 2000)
     },
-    onError: (err) => { setError(getErrorMessage(err)); setSuccess(false) },
+    onError: (err) => {
+      if (getResponseCode(err) === 'U003') {
+        setNicknameError(getErrorMessage(err))
+      } else {
+        setError(getErrorMessage(err))
+      }
+      setSuccess(false)
+    },
   })
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -152,11 +161,14 @@ export default function ProfileSection() {
           </div>
         </div>
 
-        <Input
-          label="닉네임"
-          value={form.nickname}
-          onChange={(e) => setForm({ ...form, nickname: e.target.value })}
-        />
+        <div>
+          <Input
+            label="닉네임"
+            value={form.nickname}
+            onChange={(e) => { setForm({ ...form, nickname: e.target.value }); setNicknameError('') }}
+          />
+          {nicknameError && <p style={{ fontSize: '12px', marginTop: '4px', color: 'var(--error)' }}>{nicknameError}</p>}
+        </div>
 
         <div>
           <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: 'var(--fg)', marginBottom: '6px' }}>소개</label>

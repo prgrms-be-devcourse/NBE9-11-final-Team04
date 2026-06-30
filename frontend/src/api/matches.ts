@@ -49,4 +49,7 @@ export const matchesApi = {
     unwrap(
       apiClient.post<ApiResponse<ReviewResponse>>(`/matches/${matchId}/review`, body),
     ),
+
+  getReviewsByIdea: (ideaId: number) =>
+    unwrap(apiClient.get<ApiResponse<ReviewResponse[]>>(`/matches/ideas/${ideaId}/reviews`)),
 }

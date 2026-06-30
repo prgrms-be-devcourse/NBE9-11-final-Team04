@@ -241,14 +241,28 @@ public class Idea extends BaseEntity {
 
     /** 후원 결제 완료 시 누적 후원금과 후원자 수를 갱신합니다. */
     public void addFundingAmount(Long amount) {
+        addFundingAmount(amount, true);
+    }
+
+    /** 후원 결제 완료 시 누적 후원금과 고유 후원자 수를 갱신합니다. */
+    public void addFundingAmount(Long amount, boolean increaseSponsorCount) {
         this.currentAmount += amount;
-        this.sponsorCount++;
+        if (increaseSponsorCount) {
+            this.sponsorCount++;
+        }
     }
 
     /** 후원 환불 시 누적 후원금과 후원자 수를 갱신합니다. */
     public void subtractFundingAmount(Long amount) {
+        subtractFundingAmount(amount, true);
+    }
+
+    /** 후원 환불 시 누적 후원금과 고유 후원자 수를 갱신합니다. */
+    public void subtractFundingAmount(Long amount, boolean decreaseSponsorCount) {
         this.currentAmount = Math.max(0L, this.currentAmount - amount);
-        decreaseSponsorCount();
+        if (decreaseSponsorCount) {
+            decreaseSponsorCount();
+        }
     }
 
     /** 현재 아이디어가 수정 가능한 상태인지 검증합니다. */

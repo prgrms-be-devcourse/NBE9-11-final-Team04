@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { getErrorMessage } from '@/utils/format'
 
+const PASSWORD_REGEX = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&]).{8,20}$/
+
 export default function AccountPage() {
   const router = useRouter()
   const { logout } = useAuthStore()
@@ -36,12 +38,12 @@ export default function AccountPage() {
   })
 
   const handlePasswordSubmit = () => {
-    if (pwForm.newPassword !== pwForm.confirmPassword) {
-      setPwError('새 비밀번호가 일치하지 않습니다.')
+    if (!PASSWORD_REGEX.test(pwForm.newPassword)) {
+      setPwError('비밀번호는 8~20자, 영문·숫자·특수문자(@$!%*#?&)를 모두 포함해야 합니다.')
       return
     }
-    if (pwForm.newPassword.length < 8) {
-      setPwError('비밀번호는 8자 이상이어야 합니다.')
+    if (pwForm.newPassword !== pwForm.confirmPassword) {
+      setPwError('새 비밀번호가 일치하지 않습니다.')
       return
     }
     setPwError('')
@@ -83,15 +85,22 @@ export default function AccountPage() {
           type="password"
           value={pwForm.newPassword}
           onChange={(e) => setPwForm({ ...pwForm, newPassword: e.target.value })}
-          placeholder="8자 이상"
+          placeholder="영문·숫자·특수문자 포함 8~20자"
         />
-        <Input
-          label="새 비밀번호 확인"
-          type="password"
-          value={pwForm.confirmPassword}
-          onChange={(e) => setPwForm({ ...pwForm, confirmPassword: e.target.value })}
-          placeholder="새 비밀번호 재입력"
-        />
+        <div>
+          <Input
+            label="새 비밀번호 확인"
+            type="password"
+            value={pwForm.confirmPassword}
+            onChange={(e) => setPwForm({ ...pwForm, confirmPassword: e.target.value })}
+            placeholder="새 비밀번호 재입력"
+          />
+          {pwForm.confirmPassword && (
+            <p style={{ fontSize: '12px', marginTop: '4px', color: pwForm.newPassword === pwForm.confirmPassword ? '#22c55e' : 'var(--error)' }}>
+              {pwForm.newPassword === pwForm.confirmPassword ? '비밀번호가 일치합니다.' : '비밀번호가 일치하지 않습니다.'}
+            </p>
+          )}
+        </div>
 
         {pwError && <p style={{ fontSize: '14px', color: 'var(--error)' }}>{pwError}</p>}
         {pwSuccess && <p style={{ fontSize: '14px', color: 'var(--brand-dark)' }}>비밀번호가 변경되었습니다.</p>}
