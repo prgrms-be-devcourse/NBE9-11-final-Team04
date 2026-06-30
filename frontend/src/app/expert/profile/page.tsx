@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient, unwrap } from '@/api/client'
 import type { ApiResponse } from '@/types/api'
 import { usersApi } from '@/api/users'
@@ -61,6 +61,7 @@ function StepIndicator({ current }: { current: number }) {
 
 function ExpertProfileContent() {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const { setUser } = useAuthStore()
   const [techStack, setTechStack] = useState<TechStack | ''>('')
   const [portfolioUrl, setPortfolioUrl] = useState('')
@@ -79,6 +80,7 @@ function ExpertProfileContent() {
     onSuccess: async () => {
       const updatedUser = await usersApi.getMe()
       setUser(updatedUser)
+      queryClient.setQueryData(['users', 'me'], updatedUser)
       router.push('/expert/matches')
     },
     onError: (err) => setError(getErrorMessage(err)),
