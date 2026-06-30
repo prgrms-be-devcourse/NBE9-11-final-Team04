@@ -7,6 +7,12 @@ spring:
     name: backend
   profiles:
     active: local
+  jpa:
+    open-in-view: false
+  task:
+    scheduling:
+      pool:
+        size: 2
 
 springdoc:
   api-docs:
@@ -18,19 +24,6 @@ springdoc:
 
 app:
   base-url: http://localhost:3000
-
-  jpa:
-    open-in-view: false
-    hibernate:
-      ddl-auto: none
-    properties:
-      hibernate:
-        format_sql: true
-
-  task:
-    scheduling:
-      pool:
-        size: 2
 
 server:
   port: 8080

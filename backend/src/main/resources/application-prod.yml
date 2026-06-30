@@ -14,7 +14,13 @@ spring:
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 20000
+      max-lifetime: 1800000
   jpa:
+    open-in-view: false
     hibernate:
       ddl-auto: update
     properties:
@@ -22,6 +28,8 @@ spring:
         dialect: org.hibernate.dialect.MySQLDialect
         format_sql: false
     show-sql: false
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
   data:
     redis:
       host: ${REDIS_HOST}
@@ -82,6 +90,12 @@ cloud:
       secret-key: ${AWS_SECRET_ACCESS_KEY}
 
 server:
+  shutdown: graceful
+  tomcat:
+    threads:
+      max: 150
+    accept-count: 100
+    connection-timeout: 20000
   servlet:
     context-path: /api
 
