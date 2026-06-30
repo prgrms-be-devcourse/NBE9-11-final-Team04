@@ -164,7 +164,7 @@ public class FundingService {
             ideaVbankPoolService.ensurePoolForIdea(request.ideaId());
         }
 
-        return FundingDetailResponse.from(idea, countDistinctPaidSponsors(idea.getId()));
+        return FundingDetailResponse.from(idea);
     }
 
     // OPEN/IN_PROGRESS 상태 펀딩 목록 조회 (페이징)
@@ -173,7 +173,7 @@ public class FundingService {
         return ideaRepository.findByStatusInAndDeletedAtIsNull(
                 List.of(IdeaStatus.OPEN, IdeaStatus.IN_PROGRESS),
                 pageable
-        ).map(idea -> FundingSummaryResponse.from(idea, countDistinctPaidSponsors(idea.getId())));
+        ).map(FundingSummaryResponse::from);
     }
 
     // 펀딩 상세 조회 — 목표금액·현재금액·달성률 포함 (fundingId = ideaId)
@@ -181,7 +181,7 @@ public class FundingService {
     public FundingDetailResponse getFundingDetail(Long fundingId) {
         Idea idea = ideaRepository.findByIdAndDeletedAtIsNull(fundingId)
                 .orElseThrow(() -> new CustomException(ErrorCode.FUNDING_NOT_FOUND));
-        return FundingDetailResponse.from(idea, countDistinctPaidSponsors(idea.getId()));
+        return FundingDetailResponse.from(idea);
     }
 
     // ── 후원 ──────────────────────────────────────────────────────────────
@@ -274,12 +274,8 @@ public class FundingService {
             return;
         }
 
-        FundingDetailResponse detail = FundingDetailResponse.from(idea, countDistinctPaidSponsors(idea.getId()));
+        FundingDetailResponse detail = FundingDetailResponse.from(idea);
         sendAchievementRate(event.ideaId(), FundingAchievementResponse.from(detail));
-    }
-
-    private int countDistinctPaidSponsors(Long ideaId) {
-        return Math.toIntExact(fundingRepository.countDistinctPaidSponsorsByIdeaId(ideaId));
     }
 
     private void sendAchievementRate(Long fundingId, FundingAchievementResponse event) {

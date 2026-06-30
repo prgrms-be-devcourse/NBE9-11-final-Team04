@@ -70,4 +70,22 @@ public class AdminExpertService {
     public void demoteExpert(Long expertProfileId) {
         expertVerificationService.demoteToSponsor(expertProfileId);
     }
+
+    // PENDING_VERIFICATION 전문가 목록 조회
+    @Transactional(readOnly = true)
+    public Page<AdminExpertSuspendedResponse> getPendingExperts(Pageable pageable) {
+        return expertProfileRepository
+                .findProfilesByStatus(ExpertStatus.PENDING_VERIFICATION, pageable)
+                .map(AdminExpertSuspendedResponse::from);
+    }
+
+    // 국가자격증 수동 승인
+    public void approvePendingExpert(Long expertProfileId) {
+        expertVerificationService.approvePendingProfile(expertProfileId);
+    }
+
+    // 국가자격증 수동 거절
+    public void rejectPendingExpert(Long expertProfileId) {
+        expertVerificationService.rejectPendingProfile(expertProfileId);
+    }
 }
