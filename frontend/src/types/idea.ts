@@ -79,9 +79,11 @@ export interface IdeaDraft {
   competitor: string | null
   teamIntro: string | null
   goalAmount: number | null
+  depositAmount: number | null
   fundingStartAt: string | null
   fundingEndAt: string | null
   rewardType: RewardType | null
+  milestones: CreateMilestoneRequest[] | null
   createdAt: string
   updatedAt: string
 }

@@ -85,4 +85,50 @@ public class ExpertVerificationService {
 
         log.info("[ExpertVerificationService] 계정 복구 완료: expertProfileId={}", expertProfileId);
     }
+
+    @Transactional
+    public void approvePendingProfile(Long expertProfileId) {
+        ExpertProfile profile = expertProfileRepository.findById(expertProfileId)
+                .orElseThrow(() -> new CustomException(ErrorCode.EXPERT_NOT_FOUND));
+
+        if (profile.getStatus() != ExpertStatus.PENDING_VERIFICATION) {
+            throw new CustomException(ErrorCode.EXPERT_NOT_PENDING);
+        }
+
+        profile.verify(); // verified=true, ACTIVE 전환
+
+        eventPublisher.publishEvent(new NotificationEvent(
+                profile.getUser().getId(),
+                NotificationType.EXPERT_VERIFICATION_APPROVED,
+                "전문가 자격 승인 완료",
+                "국가자격증 검토 결과 전문가 자격이 승인되었습니다. 프로필을 등록하고 활동을 시작해 주세요.",
+                profile.getId()
+        ));
+
+        log.info("[ExpertVerificationService] 국가자격증 수동 승인 완료: expertProfileId={}", expertProfileId);
+    }
+
+    @Transactional
+    public void rejectPendingProfile(Long expertProfileId) {
+        ExpertProfile profile = expertProfileRepository.findById(expertProfileId)
+                .orElseThrow(() -> new CustomException(ErrorCode.EXPERT_NOT_FOUND));
+
+        if (profile.getStatus() != ExpertStatus.PENDING_VERIFICATION) {
+            throw new CustomException(ErrorCode.EXPERT_NOT_PENDING);
+        }
+
+        Long userId = profile.getUser().getId();
+
+        expertProfileRepository.delete(profile); // 프로필 삭제
+
+        eventPublisher.publishEvent(new NotificationEvent(
+                userId,
+                NotificationType.EXPERT_VERIFICATION_REJECTED,
+                "전문가 자격 거절",
+                "국가자격증 검토 결과 자격 요건이 충족되지 않아 거절되었습니다. 서류를 확인 후 재신청해 주세요.",
+                expertProfileId
+        ));
+
+        log.info("[ExpertVerificationService] 국가자격증 수동 거절 완료: expertProfileId={}", expertProfileId);
+    }
 }

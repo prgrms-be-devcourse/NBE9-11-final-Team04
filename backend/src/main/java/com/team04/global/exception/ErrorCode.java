@@ -74,6 +74,7 @@ public enum ErrorCode {
     EXTERNAL_API_FAILURE(503, "E005", "외부 API 장애가 발생했습니다"),
     EXTERNAL_API_INVALID(400, "E006", "유효하지 않은 자격 정보입니다"),
     REVIEW_ALREADY_EXISTS(409, "E007", "이미 작성된 리뷰가 존재합니다"),
+    EXPERT_NOT_PENDING(400, "E008", "검토 대기 중인 전문가 계정이 아닙니다"),
 
     // 펀딩
     FUNDING_NOT_FOUND(404, "F001", "존재하지 않는 펀딩입니다"),

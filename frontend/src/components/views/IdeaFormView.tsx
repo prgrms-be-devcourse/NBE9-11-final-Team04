@@ -152,32 +152,47 @@ export default function IdeaFormView() {
   const milestoneMinDate = toDateInputValue(form.fundingEndAt)
   const maxDeposit = Math.floor(form.goalAmount * 0.3)
 
-  useQuery({
+  const { data: editIdea } = useQuery({
     queryKey: ['ideas', ideaId],
-    queryFn: async () => {
-      const idea = await ideasApi.getById(ideaId!)
-      setForm({
-        ...defaultForm,
-        title: idea.title,
-        category: idea.category,
-        oneLineIntro: idea.oneLineIntro,
-        problemDefinition: idea.problemDefinition,
-        solution: idea.solution,
-        goal: idea.goal,
-        targetCustomer: idea.targetCustomer,
-        competitor: idea.competitor,
-        teamIntro: idea.teamIntro,
-        goalAmount: idea.goalAmount,
-        depositAmount: idea.depositAmount,
-        fundingStartAt: idea.fundingStartAt.slice(0, 16),
-        fundingEndAt: idea.fundingEndAt.slice(0, 16),
-        rewardType: idea.rewardType,
-      })
-      setPreSettlement(idea.depositAmount > 0)
-      return idea
-    },
+    queryFn: () => ideasApi.getById(ideaId!),
     enabled: isEdit,
   })
+
+  const { data: editMilestones } = useQuery({
+    queryKey: ['ideas', ideaId, 'milestones'],
+    queryFn: () => ideasApi.getMilestones(ideaId!),
+    enabled: isEdit,
+  })
+
+  useEffect(() => {
+    if (!editIdea) return
+    setPreSettlement(editIdea.depositAmount > 0)
+    setForm({
+      ...defaultForm,
+      title: editIdea.title,
+      category: editIdea.category,
+      oneLineIntro: editIdea.oneLineIntro,
+      problemDefinition: editIdea.problemDefinition,
+      solution: editIdea.solution,
+      goal: editIdea.goal,
+      targetCustomer: editIdea.targetCustomer,
+      competitor: editIdea.competitor,
+      teamIntro: editIdea.teamIntro,
+      goalAmount: editIdea.goalAmount,
+      depositAmount: editIdea.depositAmount,
+      fundingStartAt: editIdea.fundingStartAt.slice(0, 16),
+      fundingEndAt: editIdea.fundingEndAt.slice(0, 16),
+      rewardType: editIdea.rewardType,
+      milestones: editMilestones && editMilestones.length === 3
+        ? editMilestones.map((ms) => ({
+            step: ms.step,
+            goal: ms.goal,
+            expectedResult: ms.expectedResult,
+            expectedDate: ms.expectedDate,
+          }))
+        : defaultForm.milestones,
+    })
+  }, [editIdea, editMilestones])
 
   const { data: drafts } = useQuery({
     queryKey: ['ideas', 'drafts'],
@@ -204,7 +219,12 @@ export default function IdeaFormView() {
       fundingStartAt: draft.fundingStartAt ? draft.fundingStartAt.slice(0, 16) : '',
       fundingEndAt: draft.fundingEndAt ? draft.fundingEndAt.slice(0, 16) : '',
       rewardType: draft.rewardType ?? 'REWARD_POINT',
+      depositAmount: draft.depositAmount ?? 0,
+      milestones: draft.milestones && draft.milestones.length === 3
+        ? draft.milestones
+        : defaultForm.milestones,
     })
+    setPreSettlement(draft.depositAmount != null && draft.depositAmount > 0 ? true : draft.depositAmount === 0 ? false : null)
   }, [draftId, drafts])
 
   const buildSubmitForm = (): CreateIdeaRequest => ({
@@ -308,13 +328,16 @@ export default function IdeaFormView() {
   })
 
   const buildDraftForm = () => {
-    const { milestones, ...rest } = form
     return Object.fromEntries(
       Object.entries({
-        ...rest,
+        ...form,
         fundingStartAt: toIsoDateTime(form.fundingStartAt) || null,
         fundingEndAt: toIsoDateTime(form.fundingEndAt) || null,
         goalAmount: form.goalAmount || null,
+        depositAmount: preSettlement ? form.depositAmount || null : null,
+        milestones: form.milestones.some((ms) => ms.goal || ms.expectedResult || ms.expectedDate)
+          ? form.milestones
+          : null,
       }).map(([k, v]) => [k, v === '' ? null : v]),
     )
   }
