@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation'
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { ideasApi } from '@/api/ideas'
+import { fundingsApi } from '@/api/fundings'
 import type { Milestone } from '@/types/idea'
 import { matchesApi } from '@/api/matches'
 import { expertsApi } from '@/api/experts'
@@ -151,6 +152,20 @@ export default function IdeaDetailPage() {
     queryKey: ['ideas', ideaId, 'milestones'],
     queryFn: () => ideasApi.getMilestones(ideaId),
     enabled: !!ideaId && !!user,
+    retry: false,
+  })
+
+  const DEPOSIT_REQUIRED_STATUSES = ['AI_PENDING', 'EXPERT_PENDING', 'ADMIN_PENDING', 'OPEN']
+
+  const isDepositNeeded =
+    !!user && user.id === idea?.userId &&
+    DEPOSIT_REQUIRED_STATUSES.includes(idea?.status ?? '') &&
+    (idea?.depositAmount ?? 0) > 0
+
+  const { data: deposit } = useQuery({
+    queryKey: ['fundings', ideaId, 'deposit'],
+    queryFn: () => fundingsApi.getDeposit(ideaId),
+    enabled: isDepositNeeded,
     retry: false,
   })
 
@@ -615,6 +630,16 @@ export default function IdeaDetailPage() {
                 borderRadius: '10px', textDecoration: 'none',
               }}>
                 🚀 워크스페이스 입장
+              </Link>
+            )}
+            {isOwner && DEPOSIT_REQUIRED_STATUSES.includes(idea.status) && idea.depositAmount > 0 && deposit?.status !== 'HELD' && (
+              <Link href={`/ideas/${idea.ideaId}/deposit`} style={{
+                display: 'block', textAlign: 'center',
+                padding: '14px', fontSize: '15px', fontWeight: 700,
+                background: 'var(--brand)', color: '#fff',
+                borderRadius: '10px', textDecoration: 'none',
+              }}>
+                💰 보증금 납부하기
               </Link>
             )}
             {isOwner && !['OPEN', 'IN_PROGRESS', 'COMPLETED'].includes(idea.status) && (
