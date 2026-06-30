@@ -8,7 +8,7 @@ import { authApi } from '@/api/auth'
 import { usersApi } from '@/api/users'
 import { useAuthStore } from '@/store/authStore'
 import { Input } from '@/components/ui/Input'
-import { getErrorMessage } from '@/utils/format'
+import { getErrorMessage, getResponseCode } from '@/utils/format'
 
 const PASSWORD_REGEX = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,20}$/
 
@@ -29,6 +29,7 @@ function AdminSignupForm() {
     age: '' as unknown as number,
   })
   const [error, setError] = useState('')
+  const [nicknameError, setNicknameError] = useState('')
 
   const signupMutation = useMutation({
     mutationFn: () =>
@@ -45,7 +46,13 @@ function AdminSignupForm() {
       setUser(user)
       router.replace('/admin')
     },
-    onError: (err) => setError(getErrorMessage(err)),
+    onError: (err) => {
+      if (getResponseCode(err) === 'U003') {
+        setNicknameError(getErrorMessage(err))
+      } else {
+        setError(getErrorMessage(err))
+      }
+    },
   })
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -158,13 +165,16 @@ function AdminSignupForm() {
               placeholder="홍길동"
               required
             />
-            <Input
-              label="닉네임"
-              value={form.nickname}
-              onChange={(e) => setForm({ ...form, nickname: e.target.value })}
-              placeholder="닉네임"
-              required
-            />
+            <div>
+              <Input
+                label="닉네임"
+                value={form.nickname}
+                onChange={(e) => { setForm({ ...form, nickname: e.target.value }); setNicknameError('') }}
+                placeholder="닉네임"
+                required
+              />
+              {nicknameError && <p style={{ fontSize: '12px', marginTop: '4px', color: 'var(--error)' }}>{nicknameError}</p>}
+            </div>
           </div>
 
           <Input

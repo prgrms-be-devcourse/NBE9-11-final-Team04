@@ -49,6 +49,13 @@ public class AuthController {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ofSuccess(tokenResponse));
     }
 
+    @Operation(summary = "닉네임 중복 확인", description = "닉네임 사용 가능 여부를 확인합니다. 사용 가능하면 200, 중복이면 409를 반환합니다.")
+    @GetMapping("/check-nickname")
+    public ApiResponse<Void> checkNickname(@RequestParam String nickname) {
+        authService.checkNickname(nickname);
+        return ApiResponse.ofSuccessWithoutBody();
+    }
+
     @Operation(summary = "이메일 인증 코드 발송", description = "입력한 이메일로 6자리 OTP 인증 코드를 발송합니다.")
     @PostMapping("/email-verify/send")
     public ApiResponse<Void> sendOtp(
