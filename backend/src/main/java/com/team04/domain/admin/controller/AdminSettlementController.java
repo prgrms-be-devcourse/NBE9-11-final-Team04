@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.*;
  * 정산/보증금 관련 어드민 전용 API
  * 보증금 납부 확인, 환급/몰수 판정, 에스크로 강제 환불을 처리합니다.
  */
-@Tag(name = "Admin Settlement", description = "관리자 정산, 보증금, 강제 환불 API")
+@Tag(name = "관리자 - 정산", description = "관리자 정산, 보증금, 강제 환불 API")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/admin/settlements")

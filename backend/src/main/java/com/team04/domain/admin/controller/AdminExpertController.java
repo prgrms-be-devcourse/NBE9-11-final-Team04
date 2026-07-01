@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@Tag(name = "관리자 전문가 API", description = "관리자 전문가 계정 조회, 복구, 강등 API")
+@Tag(name = "관리자 - 전문가", description = "관리자 전문가 계정 조회, 복구, 강등 API")
 @RestController
 @RequestMapping("/admin/experts")
 @RequiredArgsConstructor

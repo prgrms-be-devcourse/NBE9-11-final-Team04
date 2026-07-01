@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@Tag(name = "Pre Settlement", description = "선정산 신청, 조회, 지급 콜백 API")
+@Tag(name = "선정산", description = "선정산 신청, 조회, 지급 콜백 API")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/pre-settlements")

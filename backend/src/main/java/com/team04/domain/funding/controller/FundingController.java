@@ -36,7 +36,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 /**
  * 펀딩 API 컨트롤러 — 보증금, 펀딩 오픈·조회, 후원 신청·취소, 달성률 SSE를 제공합니다.
  */
-@Tag(name = "Funding", description = "보증금 납부, 펀딩 오픈·조회, 후원 신청·취소, 달성률 SSE API")
+@Tag(name = "펀딩", description = "보증금 납부, 펀딩 오픈·조회, 후원 신청·취소, 달성률 SSE API")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/fundings")

@@ -34,7 +34,7 @@ import java.util.Map;
 @RequestMapping("/admin/ideas")
 @RequiredArgsConstructor
 @PreAuthorize("hasRole('ADMIN')")
-@Tag(name = "아이디어 관리자 API", description = "관리자 아이디어 심사, 승인, 반려, 중단, 복원, 통계 API")
+@Tag(name = "관리자 - 아이디어", description = "관리자 아이디어 심사, 승인, 반려, 중단, 복원, 통계 API")
 public class AdminIdeaController {
 
     private final AdminIdeaReviewService adminIdeaReviewService;
