@@ -33,7 +33,7 @@ import org.springframework.web.bind.annotation.RestController;
  * 결제 API — 결제 생성·승인·환불·조회, PG 웹훅.
  * 후원 결제 생성·환불은 USER 본인만 호출할 수 있습니다.
  */
-@Tag(name = "Payment", description = "결제 생성·승인·환불·조회 및 PG 웹훅 API")
+@Tag(name = "결제", description = "결제 생성·승인·환불·조회 및 PG 웹훅 API")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/payments")

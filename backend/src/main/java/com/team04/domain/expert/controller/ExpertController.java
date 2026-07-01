@@ -28,7 +28,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-@Tag(name = "전문가 API", description = "전문가 자격 검증, 프로필 등록/조회, 소명 자료 제출 API")
+@Tag(name = "전문가", description = "전문가 자격 검증, 프로필 등록/조회, 소명 자료 제출 API")
 @RestController
 @RequestMapping("/experts")
 @RequiredArgsConstructor

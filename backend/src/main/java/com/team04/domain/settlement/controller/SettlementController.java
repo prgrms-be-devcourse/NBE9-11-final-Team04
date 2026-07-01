@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
-@Tag(name = "Settlement", description = "최종 정산, 환불 정산, 보증금 처리 장부 조회 API")
+@Tag(name = "정산", description = "최종 정산, 환불 정산, 보증금 처리 장부 조회 API")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/settlements")

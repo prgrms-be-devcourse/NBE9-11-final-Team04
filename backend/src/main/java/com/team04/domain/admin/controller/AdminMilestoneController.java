@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@Tag(name = "Admin Milestone", description = "관리자 마일스톤 검토 및 중단 처리 API")
+@Tag(name = "관리자 - 마일스톤", description = "관리자 마일스톤 검토 및 중단 처리 API")
 @RestController
 @RequestMapping("/admin/milestones")
 @RequiredArgsConstructor

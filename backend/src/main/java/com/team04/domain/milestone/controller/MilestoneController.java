@@ -21,7 +21,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
-@Tag(name = "Milestone", description = "마일스톤, 완료/소명 보고서 API")
+@Tag(name = "마일스톤", description = "마일스톤, 완료/소명 보고서 API")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/milestones")

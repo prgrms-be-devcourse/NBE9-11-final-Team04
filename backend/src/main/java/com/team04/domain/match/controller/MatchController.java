@@ -22,7 +22,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@Tag(name = "매칭 API", description = "전문가 매칭 요청, 수락/거절, 검토서 작성 API")
+@Tag(name = "매칭", description = "전문가 매칭 요청, 수락/거절, 검토서 작성 API")
 @RestController
 @RequestMapping("/matches")
 @RequiredArgsConstructor

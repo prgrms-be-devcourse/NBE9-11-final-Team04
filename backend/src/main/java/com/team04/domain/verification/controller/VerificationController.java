@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/verifications")
-@Tag(name = "검증 사용자 API", description = "프로젝트 검증 요청 및 아이디어 검증 결과 조회 API")
+@Tag(name = "검증 - 사용자", description = "프로젝트 검증 요청 및 아이디어 검증 결과 조회 API")
 public class VerificationController {
 
     private final VerificationService verificationService;

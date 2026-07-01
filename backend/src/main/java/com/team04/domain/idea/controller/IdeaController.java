@@ -26,7 +26,7 @@ import java.util.List;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/ideas")
-@Tag(name = "아이디어 사용자 API", description = "아이디어 등록, 조회, 임시저장, 이미지, 계좌, 관심 프로젝트, 신고 API")
+@Tag(name = "아이디어", description = "아이디어 등록, 조회, 임시저장, 이미지, 계좌, 관심 프로젝트, 신고 API")
 public class IdeaController {
 
     private final IdeaService ideaService;

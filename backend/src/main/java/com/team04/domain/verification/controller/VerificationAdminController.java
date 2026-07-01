@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/admin/verifications")
 @RequiredArgsConstructor
 @PreAuthorize("hasRole('ADMIN')")
-@Tag(name = "검증 관리자 API", description = "관리자 검증 장애 목록 조회 및 수동 재시도 API")
+@Tag(name = "검증 - 관리자", description = "관리자 검증 장애 목록 조회 및 수동 재시도 API")
 public class VerificationAdminController {
 
     private final VerificationAdminService verificationAdminService;

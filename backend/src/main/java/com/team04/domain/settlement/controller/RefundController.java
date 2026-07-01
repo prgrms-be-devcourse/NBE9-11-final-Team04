@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
-@Tag(name = "Refund", description = "환불 내역 조회 및 결제팀 환불 콜백 API")
+@Tag(name = "환불", description = "환불 내역 조회 및 결제팀 환불 콜백 API")
 @RestController
 @RequestMapping("/refunds")
 @RequiredArgsConstructor

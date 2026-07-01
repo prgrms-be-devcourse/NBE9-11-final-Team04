@@ -21,7 +21,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-@Tag(name = "관리자 분쟁 API", description = "관리자 분쟁 목록 조회, 상태 변경, 강제 환불 API")
+@Tag(name = "관리자 - 분쟁 ", description = "관리자 분쟁 목록 조회, 상태 변경, 강제 환불 API")
 @RestController
 @RequestMapping("/admin/disputes")
 @RequiredArgsConstructor
