@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useRouter, useParams, useSearchParams } from 'next/navigation'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ideasApi } from '@/api/ideas'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -132,6 +132,7 @@ function StepIndicator({ current }: { current: 1 | 2 }) {
 
 export default function IdeaFormView() {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const params = useParams()
   const searchParams = useSearchParams()
   const ideaId = params.ideaId ? Number(params.ideaId) : null
@@ -370,7 +371,10 @@ export default function IdeaFormView() {
 
   const updateMutation = useMutation({
     mutationFn: () => ideasApi.update(ideaId!, buildSubmitForm()),
-    onSuccess: (data) => router.push(`/ideas/${data.ideaId}`),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['ideas', data.ideaId] })
+      router.push(`/ideas/${data.ideaId}`)
+    },
     onError: (err) => setError(getErrorMessage(err)),
   })
 

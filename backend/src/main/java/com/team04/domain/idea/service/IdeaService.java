@@ -13,6 +13,7 @@ import com.team04.domain.idea.repository.IdeaBookmarkRepository;
 import com.team04.domain.idea.repository.IdeaDraftRepository;
 import com.team04.domain.idea.repository.IdeaSettlementAccountRepository;
 import com.team04.domain.match.repository.ExpertMatchRepository;
+import com.team04.domain.match.repository.ExpertReviewRepository;
 import com.team04.domain.milestone.dto.response.MilestoneResponse;
 import com.team04.domain.milestone.entity.Milestone;
 import com.team04.domain.milestone.repository.MilestoneRepository;
@@ -65,6 +66,7 @@ public class IdeaService {
     private final ProjectVerificationRepository projectVerificationRepository;
     private final IdeaSettlementAccountRepository ideaSettlementAccountRepository;
     private final ExpertMatchRepository expertMatchRepository;
+    private final ExpertReviewRepository expertReviewRepository;
     private final IdeaDraftMilestoneConverter ideaDraftMilestoneConverter;
     private final TrustScoreRepository trustScoreRepository;
 
@@ -359,6 +361,7 @@ public class IdeaService {
         idea.updateImageUrls(ImageUrlConverter.join(request.imageUrls()));
         replaceMilestones(ideaId, request.milestones());
         resubmitRejectedIdea(idea);
+        ideaRepository.save(idea);
         return IdeaResponse.of(idea);
     }
 
@@ -531,6 +534,8 @@ public class IdeaService {
     /** 관리자 반려 상태의 아이디어를 수정하면 AI 재심사 대기 상태로 되돌립니다. */
     private void resubmitRejectedIdea(Idea idea) {
         if (idea.getStatus() == IdeaStatus.REJECTED) {
+            // 이전 전문가 리뷰 삭제 — 재심사 시 전문가가 새 리뷰를 제출할 수 있도록
+            expertReviewRepository.deleteAllInBatch(expertReviewRepository.findByIdeaId(idea.getId()));
             idea.changeStatus(IdeaStatus.AI_PENDING);
             verificationService.requestVerification(
                     new VerificationRequest(

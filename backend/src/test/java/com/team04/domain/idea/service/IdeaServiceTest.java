@@ -10,6 +10,7 @@ import com.team04.domain.idea.entity.IdeaStatus;
 import com.team04.domain.idea.entity.RewardType;
 import com.team04.domain.idea.repository.IdeaRepository;
 import com.team04.domain.match.repository.ExpertMatchRepository;
+import com.team04.domain.match.repository.ExpertReviewRepository;
 import com.team04.domain.milestone.repository.MilestoneRepository;
 import com.team04.domain.user.entity.Role;
 import com.team04.domain.verification.dto.request.VerificationRequest;
@@ -51,6 +52,7 @@ class IdeaServiceTest {
     @Mock private VerificationService verificationService;
     @Mock private ProjectVerificationRepository projectVerificationRepository;
     @Mock private ExpertMatchRepository expertMatchRepository;
+    @Mock private ExpertReviewRepository expertReviewRepository;
 
     @InjectMocks
     private IdeaService ideaService;
