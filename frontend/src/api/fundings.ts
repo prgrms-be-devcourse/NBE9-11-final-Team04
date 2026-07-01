@@ -28,6 +28,9 @@ export const fundingsApi = {
   getMilestones: (fundingId: number) =>
     unwrap(apiClient.get<ApiResponse<Milestone[]>>(`/fundings/${fundingId}/milestones`)),
 
+  getDeposit: (ideaId: number) =>
+    unwrap(apiClient.get<ApiResponse<DepositResponse>>(`/fundings/${ideaId}/deposit`)),
+
   payDeposit: (ideaId: number, amount: number, paymentMethod: 'CARD' | 'VIRTUAL_ACCOUNT') =>
     unwrap(
       apiClient.post<ApiResponse<DepositResponse>>(`/fundings/${ideaId}/deposit`, {

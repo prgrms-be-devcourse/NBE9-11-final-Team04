@@ -70,6 +70,9 @@ class IdeaFlowTest {
     private VerificationAsyncProcessor verificationAsyncProcessor;
 
     @Autowired
+    private com.team04.domain.verification.service.VerificationService verificationService;
+
+    @Autowired
     private UserRepository userRepository;
 
     @Autowired
@@ -128,6 +131,7 @@ class IdeaFlowTest {
         Long ideaId = created.ideaId();
 
         assertIdeaStatus(ideaId, IdeaStatus.AI_PENDING);
+        triggerVerification(ideaId);
         assertVerificationStatus(ideaId, VerificationStatus.AI_VERIFYING);
 
         processAiVerificationSynchronously(ideaId);
@@ -179,6 +183,7 @@ class IdeaFlowTest {
     void 매칭_수락_전_전문가_검토_제출_시_예외가_발생한다() throws Exception {
         IdeaResponse created = ideaService.createIdea(proposerId, savedIdeaRequest);
         Long ideaId = created.ideaId();
+        triggerVerification(ideaId);
         processAiVerificationSynchronously(ideaId);
 
         ExpertMatchResponse requested = expertMatchService.requestMatch(
@@ -198,10 +203,15 @@ class IdeaFlowTest {
     @DisplayName("유효하지 않은 VerificationStatus 전이 시 예외가 발생한다")
     void 유효하지_않은_VerificationStatus_전이_시_예외가_발생한다() {
         IdeaResponse created = ideaService.createIdea(proposerId, savedIdeaRequest);
+        triggerVerification(created.ideaId());
         ProjectVerification verification = findVerification(created.ideaId());
 
         assertThatThrownBy(() -> verification.changeStatus(VerificationStatus.EXPERT_MATCHING))
                 .isInstanceOf(CustomException.class);
+    }
+
+    private void triggerVerification(Long ideaId) {
+        verificationService.requestVerification(createVerificationRequest(ideaId), proposerId);
     }
 
     private void processAiVerificationSynchronously(Long ideaId) throws Exception {

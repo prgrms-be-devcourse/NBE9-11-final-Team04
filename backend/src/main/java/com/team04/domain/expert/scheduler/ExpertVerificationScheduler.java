@@ -52,8 +52,7 @@ public class ExpertVerificationScheduler {
                             QualificationType.BUSINESS_REGISTRATION,
                             profile.getQualificationNumber(),
                             profile.getStartDate(),
-                            profile.getRepresentativeName(),
-                            null
+                            profile.getRepresentativeName()
                     );
 
                     boolean valid = externalVerifyClient.verify(request, false); // 트랜잭션 밖에서 외부 API 호출

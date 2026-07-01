@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation'
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { ideasApi } from '@/api/ideas'
+import { fundingsApi } from '@/api/fundings'
 import type { Milestone } from '@/types/idea'
 import { matchesApi } from '@/api/matches'
 import { expertsApi } from '@/api/experts'
@@ -151,6 +152,20 @@ export default function IdeaDetailPage() {
     queryKey: ['ideas', ideaId, 'milestones'],
     queryFn: () => ideasApi.getMilestones(ideaId),
     enabled: !!ideaId && !!user,
+    retry: false,
+  })
+
+  const DEPOSIT_REQUIRED_STATUSES = ['AI_PENDING', 'EXPERT_PENDING', 'ADMIN_PENDING', 'OPEN']
+
+  const isDepositNeeded =
+    !!user && user.id === idea?.userId &&
+    DEPOSIT_REQUIRED_STATUSES.includes(idea?.status ?? '') &&
+    (idea?.depositAmount ?? 0) > 0
+
+  const { data: deposit } = useQuery({
+    queryKey: ['fundings', ideaId, 'deposit'],
+    queryFn: () => fundingsApi.getDeposit(ideaId),
+    enabled: isDepositNeeded,
     retry: false,
   })
 
@@ -617,6 +632,16 @@ export default function IdeaDetailPage() {
                 🚀 워크스페이스 입장
               </Link>
             )}
+            {isOwner && DEPOSIT_REQUIRED_STATUSES.includes(idea.status) && idea.depositAmount > 0 && deposit?.status !== 'HELD' && (
+              <Link href={`/ideas/${idea.ideaId}/deposit`} style={{
+                display: 'block', textAlign: 'center',
+                padding: '14px', fontSize: '15px', fontWeight: 700,
+                background: 'var(--brand)', color: '#fff',
+                borderRadius: '10px', textDecoration: 'none',
+              }}>
+                💰 보증금 납부하기
+              </Link>
+            )}
             {isOwner && !['OPEN', 'IN_PROGRESS', 'COMPLETED'].includes(idea.status) && (
               <Link href={`/ideas/${idea.ideaId}/edit`} style={{
                 display: 'block', textAlign: 'center',
@@ -661,6 +686,69 @@ export default function IdeaDetailPage() {
             )}
           </div>
         </div>
+      </div>
+
+      {/* 크라우드펀딩 정책 안내 */}
+      <div style={{
+        marginTop: '48px',
+        padding: '28px 32px',
+        borderRadius: '14px',
+        border: '1px solid var(--border)',
+        background: 'var(--bg-alt)',
+      }}>
+        <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--fg)', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          📋 시드링크 크라우드펀딩 운영 정책
+        </h3>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px' }}>
+          {[
+            {
+              icon: '🎯',
+              title: '목표 미달성 시 전액 환불',
+              desc: '펀딩 기간 종료 시 목표 금액에 도달하지 못하면 후원금 전액이 자동으로 환불됩니다.',
+            },
+            {
+              icon: '🔒',
+              title: '보증금 제도',
+              desc: '제안자는 펀딩 시작 전 보증금을 납부합니다. 마일스톤 미이행 시 보증금이 몰수되어 후원자에게 추가 환불됩니다.',
+            },
+            {
+              icon: '📋',
+              title: '마일스톤 중간 점검',
+              desc: '프로젝트는 단계별 마일스톤으로 진행 상황을 점검합니다. 마일스톤 이행이 미흡하다고 판단될 경우 프로젝트가 중단될 수 있습니다.',
+            },
+            {
+              icon: '🤝',
+              title: '전문가 검증',
+              desc: '아이디어는 AI 1차 검증과 분야 전문가의 검토를 거쳐 펀딩이 오픈됩니다. 신뢰도 점수가 배지로 표시됩니다.',
+            },
+            {
+              icon: '🚨',
+              title: '분쟁 및 신고',
+              desc: '부정행위 의심 시 신고할 수 있습니다. 분쟁이 확정되면 관리자가 개입하여 환불 처리 등을 진행합니다.',
+            },
+            {
+              icon: '💸',
+              title: '중도 무산 시 환불 안내',
+              desc: '프로젝트 진행 중 무산될 경우, 이미 집행된 자금이 있다면 전액 환불이 어려울 수 있습니다. 단, 보증금 몰수분이 후원자에게 추가 배분됩니다.',
+            },
+          ].map(({ icon, title, desc }) => (
+            <div key={title} style={{
+              padding: '16px 18px',
+              borderRadius: '10px',
+              background: '#fff',
+              border: '1px solid var(--border)',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                <span style={{ fontSize: '18px' }}>{icon}</span>
+                <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--fg)' }}>{title}</span>
+              </div>
+              <p style={{ fontSize: '12px', color: 'var(--fg-muted)', lineHeight: 1.7, margin: 0 }}>{desc}</p>
+            </div>
+          ))}
+        </div>
+        <p style={{ fontSize: '11px', color: 'var(--fg-muted)', marginTop: '20px', lineHeight: 1.6 }}>
+          위 정책은 시드링크 서비스 약관에 따르며, 자세한 내용은 운영 정책 페이지를 참고해 주세요.
+        </p>
       </div>
     </div>
   )

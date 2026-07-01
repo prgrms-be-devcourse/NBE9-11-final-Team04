@@ -20,6 +20,7 @@ interface AdminExpertResponse {
   status: ExpertStatusType
   suspendedAt: string | null
   appealCount: number
+  fileUrl: string | null
 }
 
 const adminExpertsApi = {
@@ -33,6 +34,10 @@ const adminExpertsApi = {
     unwrap(apiClient.post<ApiResponse<void>>(`/admin/experts/${expertProfileId}/restore`)),
   demote: (expertProfileId: number) =>
     unwrap(apiClient.post<ApiResponse<void>>(`/admin/experts/${expertProfileId}/demote`)),
+  approvePending: (expertProfileId: number) =>
+    unwrap(apiClient.post<ApiResponse<void>>(`/admin/experts/${expertProfileId}/verify`)),
+  rejectPending: (expertProfileId: number) =>
+    unwrap(apiClient.post<ApiResponse<void>>(`/admin/experts/${expertProfileId}/reject`)),
 }
 
 const STATUS_BADGE: Record<ExpertStatusType, { variant: 'green' | 'orange' | 'red' | 'gray'; label: string }> = {
@@ -72,10 +77,22 @@ export default function AdminExpertsPage() {
     onError: () => alert('강등 처리 중 오류가 발생했습니다.'),
   })
 
+  const approveMutation = useMutation({
+    mutationFn: (expertProfileId: number) => adminExpertsApi.approvePending(expertProfileId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'experts'] }),
+    onError: () => alert('승인 처리 중 오류가 발생했습니다.'),
+  })
+
+  const rejectMutation = useMutation({
+    mutationFn: (expertProfileId: number) => adminExpertsApi.rejectPending(expertProfileId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'experts'] }),
+    onError: () => alert('거절 처리 중 오류가 발생했습니다.'),
+  })
+
   const experts = data?.content ?? []
   const totalPages = data?.totalPages ?? 1
   const totalElements = data?.totalElements ?? 0
-  const isMutating = restoreMutation.isPending || demoteMutation.isPending
+  const isMutating = restoreMutation.isPending || demoteMutation.isPending || approveMutation.isPending || rejectMutation.isPending
 
   const handleStatusChange = (value: ExpertStatusType | '') => {
     setStatusFilter(value)
@@ -164,7 +181,56 @@ export default function AdminExpertsPage() {
                       </>
                     )}
                   </div>
+                  {expert.status === 'PENDING_VERIFICATION' && expert.fileUrl && (
+                    <a
+                      href={expert.fileUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ fontSize: '13px', color: 'var(--brand)', textDecoration: 'underline' }}
+                    >
+                      자격증 파일 보기
+                    </a>
+                  )}
                 </div>
+
+                {expert.status === 'PENDING_VERIFICATION' && (
+                  <div style={{ display: 'flex', gap: '8px', flexShrink: 0, flexWrap: 'wrap' }}>
+                    <button
+                      onClick={() => {
+                        if (confirm(`"${expert.name}" 전문가 신청을 승인하시겠습니까?`)) {
+                          approveMutation.mutate(expert.expertProfileId)
+                        }
+                      }}
+                      disabled={isMutating}
+                      style={{
+                        padding: '8px 16px', borderRadius: '8px',
+                        border: '1.5px solid #86efac', background: '#f0fdf4',
+                        color: '#1a7a3f', fontWeight: 700, fontSize: '13px',
+                        cursor: isMutating ? 'not-allowed' : 'pointer',
+                        opacity: isMutating ? 0.7 : 1,
+                      }}
+                    >
+                      ✅ 승인
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (confirm(`"${expert.name}" 전문가 신청을 거절합니다. 계속할까요?`)) {
+                          rejectMutation.mutate(expert.expertProfileId)
+                        }
+                      }}
+                      disabled={isMutating}
+                      style={{
+                        padding: '8px 16px', borderRadius: '8px',
+                        border: '1.5px solid #fca5a5', background: '#fff',
+                        color: '#dc2626', fontWeight: 700, fontSize: '13px',
+                        cursor: isMutating ? 'not-allowed' : 'pointer',
+                        opacity: isMutating ? 0.7 : 1,
+                      }}
+                    >
+                      ⛔ 거절
+                    </button>
+                  </div>
+                )}
 
                 {expert.status === 'SUSPENDED' && (
                   <div style={{ display: 'flex', gap: '8px', flexShrink: 0, flexWrap: 'wrap' }}>

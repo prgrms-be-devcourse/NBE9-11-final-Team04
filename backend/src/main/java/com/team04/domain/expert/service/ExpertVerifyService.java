@@ -10,10 +10,12 @@ import com.team04.domain.user.entity.User;
 import com.team04.domain.user.repository.UserRepository;
 import com.team04.global.exception.CustomException;
 import com.team04.global.exception.ErrorCode;
+import com.team04.global.storage.AppealStorageClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 @Slf4j
 @Service
@@ -23,9 +25,10 @@ public class ExpertVerifyService {
     private final ExpertProfileRepository expertProfileRepository;
     private final UserRepository userRepository;
     private final ExternalVerifyClient externalVerifyClient;
+    private final AppealStorageClient appealStorageClient;
 
     @Transactional
-    public ExpertVerifyResponse verify(Long userId, ExpertVerifyRequest request) {
+    public ExpertVerifyResponse verify(Long userId, ExpertVerifyRequest request, MultipartFile file) {
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
@@ -39,9 +42,9 @@ public class ExpertVerifyService {
             expertProfileRepository.delete(existing);
         });
 
-        // NATIONAL_QUALIFICATION → 파일 URL 필수 검증
+        // NATIONAL_QUALIFICATION → 파일 첨부 필수 검증
         if (request.qualificationType() == QualificationType.NATIONAL_QUALIFICATION
-                && (request.fileUrl() == null || request.fileUrl().isBlank())) {
+                && (file == null || file.isEmpty())) {
             throw new CustomException(ErrorCode.INVALID_INPUT);
         }
 
@@ -49,12 +52,13 @@ public class ExpertVerifyService {
             boolean verified = externalVerifyClient.verify(request, true);
 
             if (request.qualificationType() == QualificationType.NATIONAL_QUALIFICATION) {
-                // 수동 검토 → 보류 상태로 저장
+                // 파일 업로드 후 보류 상태로 저장
+                String fileKey = appealStorageClient.upload(file);
                 ExpertProfile pending = ExpertProfile.ofPending(
                         user,
                         request.qualificationType(),
                         request.qualificationNumber(),
-                        request.fileUrl(),
+                        fileKey,
                         null,   // startDate 불필요
                         null    // representativeName 불필요
                 );
@@ -80,13 +84,14 @@ public class ExpertVerifyService {
 
         } catch (CustomException e) {
             if (e.getErrorCode() == ErrorCode.EXTERNAL_API_FAILURE) {
-                // 국세청 API 장애 → 보류 처리
+                // 국세청 API 장애 → 보류 처리 (파일 있으면 업로드)
                 log.error("국세청 API 장애, 보류 처리: userId={}", userId);
+                String fileKey = (file != null && !file.isEmpty()) ? appealStorageClient.upload(file) : null;
                 ExpertProfile pending = ExpertProfile.ofPending(
                         user,
                         request.qualificationType(),
                         request.qualificationNumber(),
-                        null,
+                        fileKey,
                         request.startDate(),
                         request.representativeName()
                 );

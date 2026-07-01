@@ -1,6 +1,6 @@
 package com.team04.domain.idea.dto.response;
 
-import com.team04.domain.idea.dto.request.CreateMilestoneRequest;
+import com.team04.domain.idea.dto.request.DraftMilestoneRequest;
 import com.team04.domain.idea.entity.IdeaDraft;
 import com.team04.global.util.IdeaDraftMilestoneConverter;
 import com.team04.global.util.ImageUrlConverter;
@@ -28,7 +28,7 @@ public record IdeaDraftResponse(
         String rewardType,
         String imageUrl,
         List<String> imageUrls,
-        List<CreateMilestoneRequest> milestones,
+        List<DraftMilestoneRequest> milestones,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {
