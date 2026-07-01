@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@Tag(name = "Fund Usage", description = "프로젝트 자금 사용 내역 API")
+@Tag(name = "자금 사용", description = "프로젝트 자금 사용 내역 API")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/fund-usages")

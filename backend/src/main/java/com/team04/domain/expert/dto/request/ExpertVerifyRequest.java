@@ -17,8 +17,5 @@ public record ExpertVerifyRequest(
         String startDate,
 
         // BUSINESS_REGISTRATION 필수 항목
-        String representativeName,
-
-        // NATIONAL_QUALIFICATION 필수
-        String fileUrl
+        String representativeName
 ) {}

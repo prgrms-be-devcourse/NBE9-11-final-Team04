@@ -36,13 +36,26 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 /**
  * 펀딩 API 컨트롤러 — 보증금, 펀딩 오픈·조회, 후원 신청·취소, 달성률 SSE를 제공합니다.
  */
-@Tag(name = "Funding", description = "보증금 납부, 펀딩 오픈·조회, 후원 신청·취소, 달성률 SSE API")
+@Tag(name = "펀딩", description = "보증금 납부, 펀딩 오픈·조회, 후원 신청·취소, 달성률 SSE API")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/fundings")
 public class FundingController {
 
     private final FundingService fundingService;
+
+    @Operation(
+            summary = "보증금 조회",
+            description = "아이디어의 보증금 납부 상태를 조회합니다. 보증금이 없으면 404를 반환합니다.",
+            security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @GetMapping("/{ideaId}/deposit")
+    public ApiResponse<DepositResponse> getDeposit(
+            @PathVariable Long ideaId,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        return ApiResponse.ofSuccess(fundingService.getDeposit(ideaId, userDetails.getUserId()));
+    }
 
     @Operation(
             summary = "보증금 납부",

@@ -19,7 +19,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-@Tag(name = "관리자 회원 API", description = "관리자 회원 목록 조회, 상태 변경, 권한 변경, 강제 탈퇴 API")
+@Tag(name = "관리자 - 회원", description = "관리자 회원 목록 조회, 상태 변경, 권한 변경, 강제 탈퇴 API")
 @RestController
 @RequestMapping("/admin/users")
 @RequiredArgsConstructor

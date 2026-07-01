@@ -43,7 +43,7 @@ interface PreSettlementResponse {
   preSettlementId: number
   ideaId: number
   amount: number
-  status: 'PENDING' | 'COMPLETED' | 'FAILED'
+  status: 'REQUESTED' | 'PROCESSING' | 'COMPLETED' | 'FAILED'
   requestedAt: string
 }
 
@@ -123,9 +123,10 @@ const REPORT_STATUS_BADGE: Record<string, { variant: 'green' | 'orange' | 'red' 
 }
 
 const PRE_SETTLEMENT_STATUS_BADGE: Record<string, { variant: 'green' | 'orange' | 'red' | 'gray'; label: string }> = {
-  PENDING:   { variant: 'orange', label: '검토 중' },
-  COMPLETED: { variant: 'green',  label: '완료' },
-  FAILED:    { variant: 'red',    label: '실패' },
+  REQUESTED:  { variant: 'orange', label: '신청 완료' },
+  PROCESSING: { variant: 'orange', label: '처리 중' },
+  COMPLETED:  { variant: 'green',  label: '지급 완료' },
+  FAILED:     { variant: 'red',    label: '지급 실패' },
 }
 
 const LEDGER_TYPE_LABEL: Record<VbankLedgerType, string> = {
@@ -589,7 +590,7 @@ function MilestonesTab({ ideaId, isCreator }: { ideaId: number; isCreator: boole
   )
 }
 
-function FundUsageTab({ workspaceId, ideaId, isCreator }: { workspaceId: number; ideaId: number; isCreator: boolean }) {
+function FundUsageTab({ workspaceId, ideaId, isCreator, ideaStatus }: { workspaceId: number; ideaId: number; isCreator: boolean; ideaStatus: string }) {
   const queryClient = useQueryClient()
   const [itemName, setItemName] = useState('')
   const [amount, setAmount] = useState('')
@@ -625,10 +626,25 @@ function FundUsageTab({ workspaceId, ideaId, isCreator }: { workspaceId: number;
   if (isLoading) return <LoadingSpinner />
 
   const items = usages ?? []
+  const isInProgress = ideaStatus === 'IN_PROGRESS'
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-      {isCreator && (
+      {isCreator && !isInProgress && (
+        <div
+          style={{
+            padding: '16px 20px',
+            borderRadius: '12px',
+            border: '1.5px solid var(--border)',
+            background: 'var(--bg-alt)',
+            color: 'var(--fg-muted)',
+            fontSize: '14px',
+          }}
+        >
+          펀딩이 완료되고 마일스톤이 시작된 후 자금 사용 내역을 등록할 수 있습니다.
+        </div>
+      )}
+      {isCreator && isInProgress && (
         <form
           onSubmit={handleSubmit}
           style={{
@@ -754,7 +770,7 @@ function FundUsageTab({ workspaceId, ideaId, isCreator }: { workspaceId: number;
   )
 }
 
-function PreSettlementTab({ ideaId, isCreator }: { ideaId: number; isCreator: boolean }) {
+function PreSettlementTab({ ideaId, isCreator, ideaStatus }: { ideaId: number; isCreator: boolean; ideaStatus: string }) {
   const queryClient = useQueryClient()
   const [amountInput, setAmountInput] = useState('')
 
@@ -781,10 +797,25 @@ function PreSettlementTab({ ideaId, isCreator }: { ideaId: number; isCreator: bo
   if (isLoading) return <LoadingSpinner />
 
   const items = settlements ?? []
+  const isInProgress = ideaStatus === 'IN_PROGRESS'
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-      {isCreator && (
+      {isCreator && !isInProgress && (
+        <div
+          style={{
+            padding: '16px 20px',
+            borderRadius: '12px',
+            border: '1.5px solid var(--border)',
+            background: 'var(--bg-alt)',
+            color: 'var(--fg-muted)',
+            fontSize: '14px',
+          }}
+        >
+          펀딩이 완료되고 마일스톤이 시작된 후 선정산을 신청할 수 있습니다.
+        </div>
+      )}
+      {isCreator && isInProgress && (
         <form
           onSubmit={handleSubmit}
           style={{
@@ -1121,10 +1152,10 @@ function WorkspaceContent({ workspaceId }: { workspaceId: number }) {
         <MilestonesTab ideaId={workspace.ideaId} isCreator={workspace.creator} />
       )}
       {activeTab === 'fundUsage' && (
-        canViewCreatorOnly && <FundUsageTab workspaceId={workspaceId} ideaId={workspace.ideaId} isCreator={workspace.creator} />
+        canViewCreatorOnly && <FundUsageTab workspaceId={workspaceId} ideaId={workspace.ideaId} isCreator={workspace.creator} ideaStatus={workspace.status} />
       )}
       {activeTab === 'preSettlement' && (
-        canViewCreatorOnly && <PreSettlementTab ideaId={workspace.ideaId} isCreator={workspace.creator} />
+        canViewCreatorOnly && <PreSettlementTab ideaId={workspace.ideaId} isCreator={workspace.creator} ideaStatus={workspace.status} />
       )}
       {activeTab === 'vbankLedger' && (
         <VbankLedgerTab ideaId={workspace.ideaId} />

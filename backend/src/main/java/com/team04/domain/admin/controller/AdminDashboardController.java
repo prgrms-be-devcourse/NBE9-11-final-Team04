@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-@Tag(name = "관리자 대시보드 API", description = "관리자 서비스 현황 통계 대시보드 API")
+@Tag(name = "관리자 - 대시보드", description = "관리자 서비스 현황 통계 대시보드 API")
 @RestController
 @RequestMapping("/admin/dashboard")
 @RequiredArgsConstructor

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useMutation } from '@tanstack/react-query'
@@ -17,7 +17,6 @@ interface ExpertVerifyRequest {
   qualificationNumber: string
   startDate?: string
   representativeName?: string
-  fileUrl?: string
 }
 
 interface ExpertVerifyResponse {
@@ -75,30 +74,31 @@ function StepIndicator({ current }: { current: number }) {
 function ExpertApplyContent() {
   const router = useRouter()
   const { user, setUser } = useAuthStore()
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [type, setType] = useState<QualificationType | ''>('')
   const [form, setForm] = useState({
     qualificationNumber: '',
     startDate: '',
     representativeName: '',
-    fileUrl: '',
   })
+  const [file, setFile] = useState<File | null>(null)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
 
   const applyMutation = useMutation({
     mutationFn: () => {
-      const body: ExpertVerifyRequest = {
+      const data: ExpertVerifyRequest = {
         qualificationType: type as QualificationType,
         qualificationNumber: form.qualificationNumber,
         ...(type === 'BUSINESS_REGISTRATION' && {
           startDate: form.startDate,
           representativeName: form.representativeName,
         }),
-        ...(type === 'NATIONAL_QUALIFICATION' && {
-          fileUrl: form.fileUrl,
-        }),
       }
-      return unwrap(apiClient.post<ApiResponse<ExpertVerifyResponse>>('/experts/verify', body))
+      const formData = new FormData()
+      formData.append('data', new Blob([JSON.stringify(data)], { type: 'application/json' }))
+      if (file) formData.append('file', file)
+      return unwrap(apiClient.post<ApiResponse<ExpertVerifyResponse>>('/experts/verify', formData))
     },
     onSuccess: (data) => {
       if (data.verified && user) setUser({ ...user, role: 'EXPERT' })
@@ -117,8 +117,8 @@ function ExpertApplyContent() {
       if (!form.startDate.trim()) { setError('개업일자를 입력해주세요.'); return }
       if (!form.representativeName.trim()) { setError('대표자명을 입력해주세요.'); return }
     }
-    if (type === 'NATIONAL_QUALIFICATION' && !form.fileUrl.trim()) {
-      setError('자격증 파일 URL을 입력해주세요.'); return
+    if (type === 'NATIONAL_QUALIFICATION' && !file) {
+      setError('자격증 파일을 첨부해주세요.'); return
     }
     applyMutation.mutate()
   }
@@ -276,25 +276,60 @@ function ExpertApplyContent() {
           </div>
         )}
 
-        {/* 국가자격증 파일 URL */}
+        {/* 국가자격증 파일 첨부 */}
         {type === 'NATIONAL_QUALIFICATION' && (
           <div>
             <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, color: 'var(--fg)', marginBottom: '6px' }}>
-              자격증 파일 URL
+              자격증 파일 <span style={{ color: '#ef4444' }}>*</span>
             </label>
             <input
-              type="url"
-              value={form.fileUrl}
-              onChange={(e) => setForm({ ...form, fileUrl: e.target.value })}
-              placeholder="https://..."
-              style={{
-                width: '100%', height: '48px', border: '1.5px solid var(--border)',
-                borderRadius: '10px', padding: '0 14px', fontSize: '15px',
-                fontFamily: 'inherit', outline: 'none', color: 'var(--fg)', boxSizing: 'border-box',
-              }}
+              ref={fileInputRef}
+              type="file"
+              accept=".jpg,.jpeg,.png,.pdf,.doc,.docx"
+              style={{ display: 'none' }}
+              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
             />
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <input
+                readOnly
+                value={file?.name ?? ''}
+                placeholder="파일을 선택해주세요 (jpg, png, pdf, doc)"
+                style={{
+                  flex: 1, height: '48px', border: '1.5px solid var(--border)',
+                  borderRadius: '10px', padding: '0 14px', fontSize: '14px',
+                  fontFamily: 'inherit', outline: 'none', cursor: 'default',
+                  color: file ? 'var(--fg)' : 'var(--fg-muted)', boxSizing: 'border-box',
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                style={{
+                  flexShrink: 0, height: '48px', padding: '0 18px',
+                  border: '1.5px solid var(--border)', borderRadius: '10px',
+                  background: '#fff', fontSize: '14px', cursor: 'pointer',
+                  fontFamily: 'inherit', color: 'var(--fg)', whiteSpace: 'nowrap',
+                }}
+              >
+                파일 선택
+              </button>
+              {file && (
+                <button
+                  type="button"
+                  onClick={() => { setFile(null); if (fileInputRef.current) fileInputRef.current.value = '' }}
+                  style={{
+                    flexShrink: 0, height: '48px', padding: '0 14px',
+                    border: '1.5px solid #fecaca', borderRadius: '10px',
+                    background: '#fff5f5', fontSize: '14px', cursor: 'pointer',
+                    fontFamily: 'inherit', color: '#ef4444',
+                  }}
+                >
+                  ✕
+                </button>
+              )}
+            </div>
             <p style={{ fontSize: '12px', color: 'var(--fg-muted)', marginTop: '4px' }}>
-              S3 등에 업로드 후 URL을 입력해주세요.
+              최대 10MB · jpg, jpeg, png, pdf, doc, docx
             </p>
           </div>
         )}

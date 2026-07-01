@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter, useParams, useSearchParams } from 'next/navigation'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ideasApi } from '@/api/ideas'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -132,6 +132,7 @@ function StepIndicator({ current }: { current: 1 | 2 }) {
 
 export default function IdeaFormView() {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const params = useParams()
   const searchParams = useSearchParams()
   const ideaId = params.ideaId ? Number(params.ideaId) : null
@@ -142,6 +143,51 @@ export default function IdeaFormView() {
   const [form, setForm] = useState<CreateIdeaRequest>(defaultForm)
   const [preSettlement, setPreSettlement] = useState<boolean | null>(null)
   const [error, setError] = useState('')
+  const [currentDraftId, setCurrentDraftId] = useState<number | null>(draftId)
+  const [isDirty, setIsDirty] = useState(false)
+  const skipDirtyRef = useRef(true)
+
+  useEffect(() => {
+    if (skipDirtyRef.current) {
+      skipDirtyRef.current = false
+      return
+    }
+    setIsDirty(true)
+  }, [form])
+
+  useEffect(() => {
+    if (!isDirty) return
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+      e.returnValue = ''
+    }
+    window.addEventListener('beforeunload', handler)
+    return () => window.removeEventListener('beforeunload', handler)
+  }, [isDirty])
+
+  useEffect(() => {
+    if (!isDirty) return
+    const handler = (e: MouseEvent) => {
+      const anchor = (e.target as HTMLElement).closest('a')
+      if (!anchor?.href) return
+      try {
+        const url = new URL(anchor.href)
+        if (url.pathname === window.location.pathname) return
+      } catch {
+        return
+      }
+      e.preventDefault()
+      e.stopPropagation()
+      const confirmed = window.confirm('임시저장하지 않은 내용이 있어요.\n페이지를 나가시겠어요?')
+      if (confirmed) {
+        setIsDirty(false)
+        router.push(anchor.href)
+      }
+    }
+    document.addEventListener('click', handler, true)
+    return () => document.removeEventListener('click', handler, true)
+  }, [isDirty, router])
+
   const minDatetime = minStartDatetimeLocal()
   const fundingEndMin = form.fundingStartAt
     ? addWeeksToDatetimeLocal(form.fundingStartAt, FUNDING_MIN_WEEKS)
@@ -166,6 +212,7 @@ export default function IdeaFormView() {
 
   useEffect(() => {
     if (!editIdea) return
+    skipDirtyRef.current = true
     setPreSettlement(editIdea.depositAmount > 0)
     setForm({
       ...defaultForm,
@@ -204,6 +251,7 @@ export default function IdeaFormView() {
     if (!draftId || !drafts) return
     const draft = drafts.find((d) => d.draftId === draftId)
     if (!draft) return
+    skipDirtyRef.current = true
     setForm({
       ...defaultForm,
       title: draft.title ?? '',
@@ -308,8 +356,8 @@ export default function IdeaFormView() {
 
   const createMutation = useMutation({
     mutationFn: () =>
-      draftId
-        ? ideasApi.publishDraft(draftId, buildSubmitForm())
+      currentDraftId
+        ? ideasApi.publishDraft(currentDraftId, buildSubmitForm())
         : ideasApi.create(buildSubmitForm()),
     onSuccess: (data) => {
       if (data.depositAmount > 0) {
@@ -323,7 +371,10 @@ export default function IdeaFormView() {
 
   const updateMutation = useMutation({
     mutationFn: () => ideasApi.update(ideaId!, buildSubmitForm()),
-    onSuccess: (data) => router.push(`/ideas/${data.ideaId}`),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['ideas', data.ideaId] })
+      router.push(`/ideas/${data.ideaId}`)
+    },
     onError: (err) => setError(getErrorMessage(err)),
   })
 
@@ -343,8 +394,18 @@ export default function IdeaFormView() {
   }
 
   const draftMutation = useMutation({
-    mutationFn: () => ideasApi.createDraft(buildDraftForm()),
-    onSuccess: () => alert('임시저장되었습니다.'),
+    mutationFn: () =>
+      currentDraftId
+        ? ideasApi.updateDraft(currentDraftId, buildDraftForm())
+        : ideasApi.createDraft(buildDraftForm()),
+    onSuccess: (data) => {
+      if (!currentDraftId) {
+        setCurrentDraftId(data.draftId)
+        router.replace(`/ideas/new?draftId=${data.draftId}`)
+      }
+      setIsDirty(false)
+      alert('임시저장되었습니다.')
+    },
     onError: (err) => setError(getErrorMessage(err)),
   })
 
@@ -524,7 +585,7 @@ export default function IdeaFormView() {
                 <div>
                   <label className="mb-1 block text-sm font-medium text-slate-700">목표</label>
                   <textarea
-                    value={ms.goal}
+                    value={ms.goal ?? ''}
                     onChange={(e) => updateMilestone(i, 'goal', e.target.value)}
                     rows={2}
                     className="w-full rounded-lg border px-3 py-2 text-sm"
@@ -534,7 +595,7 @@ export default function IdeaFormView() {
                 <div>
                   <label className="mb-1 block text-sm font-medium text-slate-700">기대 결과</label>
                   <textarea
-                    value={ms.expectedResult}
+                    value={ms.expectedResult ?? ''}
                     onChange={(e) => updateMilestone(i, 'expectedResult', e.target.value)}
                     rows={2}
                     className="w-full rounded-lg border px-3 py-2 text-sm"
@@ -545,7 +606,7 @@ export default function IdeaFormView() {
                   <label className="mb-1 block text-sm font-medium text-slate-700">목표 완료일</label>
                   <input
                     type="date"
-                    value={ms.expectedDate}
+                    value={ms.expectedDate ?? ''}
                     min={milestoneMinDate || undefined}
                     disabled={!form.fundingEndAt}
                     onChange={(e) => updateMilestone(i, 'expectedDate', e.target.value)}

@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
-@Tag(name = "Payment", description = "결제 생성·승인·환불·조회 및 PG 웹훅 API")
+@Tag(name = "결제", description = "결제 생성·승인·환불·조회 및 PG 웹훅 API")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/payments/vbank-ledgers")
